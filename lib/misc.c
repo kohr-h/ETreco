@@ -69,6 +69,7 @@ temp_mrc_out (gfunc3 const *gf, char const *mrc_fbasename, int count)
   size_t flen = strlen (mrc_fbasename), templen = strlen (TEMPDIR_STR), extlen = strlen (".mrc");
   char *mrc_fname, *p;
 
+
   Try
   {
     /* Try to create the tempdir. If it exists, continue. */
