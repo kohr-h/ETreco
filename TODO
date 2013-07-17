@@ -1,0 +1,44 @@
+TODO file for ETreco.
+
+
+Urgent goals are (from most to least urgent, but still urgent):
+
+- Fix the weird AXPY functions (misleading API)
+
+- Make the code work for shifted functions (esp. FFT and backprojection)
+
+- Introduce tests to check if parameter values make sense
+
+- Implement anisotropic mollifier by z shrink factor and corresponding flag
+
+- Re-organize the code such that it is better re-usable for further programs (e.g. options)
+
+- Implement varying defocus with strip-wise deconvolution
+
+- Use OpenMP to speed up further (first test if CException is thread-safe!)
+
+- Setup pipeline for automated reco from simulation series (BASH)
+
+- Fix various constants (factor before reco kernel, scaling, multiples of 2*pi etc.).
+  (This is important for quantitative evaluation of reconstructions.)
+  
+- Make printing functions dependent on verbosity level
+  
+- Write function descriptions (doxygen style)
+
+
+
+
+
+Further things to do in the future (not so urgent):
+
+- Thoroughly test implementation of CTF, reco kernel and detector MTF
+
+- Write unit tests and integrate them with DejaGnu or some other testing framework
+
+- Shift code closer to the GNU coding style guidelines
+
+- Implement NFFT functions e.g. for Born approximation computation
+
+- Introduce a config option for double precision and adapt config test. Maybe introduce a config 
+  switch to choose between single and double precision

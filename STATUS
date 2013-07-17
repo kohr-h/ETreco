@@ -1,0 +1,19 @@
+Development status of ETreco
+
+This software is currently in experimental status. This means that it does its job in some typical 
+use cases but may fail in corner cases or exotic settings (corrupted data, untypical parameter 
+values, ...). Moreover, the library functions haven't been thoroughly tested (e.g. via unit tests),
+so there might be scenarios where programs show unexpected behavior (aka bugs).
+
+What works in typical use cases:
+
+- Option handling
+- Parameter input from config file
+- Data I/O in MRC format
+- Reconstruction with and without Lambda
+
+
+What might work (untested):
+
+- Reconstruction with shifted images or shifted volume
+- Shifted Fourier transform

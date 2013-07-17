@@ -1,0 +1,295 @@
+2013-07-10  Holger Kohr  <kohr@num.uni-sb.de>
+
+ * Unified vfunc concept for real and complex
+ 
+ * Intermediate file output now depends on DEBUGGING rather than verbosity
+ 
+ * gfunc3.c: implemented half-complex * real multiplication
+
+
+
+2013-06-24  Holger Kohr  <kohr@num.uni-sb.de>
+
+ * Added CException code from http://sourceforge.net/projects/cexception/ (MIT License):
+   Light-weight exception handling in C
+   
+ * Implemented exception handling into all ETreco files
+ 
+ * Removed errors.c/.h in favor of CException
+
+
+
+2013-06-13  Holger Kohr  <kohr@num.uni-sb.de>
+
+ * Added errors.c: error tracking and printing functions
+ 
+ * errors.h: added TRY macros to evaluate expressions and react on failure
+
+
+
+2013-06-12  Holger Kohr  <kohr@num.uni-sb.de>
+
+ * Half-complex versions of gfunc3 functions merged into gfunc3.c. The property of being in 
+   half-complex shape is now stored in the gfunc3 struct.
+
+
+
+2013-06-03  Holger Kohr  <kohr@num.uni-sb.de>
+
+ * fft.c/.h:
+   - added gfunc3_hc_compute_xmin_xmax for correct computation in the half-complex case
+   - fixed gfunc3_grid_fwd_reciprocal to yield correct bounds
+
+ * ai_single_axis.c:
+   - reciprocal MTF is now computed only once
+   - reco kernel is now computed for each tilt only if it depends on the tilt angle
+
+
+2013-05-30  Holger Kohr  <kohr@num.uni-sb.de>
+
+ * operators.c/.h: 
+   - added image_rotation
+   - added xray_backprojection_sax: single-axis backprojection with inlined interpolation (several 
+     times faster than generic backprojection)
+   - included reciprocal MTF
+    
+ * ai_single_axis.c: 
+   - data is now rotated such that the tilt axis is aligned with the x axis
+   - the fast single-axis backprojection is now used instead of the generic one
+
+
+
+2013-05-23  Holger Kohr  <kohr@num.uni-sb.de>
+
+ * configure.ac: 
+   - added check for OpenMP
+
+
+
+2013-05-21  Holger Kohr  <kohr@num.uni-sb.de>
+
+ * added simd.h: 
+   - config-dependent header including all SIMD related headers
+  
+ * fft.c: 
+   - included zero-padding into FFT
+
+
+
+2013-05-17  Holger Kohr  <kohr@num.uni-sb.de>
+
+ * configure.ac: 
+   - added checks for SSE3, SSSE3 and SSE4.1 
+   - removed MMX check
+
+ * [lib,src]/Makefile.am: 
+   - dependent on SSE* checks, AM_CPPFLAGS are adapted (-msse*)
+ 
+ * matvec3.c: 
+   - SSE versions implemented
+ 
+ * gfunc3.c: 
+   - some functions written with SIMD instructions
+
+
+
+2013-05-15  Holger Kohr  <kohr@num.uni-sb.de>
+
+ * configure.ac: 
+   - added checks for MMX, SSE and SSE2 availability
+ 
+ * matvec3.c/.h: 
+   - `vec3' and `idx3' are now aligned static array data types with functions rewritten accordingly
+
+
+
+2013-05-14  Holger Kohr  <kohr@num.uni-sb.de>
+
+ * options.c/.h: 
+   - added `--fft-padding' option for zero-padding of FFTs
+ 
+ * Replaced argument check by a macro depending on the `--disable-arg-checking' ./configure option
+
+ * misc.c/.h: 
+   - added the `temp_mrc_out' function for output of intermediate results to a temporary directory
+
+
+2013-05-10  Holger Kohr  <kohr@num.uni-sb.de>
+
+ * configure.ac: 
+   - added `--disable-range-checks' switch
+ 
+ * added `scripts' and `misc' directories included for distribution
+
+
+
+2013-05-09  Holger Kohr  <kohr@num.uni-sb.de>
+
+ * ai_single_axis.c: 
+   - implemented switches for Laplacian and Lambda reconstruction
+                     
+ * options.c/.h: 
+   - simplified Lambda options to a single one
+ 
+ * configure.ac: 
+   - added `--enable-debug' switch
+
+
+
+2013-05-07  Holger Kohr  <kohr@num.uni-sb.de>
+
+ * gfunc3.c/.h: 
+   - added _make_nonneg function
+ 
+ * operators.c/.h: 
+   - added histogram_normalization function
+
+
+
+2013-05-02  Holger Kohr  <kohr@num.uni-sb.de>
+
+ * gfunc3.c: 
+   - zeropad and unpad functions no longer causing segfaults
+
+
+
+2013-04-24  Holger Kohr  <kohr@num.uni-sb.de>
+
+ * gfunc3.c/.h: 
+   - implemented subgrid_flatidcs function
+   - added zeropad function
+              
+ * options.c: 
+   - added `--normalize' (`-N'), `--background' and `--invert-contrast' options
+            
+
+
+2013-04-18  Holger Kohr  <kohr@num.uni-sb.de>
+
+ * ai_single_axis.c: 
+   - first working version of reconstruction algorithm
+
+ * options.c: 
+   - added `--tiltangles-file' (`-t') option
+   - wrote print_help function
+
+
+
+2013-04-17  Holger Kohr  <kohr@num.uni-sb.de>
+
+ * functionality to read images series removed in favor of stack support
+   
+ * options.c: 
+   - added `--start-index' (`-s') option
+
+
+
+2013-04-15  Holger Kohr  <kohr@num.uni-sb.de>
+
+ * introduced new_* functions for gfunc3, OptionData and RecParams
+ 
+ * changed *_free functions for gfunc3, OptionData and RecParams such that they also free the 
+   structure pointer itself
+   
+ * options.c: 
+   - handling of the non-option argument (input filename)
+   - now recognizes the data_stack_flag
+
+
+
+2013-04-10  Holger Kohr  <kohr@num.uni-sb.de>
+
+ * params.c: 
+   - ini files now read with iniparser
+
+
+
+2013-04-01  Holger Kohr  <kohr@num.uni-sb.de>
+
+ * Several small improvements like error checks etc.
+ 
+
+
+2013-03-29  Holger Kohr  <kohr@num.uni-sb.de>
+
+ * mrc.c: 
+   - re-implemented read and write functions
+   - wrote stack reading function
+
+
+
+2013-03-28  Holger Kohr  <kohr@num.uni-sb.de>
+
+ * mrc.c: 
+   - wrote convenience read functions with byte swapping for int16, int32 and float (single number 
+     or array)
+
+
+
+2013-03-27  Holger Kohr  <kohr@num.uni-sb.de>
+
+ * Removed grid3.c/.h
+ 
+ * Included iniparser code from http://ndevilla.free.fr/iniparser/  (MIT license) as separate library
+
+
+
+2013-03-26  Holger Kohr  <kohr@num.uni-sb.de>
+
+ * added mrc.c/.h: I/O for MRC files
+ 
+ * Merged grid3.c into gfunc3.c: gfunc3 now contains the elements of the old grid3 structure instead 
+   of a grid3 instance
+
+
+
+2013-03-25  Holger Kohr  <kohr@num.uni-sb.de>
+
+ * added options.h
+ 
+ * options.c: 
+   - finished and moved to lib
+
+ * added matvec3.c/.h: functions for 3-dimensional vectors and matrices as replacement for macros 
+   
+ * grid3.c/.h: 
+   - changed return values from void to int (error codes)
+   - arguments now provided as pointers
+
+
+
+2013-03-20  Holger Kohr  <kohr@num.uni-sb.de>
+
+ * added errors.h: error stuff (still empty)
+ 
+ * options.c: 
+   - new OptionData struct
+   - finished name pattern guessing 
+
+
+
+2013-03-17  Holger Kohr  <kohr@num.uni-sb.de>
+
+ * added options.c: basic option dispatcher 
+ 
+ * added misc.c/.h: miscallaneous helper functions (and macros?)
+
+
+
+2013-03-13  Holger Kohr  <kohr@num.uni-sb.de>
+
+ * Implemented reconstruction kernel (with and w/o CTF)
+
+ * Implemented detector MTF
+
+
+
+2013-03-11  Holger Kohr  <kohr@num.uni-sb.de>
+
+ * Made gfunc3_interp_linear aware of 2D
+
+
+
+2013-02-27  Holger Kohr  <kohr@num.uni-sb.de>
+
+ * initial setup

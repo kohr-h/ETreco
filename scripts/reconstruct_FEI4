@@ -1,0 +1,19 @@
+#!/bin/bash
+
+DATA_DIR=test_data/FEI_4_Viruses
+
+src/ai_single_axis \
+--gamma=30.0 \
+--ctf-cutoff=2.5 \
+--tiltangles-file=${DATA_DIR}/tiltangles.txt \
+--reco-params-file=${DATA_DIR}/rec_params.cfg \
+--mollifier=gaussian \
+--invert-contrast \
+--fft-padding=20 \
+--quiet \
+--output-file=${DATA_DIR}/series2_rec_nonormalize.mrc \
+${DATA_DIR}/series2.mrc
+
+
+#--normalize \
+#--background=700,0,50,50 \

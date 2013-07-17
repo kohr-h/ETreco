@@ -1,0 +1,19 @@
+#!/bin/bash
+
+DATA_DIR=test_data/Balls
+
+src/ai_single_axis \
+--gamma=5.0 \
+--ctf-cutoff=2.0 \
+--tiltangles-file=${DATA_DIR}/tiltangles.txt \
+--reco-params-file=${DATA_DIR}/rec_params.cfg \
+--mollifier=gaussian \
+--invert-contrast \
+--fft-padding=20 \
+--verbose \
+${DATA_DIR}/tiltseries_1_74500.mrc
+
+
+#--normalize \
+#--background=700,0,50,50 \
+#--output-file=${DATA_DIR}/tiltseries_1_37230_rec_ctf_mtf.mrc \
