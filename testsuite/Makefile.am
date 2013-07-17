@@ -24,7 +24,7 @@ endif
 
 AM_CPPFLAGS += $(OPENMP_CFLAGS)
 
-bin_PROGRAMS =  gf3_test_grid cexceptions
+bin_PROGRAMS =  gf3_test_grid cexceptions ft_shift_test
 
 gf3_test_grid_SOURCES = gf3_test_grid.c
 gf3_test_grid_LDFLAGS = -lm
@@ -35,3 +35,8 @@ cexceptions_SOURCES = cexceptions.c
 cexceptions_LDADD = ../lib/libetreco.a \
 									  ../lib/libiniparser.a \
   								  ../gnulib/libgnu.a
+
+ft_shift_test_SOURCES = ft_shift_test.c
+ft_shift_test_LDADD = ../lib/libetreco.a \
+											../lib/libiniparser.a \
+											../gnulib/libgnu.a

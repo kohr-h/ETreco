@@ -3,7 +3,11 @@ TODO file for ETreco.
 
 Urgent goals are (from most to least urgent, but still urgent):
 
+- Fix bad scaling when volume is larger than projection
+
 - Fix the weird AXPY functions (misleading API)
+
+- Implement the shifted backprojection
 
 - Make the code work for shifted functions (esp. FFT and backprojection)
 

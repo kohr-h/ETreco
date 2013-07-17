@@ -87,7 +87,10 @@ gfunc3_init (gfunc3 *gf, vec3 const x0, vec3 const cs, idx3 const shp, gfunc_typ
 
   /* Initialize grid */
   idx3_copy (gf->shape, shp);
-  gf->ntotal = idx3_product (shp);
+  
+  if (shp[2] == 0)
+    gf->shape[2] = 1;
+  gf->ntotal = idx3_product (gf->shape);
 
   if (x0 == NULL)
     vec3_set_all (gf->x0, 0.0);

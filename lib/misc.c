@@ -69,12 +69,12 @@ temp_mrc_out (gfunc3 const *gf, char const *mrc_fbasename, int count)
   size_t flen = strlen (mrc_fbasename), templen = strlen (TEMPDIR_STR), extlen = strlen (".mrc");
   char *mrc_fname, *p;
 
-  /* Try to create the tempdir. If it exists, continue. */
-  if (mkdir (TEMPDIR_STR, 0764) && (errno != EEXIST))
-    EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Unable to create directory '%s'.", TEMPDIR_STR);
-
   Try
   {
+    /* Try to create the tempdir. If it exists, continue. */
+    if (mkdir (TEMPDIR_STR, 0764) && (errno != EEXIST))
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Unable to create directory '%s'.", TEMPDIR_STR);
+
     mrc_fname = (char *) ali16_malloc (templen + flen + MAX_COUNT_DIGITS + extlen + 1);
 
     p = mrc_fname;
