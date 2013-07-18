@@ -6,6 +6,7 @@
 scripts/
 temp/
 test_data/
+release/
 
 
 # Not to be included yet
@@ -92,6 +93,7 @@ Makefile.in
 
 configure  
 aclocal.m4
+config.h.in
 
 # Additional autotools stuff
 
