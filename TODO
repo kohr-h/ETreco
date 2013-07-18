@@ -3,7 +3,7 @@ TODO file for ETreco.
 
 Urgent goals are (from most to least urgent, but still urgent):
 
-- Fix bad scaling when volume is larger than projection
+- Fix bad scaling when volume is larger than projection 
 
 - Fix the weird AXPY functions (misleading API)
 
