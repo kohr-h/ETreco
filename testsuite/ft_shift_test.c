@@ -34,6 +34,8 @@ int main(int argc, char **argv)
   
   float ones[2] = {1.0, 1.0};
   
+  /* TODO: compare shifted with non-shifted versions */
+  
   Try
   {
     gfunc3 *img = new_gfunc3 ();
