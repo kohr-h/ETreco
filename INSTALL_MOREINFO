@@ -1,9 +1,14 @@
 Additional install info for ETreco.
 
-If you wish to install from a checkout of the GitHub repo, you additionally need the Autotools:
+The 'configure', 'aclocal.m4', 'config.h.in' and 'Makefile.in' files depend on the Autotools versions 
+and are thus excluded from the repository. Therefore, you need to generate them yourself if you wish 
+to install ETreco from a checkout of the GitHub repo. You'll need the Autotools:
 
 autoconf: http://www.gnu.org/software/autoconf/
 automake: http://www.gnu.org/software/automake/
 
-On the top level of the tree, run `automake --add-missing' and `autoreconf [--force]' to generate the
-missing links and scripts. Then proceed with the regular INSTALL.
+On the top level of the tree, run `aclocal', `automake --add-missing' (ignoring error messages) 
+and `autoreconf [--force]' to generate the missing links and scripts. If `autoreconf' completes 
+without error, everything should be fine. 
+
+Proceed with the regular INSTALL.
