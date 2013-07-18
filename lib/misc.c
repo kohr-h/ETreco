@@ -37,8 +37,14 @@
 #include "gfunc3.h"
 #include "mrc.h"
 
+#define XSTR(s) STR(s)
+#define STR(s) #s
+#define CONCAT(s, t, u) s t u
+#define XCONCAT(s, t, u) CONCAT (s, t, u)
+
 #define TEMPDIR_STR  "temp/"
-#define MAX_COUNT_DIGITS  3
+#define COUNT_DIGITS  3
+#define DIGIT_FMT XCONCAT ("%0", XSTR(COUNT_DIGITS), "d")
 
 /*-------------------------------------------------------------------------------------------------*/
 
@@ -67,7 +73,7 @@ temp_mrc_out (gfunc3 const *gf, char const *mrc_fbasename, int count)
   
   CEXCEPTION_T e = EXC_NONE;
   size_t flen = strlen (mrc_fbasename), templen = strlen (TEMPDIR_STR), extlen = strlen (".mrc");
-  char *mrc_fname, *p;
+  char *mrc_fname;
 
 
   Try
@@ -76,16 +82,15 @@ temp_mrc_out (gfunc3 const *gf, char const *mrc_fbasename, int count)
     if (mkdir (TEMPDIR_STR, 0764) && (errno != EEXIST))
       EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Unable to create directory '%s'.", TEMPDIR_STR);
 
-    mrc_fname = (char *) ali16_malloc (templen + flen + MAX_COUNT_DIGITS + extlen + 1);
+    mrc_fname = (char *) ali16_malloc (templen + flen + COUNT_DIGITS + extlen + 1);
 
-    p = mrc_fname;
-    sprintf (p, TEMPDIR_STR);
-    p += templen;
-    sprintf (p, mrc_fbasename);
-    p += flen;
-    sprintf (p, "%03d", count);
-    p += MAX_COUNT_DIGITS;
-    sprintf (p, ".mrc");
+    strncpy (mrc_fname, TEMPDIR_STR, templen);
+    strncat (mrc_fname, mrc_fbasename, flen);
+    
+    if (count != 0)
+      snprintf (mrc_fname + templen + flen, COUNT_DIGITS + 1, DIGIT_FMT, count);
+      
+    strncat (mrc_fname, ".mrc", extlen);
 
     printf ("Writing %s\n", mrc_fname);
     

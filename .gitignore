@@ -2,9 +2,11 @@
 
 *~
 *.geany
+*.mrc
 scripts/
 temp/
 test_data/
+
 
 # Not to be included yet
 

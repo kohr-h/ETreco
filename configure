@@ -583,7 +583,7 @@ PACKAGE_TARNAME='etreco'
 PACKAGE_VERSION='20130717'
 PACKAGE_STRING='ETreco 20130717'
 PACKAGE_BUGREPORT='kohr(at)num.uni-sb.de'
-PACKAGE_URL=''
+PACKAGE_URL='https://github.com/kohr-h/ETreco'
 
 ac_unique_file="src/ai_single_axis.c"
 # Factoring default headers for most tests.
@@ -1397,6 +1397,7 @@ Use these variables to override the choices made by `configure' or to help
 it to find libraries and programs with nonstandard names/locations.
 
 Report bugs to <kohr(at)num.uni-sb.de>.
+ETreco home page: <https://github.com/kohr-h/ETreco>.
 _ACEOF
 ac_status=$?
 fi
@@ -2834,7 +2835,6 @@ am__tar='$${TAR-tar} chof - "$$tardir"' am__untar='$${TAR-tar} xf -'
 
 $as_echo "#define AUTHORS \"Holger Kohr\"" >>confdefs.h
 
-#AH_TEMPLATE([AUTHORS], [The authors of this software.])
 
 # Checks for programs
 ac_ext=c
@@ -6505,7 +6505,8 @@ $config_headers
 Configuration commands:
 $config_commands
 
-Report bugs to <kohr(at)num.uni-sb.de>."
+Report bugs to <kohr(at)num.uni-sb.de>.
+ETreco home page: <https://github.com/kohr-h/ETreco>."
 
 _ACEOF
 cat >>$CONFIG_STATUS <<_ACEOF || ac_write_fail=1

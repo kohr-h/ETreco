@@ -41,18 +41,18 @@ int main(int argc, char **argv)
     gfunc3_init (img, NULL, cs, shp, REAL);
     gfunc3_set_all (img, ones);
     gfunc3_print_grid (img, "initial grid");
-    temp_mrc_out (img, "img_orig_", 1);
+    temp_mrc_out (img, "img_orig", 0);
 
     gfunc3_zeropad (img, pd);
-    temp_mrc_out (img, "img_zp_", 1);
+    temp_mrc_out (img, "img_zp", 0);
 
     gfunc3_translate (img, sft);
 
     fft_forward (img);
-    temp_mrc_out (img, "ft_shift", 1);
+    temp_mrc_out (img, "ft_shift", 0);
     
     fft_backward (img);
-    temp_mrc_out (img, "img_ift_ft_shift_", 1);
+    temp_mrc_out (img, "img_ift_ft_shift", 0);
   }
   Catch (e)
   {
