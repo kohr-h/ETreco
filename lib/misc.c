@@ -93,7 +93,6 @@ temp_mrc_out (gfunc3 const *gf, char const *mrc_fbasename, int count)
     strncat (mrc_fname, ".mrc", extlen);
 
     printf ("Writing %s\n", mrc_fname);
-    
     gfunc3_to_mrc (gf, mrc_fname);
     
     free (mrc_fname);
