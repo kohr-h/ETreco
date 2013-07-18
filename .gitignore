@@ -88,9 +88,11 @@ Makefile.in
 
 # Additional autotools stuff
 
+build-aux/
 stamp-h1
 Makefile
 .deps/
 *.log
 config.h
 config.status
+configure.scan
