@@ -5,9 +5,8 @@
 scripts/
 temp/
 test_data/
-build-aux/*
 
-# Not to include yet
+# Not to be included yet
 
 doc/
 
