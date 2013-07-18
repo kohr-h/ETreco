@@ -88,6 +88,11 @@ Makefile.in
 /install-sh
 /missing
 
+# These files break update by `git pull` due to local changes after `autoreconf`
+
+configure  
+aclocal.m4
+
 # Additional autotools stuff
 
 stamp-h1
