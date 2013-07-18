@@ -16,7 +16,6 @@ gl_EARLY
 # Checks for programs, part 2
 AC_PROG_RANLIB
 AM_PROG_AR
-#AM_PROG_CC_C_O
 
 # Another Gnulib macro
 gl_INIT
