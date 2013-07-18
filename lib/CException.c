@@ -38,6 +38,7 @@ volatile CEXCEPTION_FRAME_T CExceptionFrames[CEXCEPTION_NUM_ID] = { {0} };
 //------------------------------------------------------------------------------------------
 //  Throw
 //------------------------------------------------------------------------------------------
+
 void Throw(CEXCEPTION_T ExceptionID)
 {
     unsigned int MY_ID = CEXCEPTION_GET_ID;

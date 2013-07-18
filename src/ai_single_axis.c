@@ -31,8 +31,6 @@
 #include <math.h>
 #include <omp.h>
 
-/* Gnulib headers */
-
 
 /* All ETreco headers */
 #include "ETreco.h"

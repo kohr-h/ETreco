@@ -1,12 +1,11 @@
 # Preliminaries
-AC_INIT([ETreco], [20130717], [kohr(at)num.uni-sb.de])
+AC_INIT([ETreco], [20130717], [kohr(at)num.uni-sb.de], [], [https://github.com/kohr-h/ETreco])
 AC_CONFIG_SRCDIR([src/ai_single_axis.c])
 AC_CONFIG_AUX_DIR([build-aux])
 AM_INIT_AUTOMAKE([-Wall -Werror])
 
 # Authors needed for `--version' or `--help' output
 AC_DEFINE([AUTHORS], ["Holger Kohr"], [The authors of this software.])
-#AH_TEMPLATE([AUTHORS], [The authors of this software.])
 
 # Checks for programs
 AC_PROG_CC

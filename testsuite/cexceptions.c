@@ -42,6 +42,7 @@ void foo (void *p)
   return;
 }
 
+
 void bar (void *p)
 {
   CEXCEPTION_T e = EXC_NONE;
