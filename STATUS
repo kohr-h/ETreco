@@ -5,6 +5,8 @@ use cases but may fail in corner cases or exotic settings (corrupted data, untyp
 values, ...). Moreover, the library functions haven't been thoroughly tested (e.g. via unit tests),
 so there might be scenarios where programs show unexpected behavior (aka bugs).
 
+Building works on both Linux and Mac OS X (under unknown conditions, however)
+
 What works in typical use cases:
 
 - Option handling
