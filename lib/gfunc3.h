@@ -160,11 +160,11 @@ gfunc3_grid_is_subgrid (gfunc3 const *gf, gfunc3 const *gf_sub);
 void
 gfunc3_copy (gfunc3 *dest, gfunc3 const *src);
 
-// Add A times GF2 to GF1. GF2 may be defined on a subgrid of GF1->GRID
+// Set GF1 <- A * GF1 + GF2. GF2 may be defined on a subgrid of GF1->GRID
 void
 gfunc3_axpy (float a, gfunc3 *gf1, gfunc3 const *gf2);
 
-// Add A times VF to GF
+// Set GF <- A * GF + VF
 void
 gfunc3_axpy_vfunc (float a, gfunc3 *gf, const vfunc *vf);
 

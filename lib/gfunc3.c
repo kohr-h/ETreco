@@ -664,7 +664,8 @@ gfunc3_axpy (float a, gfunc3 *gf1, gfunc3 const *gf2)
   if (gfunc3_grids_are_equal (gf1, gf2))
     {
       #if HAVE_CBLAS
-      cblas_saxpy (ntotal_flt, a, gf2->fvals, 1, gf1->fvals, 1);
+      cblas_sscal (ntotal_flt, a, gf1->fvals, 1);
+      cblas_saxpy (ntotal_flt, 1.0, gf2->fvals, 1, gf1->fvals, 1);
 
       #elif HAVE_SSE
       size_t i, N4 = ntotal_flt / 4, N4rem = ntotal_flt % 4;
@@ -684,7 +685,7 @@ gfunc3_axpy (float a, gfunc3 *gf1, gfunc3 const *gf2)
       #else  /* !(HAVE_CBLAS || HAVE_SSE) */
       size_t i;
       for (i = 0; i < ntotal_flt; i++)
-        gf1->fvals[i] += a * gf2->fvals[i];
+        gf1->fvals[i] = a * gf1->fvals[i] + gf2->fvals[i];
         
       #endif
     }
@@ -722,8 +723,8 @@ gfunc3_axpy (float a, gfunc3 *gf1, gfunc3 const *gf2)
         #else  /* !HAVE_SSE */
         size_t i;
         for (i = 0; i < ntotal_flt; i++)
-          gf1->fvals[idcs[i]] += a * gf2->fvals[i];
-          
+          gf1->fvals[idcs[i]] = a * gf1->fvals[idcs[i]] + gf2->fvals[i];
+                    
         #endif
         
         free (idcs);
@@ -756,7 +757,7 @@ gfunc3_axpy_vfunc_re (float a, gfunc3 *gf, const vfunc *vf)
           for (ix = 0; ix < gf->shape[0]; ix++, idx++)
             {
               VFUNC_EVAL (vf, &vfval, p);
-              gf->fvals[idx] += a * vfval;
+              gf->fvals[idx] = a * gf->fvals[idx] + vfval;
               p[0] += gf->csize[0];
             }
           p[0] = gf->xmin[0];
@@ -788,8 +789,8 @@ gfunc3_axpy_vfunc_hc (float a, gfunc3 *gf, const vfunc *vf)
           for (ix = 0; ix < gf->shape[0]; ix++, idx += 2)
             {
               VFUNC_EVAL (vf, vfval, p);
-              gf->fvals[idx]     += a * vfval[0];
-              gf->fvals[idx + 1] += a * vfval[1];
+              gf->fvals[idx]     = a * gf->fvals[idx]     + vfval[0];
+              gf->fvals[idx + 1] = a * gf->fvals[idx + 1] + vfval[1];
               p[0] += gf->csize[0];
             }
           p[0] = gf->xmin[0];
