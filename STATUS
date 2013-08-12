@@ -15,7 +15,11 @@ What works in typical use cases:
 - Reconstruction with and without Lambda
 
 
-What might work (untested):
+What might work (not properly tested):
+
+- Shifted Fourier transform
+
+
+What probably doesn't work:
 
 - Reconstruction with shifted images or shifted volume
-- Shifted Fourier transform

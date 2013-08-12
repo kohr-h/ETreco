@@ -80,8 +80,8 @@ main (int argc, char **argv)
     gfunc3_add_constant (gf2, -min2);
     gfunc3_scale (gf2, 1.0 / (max2 - min2));
     
-    gfunc3_scale (gf1, 1.0 - lambda);
-    gfunc3_axpy (lambda, gf1, gf2);
+    gfunc3_scale (gf2, lambda);
+    gfunc3_axpy (1.0 - lambda, gf1, gf2);
     
     gfunc3_to_mrc (gf1, fname_out);
 
