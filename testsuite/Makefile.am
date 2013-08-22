@@ -1,4 +1,7 @@
-AM_CPPFLAGS = -I$(srcdir)/../lib -I$(srcdir)/../gnulib
+libdir = $(top_builddir)/lib
+gnulibdir = $(top_builddir)/gnulib
+AM_CPPFLAGS = -I$(top_srcdir)/lib -I$(top_srcdir)/gnulib -Wall
+
 AUTOMAKE_OPTIONS = dejagnu
 
 if HAVE_SSE
@@ -26,17 +29,17 @@ AM_CPPFLAGS += $(OPENMP_CFLAGS)
 
 bin_PROGRAMS =  gf3_test_grid cexceptions ft_shift_test
 
-gf3_test_grid_SOURCES = gf3_test_grid.c
+gf3_test_grid_SOURCES = $(srcdir)/gf3_test_grid.c
 gf3_test_grid_LDFLAGS = -lm
-gf3_test_grid_LDADD = ../lib/libetreco.a \
-											../gnulib/libgnu.a
+gf3_test_grid_LDADD = $(libdir)/libetreco.a \
+											$(gnulibdir)/libgnu.a
 
-cexceptions_SOURCES = cexceptions.c
-cexceptions_LDADD = ../lib/libetreco.a \
-									  ../lib/libiniparser.a \
-  								  ../gnulib/libgnu.a
+cexceptions_SOURCES = $(srcdir)/cexceptions.c
+cexceptions_LDADD = $(libdir)/libetreco.a \
+									  $(libdir)/libiniparser.a \
+  								  $(gnulibdir)/libgnu.a
 
-ft_shift_test_SOURCES = ft_shift_test.c
-ft_shift_test_LDADD = ../lib/libetreco.a \
-											../lib/libiniparser.a \
-											../gnulib/libgnu.a
+ft_shift_test_SOURCES = $(srcdir)/ft_shift_test.c
+ft_shift_test_LDADD = $(libdir)/libetreco.a \
+											$(libdir)/libiniparser.a \
+											$(gnulibdir)/libgnu.a

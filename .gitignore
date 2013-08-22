@@ -7,6 +7,7 @@ scripts/
 temp/
 test_data/
 release/
+build/
 
 
 # Not to be included yet

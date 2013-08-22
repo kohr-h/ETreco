@@ -1,4 +1,6 @@
-AM_CPPFLAGS = -I$(srcdir)/../gnulib -Wall
+libdir = $(top_srcdir)/lib
+gnulibdir = $(top_srcdir)/gnulib
+AM_CPPFLAGS = -I$(top_srcdir)/gnulib -Wall
 
 if HAVE_SSE
 AM_CPPFLAGS += -msse  
@@ -24,20 +26,20 @@ endif
 AM_CPPFLAGS += $(OPENMP_CFLAGS)
 
 noinst_LIBRARIES = libetreco.a libiniparser.a
-libetreco_a_SOURCES = fft.c  fft.h \
-											gfunc3.c  gfunc3.h \
-											mrc.c  mrc.h \
-											operators.c operators.h \
-											params.c  params.h \
-											tiltangles.c  tiltangles.h \
-											et_vfuncs.c  et_vfuncs.h  et_vfuncs_private.h\
-											vfunc.h \
-											misc.c misc.h \
-											options.c options.h \
-											matvec3.c matvec3.h \
-											simd.h \
-											CException.c CException.h CExceptionConfig.h
+libetreco_a_SOURCES = $(libdir)/fft.c  				$(libdir)/fft.h \
+											$(libdir)/gfunc3.c  		$(libdir)/gfunc3.h \
+											$(libdir)/mrc.c  				$(libdir)/mrc.h \
+											$(libdir)/operators.c 	$(libdir)/operators.h \
+											$(libdir)/params.c  		$(libdir)/params.h \
+											$(libdir)/tiltangles.c  $(libdir)/tiltangles.h \
+											$(libdir)/et_vfuncs.c  	$(libdir)/et_vfuncs.h  	$(libdir)/et_vfuncs_private.h\
+											$(libdir)/vfunc.h \
+											$(libdir)/misc.c 				$(libdir)/misc.h \
+											$(libdir)/options.c 		$(libdir)/options.h \
+											$(libdir)/matvec3.c 		$(libdir)/matvec3.h \
+											$(libdir)/simd.h \
+											$(libdir)/CException.c 	$(libdir)/CException.h 	$(libdir)/CExceptionConfig.h
 #libetreco_a_LDFLAGS += $(OPENMP_CFLAGS)
 
-libiniparser_a_SOURCES = iniparser.c  iniparser.h \
-												 dictionary.c  dictionary.h
+libiniparser_a_SOURCES = $(libdir)/iniparser.c  	$(libdir)/iniparser.h \
+												 $(libdir)/dictionary.c  	$(libdir)/dictionary.h
