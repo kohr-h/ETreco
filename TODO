@@ -5,11 +5,7 @@ Urgent goals are (from most to least urgent, but still urgent):
 
 - Fix bad scaling when volume is larger than projection 
 
-- Fix the weird AXPY functions (misleading API)
-
 - Implement the shifted backprojection
-
-- Make the code work for shifted functions (esp. FFT and backprojection)
 
 - Introduce tests to check if parameter values make sense
 
@@ -20,8 +16,6 @@ Urgent goals are (from most to least urgent, but still urgent):
 - Implement varying defocus with strip-wise deconvolution
 
 - Use OpenMP to speed up further (first test if CException is thread-safe!)
-
-- Setup pipeline for automated reco from simulation series (BASH)
 
 - Fix various constants (factor before reco kernel, scaling, multiples of 2*pi etc.).
   (This is important for quantitative evaluation of reconstructions.)
