@@ -28,8 +28,9 @@
 #include <config.h>
 #endif
 
-#include "options.h"
 #include "matvec3.h"
+
+#include "ai_options.h"
 
 // TODO: write descriptions
 

@@ -28,16 +28,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <math.h>
 
 #include "CException.h"
+
 #include "misc.h"
+
 #include "tiltangles.h"
-
-#define SHIFT_PSI 0.0
-#define SHIFT_THETA 0.0
-#define SHIFT_PHI 0.0
-
 
 /*-------------------------------------------------------------------------------------------------*
  * Memory management
@@ -295,41 +291,6 @@ tiltangles_get_angles (tiltangles *ta, float *angles, int index)
   for (i = 0; i < ta->nangles; i++)
     angles[i] = ta->angles_deg[index][i];
     
-  return;
-}
-
-/*-------------------------------------------------------------------------------------------------*/
-// Other stuff
-/*-------------------------------------------------------------------------------------------------*/
-
-void
-compute_rotated_basis (vec3 const angles_deg, vec3 om_x, vec3 om_y, vec3 om_z)
-{
-  float alpha, beta, gamma;
-  
-  CAPTURE_NULL (angles_deg);
-  CAPTURE_NULL (om_x);
-  CAPTURE_NULL (om_y);
-  CAPTURE_NULL (om_z);
-
-  alpha = ONE_DEGREE * angles_deg[2] + SHIFT_PHI;
-  beta  = ONE_DEGREE * angles_deg[1] + SHIFT_THETA;
-  gamma = ONE_DEGREE * angles_deg[0] + SHIFT_PSI;
-
-  // We follow the "x" convention for the Euler angles; https://de.wikipedia.org/wiki/Eulersche_Winkel
-
-  om_x[0] = cosf (alpha) * cosf (gamma) - sinf (alpha) * cosf (beta) * sinf (gamma);
-  om_x[1] = sinf (alpha) * cosf (gamma) + cosf (alpha) * cosf (beta) * sinf (gamma);
-  om_x[2] = sinf (beta)  * sinf (gamma);
-
-  om_y[0] = -sinf (alpha) * cosf (gamma) - sinf (alpha) * cosf (beta) * cosf (gamma);
-  om_y[1] = -sinf (alpha) * sinf (gamma) + cosf (alpha) * cosf (beta) * cosf (gamma);
-  om_y[2] =  sinf (beta)  * cosf (gamma);
-
-  om_z[0] = sinf (alpha) * sinf (beta);
-  om_z[1] = cosf (alpha) * sinf (beta);
-  om_z[2] = cosf (beta);
-
   return;
 }
 

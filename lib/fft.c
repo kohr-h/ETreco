@@ -27,22 +27,25 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <errno.h>
 #include <math.h>
 #include <fftw3.h>
 // #include <nfft3.h>  // This is for the future
 
 #include "CException.h"
-#include "misc.h"
-#include "fft.h"
+
 #include "matvec3.h"
+#include "misc.h"
+
+#include "fft.h"
 #include "gfunc3.h"
 #include "vfunc.h"
-#include "options.h"
 
 
 #define FFTW_DATA_THRESHOLD 16777216
 #define TAYLOR_THRESHOLD 5e-02
+
+
+extern int fft_padding;
 
 // TODO: use interpolation functions
 // TODO: write NFFT functions

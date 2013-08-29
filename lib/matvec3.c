@@ -30,8 +30,8 @@
 #include <limits.h>
 #include <gsl/gsl_math.h>
 
-#include "misc.h"
 #include "matvec3.h"
+#include "misc.h"
 #include "simd.h"
 
 /*-------------------------------------------------------------------------------------------------*/

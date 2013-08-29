@@ -36,10 +36,12 @@
 #endif
 
 #include "CException.h"
-#include "misc.h"
-#include "gfunc3.h"
+
 #include "matvec3.h"
+#include "misc.h"
 #include "simd.h"
+
+#include "gfunc3.h"
 #include "vfunc.h"
 
 

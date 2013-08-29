@@ -31,12 +31,15 @@
 #include <float.h>
 
 #include "CException.h"
-#include "misc.h"
-#include "matvec3.h"
-#include "params.h"
+
 #include "dictionary.h"
 #include "iniparser.h"
-#include "options.h"
+
+#include "matvec3.h"
+#include "misc.h"
+
+#include "ai_options.h"
+#include "et_params.h"
 #include "et_vfuncs.h"
 #include "et_vfuncs_private.h"
 

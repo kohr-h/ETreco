@@ -28,9 +28,11 @@
 #include <config.h>
 #endif
 
-#include "vfunc.h"
 #include "matvec3.h"
-#include "params.h"
+
+#include "vfunc.h"
+
+#include "et_params.h"
 
 /* TODO: write descriptions, esp. if function is real or complex */
 

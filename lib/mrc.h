@@ -43,4 +43,7 @@ gfunc3_read_from_stack (gfunc3 *gf, FILE *fp, int stackpos);
 void
 gfunc3_to_mrc (gfunc3 const *gf, char const *mrc_fname);
 
+void
+temp_mrc_out (gfunc3 const *gf, char const *mrc_fbasename, int count);
+
 /*-------------------------------------------------------------------------------------------------*/

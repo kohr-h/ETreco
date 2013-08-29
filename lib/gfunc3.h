@@ -28,8 +28,9 @@
 #include <config.h>
 #endif
 
-#include "vfunc.h"
 #include "matvec3.h"
+
+#include "vfunc.h"
 
 // TODO: update descriptions
 

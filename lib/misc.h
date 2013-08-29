@@ -28,11 +28,15 @@
 #include <config.h>
 #endif
 
+#if GNULIB_DIRNAME
+#include "dirname.h"
+#endif
+
 #include <stdlib.h>
 #include <errno.h>
 #include <float.h>
 
-#include "gfunc3.h"
+#include "matvec3.h"
 
 
 /*-------------------------------------------------------------------------------------------------*
@@ -89,6 +93,12 @@ do { \
  * Verbosity-dependent output
  *-------------------------------------------------------------------------------------------------*/
 
+extern int verbosity_level;
+
+#define VERB_LEVEL_QUIET    -1
+#define VERB_LEVEL_NORMAL    0
+#define VERB_LEVEL_VERBOSE   1
+
 /* Print if VERBOSITY_LEVEL is larger than _VLEVEL */
 #define PRINT_VERB_LEVEL(_fmt, _vlevel, ...) \
 do { \
@@ -110,15 +120,20 @@ do { \
 void *
 ali16_malloc (size_t nbytes) __attribute__((alloc_size(1)));
 
-void
-temp_mrc_out (gfunc3 const *gf, char const *mrc_fbasename, int count);
-
 /*-------------------------------------------------------------------------------------------------*/
 
 #if !GNULIB_DIRNAME
 char const *
 base_name (char const *filename);
 #endif
+
+void 
+print_version_etc (char const *progname);
+
+/*-------------------------------------------------------------------------------------------------*/
+
+void
+compute_rotated_basis (vec3 const angles_deg, vec3 om_x, vec3 om_y, vec3 om_z);
 
 /*-------------------------------------------------------------------------------------------------*/
 

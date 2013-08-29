@@ -31,13 +31,13 @@
 #include <byteswap.h>
 #include <float.h>
 #include <stdint.h>
-#include <errno.h>
+#include <string.h>
+#include <sys/stat.h>
 
 #include "CException.h"
-#include "misc.h"
 #include "gfunc3.h"
 #include "matvec3.h"
-#include "options.h"
+#include "misc.h"
 #include "mrc.h"
 
 
@@ -703,6 +703,59 @@ gfunc3_to_mrc (gfunc3 const *gf, char const *mrc_fname)
   
   fclose (fp);
 
+  return;
+}
+
+/*-------------------------------------------------------------------------------------------------*/
+
+#define XSTR(s) STR(s)
+#define STR(s) #s
+#define CONCAT(s, t, u) s t u
+#define XCONCAT(s, t, u) CONCAT (s, t, u)
+
+#define TEMPDIR_STR  "temp/"
+#define COUNT_DIGITS  3
+#define DIGIT_FMT XCONCAT ("%0", XSTR(COUNT_DIGITS), "d")
+
+
+void
+temp_mrc_out (gfunc3 const *gf, char const *mrc_fbasename, int count)
+{
+  CAPTURE_NULL (gf);
+  CAPTURE_NULL (mrc_fbasename);
+  GFUNC_CHECK_INIT_STATUS (gf);
+  
+  CEXCEPTION_T e = EXC_NONE;
+  size_t flen = strlen (mrc_fbasename), templen = strlen (TEMPDIR_STR), extlen = strlen (".mrc");
+  char *mrc_fname;
+
+
+  Try
+  {
+    /* Try to create the tempdir. If it exists, continue. */
+    if (mkdir (TEMPDIR_STR, 0764) && (errno != EEXIST))
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Unable to create directory '%s'.", TEMPDIR_STR);
+
+    mrc_fname = (char *) ali16_malloc (templen + flen + COUNT_DIGITS + extlen + 1);
+
+    strncpy (mrc_fname, TEMPDIR_STR, templen);
+    strncat (mrc_fname, mrc_fbasename, flen);
+    
+    if (count != 0)
+      snprintf (mrc_fname + templen + flen, COUNT_DIGITS + 1, DIGIT_FMT, count);
+      
+    strncat (mrc_fname, ".mrc", extlen);
+
+    printf ("Writing %s\n", mrc_fname);
+    gfunc3_to_mrc (gf, mrc_fname);
+    
+    free (mrc_fname);
+  }
+  Catch (e)
+  {
+    EXC_RETHROW_REPRINT (e);
+  }
+  
   return;
 }
 

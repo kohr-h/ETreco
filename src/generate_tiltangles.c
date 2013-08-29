@@ -30,9 +30,6 @@
 
 #include "ETreco.h"
 
-#if GNULIB_DIRNAME
-#include "dirname.h"
-#endif
 
 int main (int argc, char **argv)
 {

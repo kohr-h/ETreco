@@ -25,15 +25,19 @@
 #include <config.h>
 #endif
 
+#include <stdio.h>
 #include <math.h>
 #include <gsl/gsl_sf_bessel.h>
 
 #include "CException.h"
+
 #include "misc.h"
-#include "et_vfuncs.h"
-#include "vfunc.h"
-#include "params.h"
 #include "simd.h"
+
+#include "vfunc.h"
+
+#include "et_params.h"
+#include "et_vfuncs.h"
 
 /*-------------------------------------------------------------------------------------------------*/
 

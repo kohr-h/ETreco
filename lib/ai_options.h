@@ -29,10 +29,8 @@
 #endif
 
 #include "matvec3.h"
+#include "misc.h"
 
-#define VERB_LEVEL_QUIET    -1
-#define VERB_LEVEL_NORMAL    0
-#define VERB_LEVEL_VERBOSE   1
 // TODO: write descriptions
 
 /*-------------------------------------------------------------------------------------------------*/

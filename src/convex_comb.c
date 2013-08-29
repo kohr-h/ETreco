@@ -30,9 +30,8 @@
 
 #include "ETreco.h"
 
-#if GNULIB_DIRNAME
-#include "dirname.h"
-#endif
+
+int verbosity_level = 0;
 
 
 int 

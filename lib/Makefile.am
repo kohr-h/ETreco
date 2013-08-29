@@ -1,6 +1,8 @@
-libdir = $(top_srcdir)/lib
-gnulibdir = $(top_srcdir)/gnulib
+lib_srcdir = $(top_srcdir)/lib
+gnulib_srcdir = $(top_srcdir)/gnulib
 AM_CPPFLAGS = -I$(top_srcdir)/gnulib -Wall
+AM_LDFLAGS = -L$(top_builddir)/lib -L$(top_builddir)/gnulib
+
 
 if HAVE_SSE
 AM_CPPFLAGS += -msse  
@@ -25,21 +27,30 @@ endif
 
 AM_CPPFLAGS += $(OPENMP_CFLAGS)
 
-noinst_LIBRARIES = libetreco.a libiniparser.a
-libetreco_a_SOURCES = $(libdir)/fft.c  				$(libdir)/fft.h \
-											$(libdir)/gfunc3.c  		$(libdir)/gfunc3.h \
-											$(libdir)/mrc.c  				$(libdir)/mrc.h \
-											$(libdir)/operators.c 	$(libdir)/operators.h \
-											$(libdir)/params.c  		$(libdir)/params.h \
-											$(libdir)/tiltangles.c  $(libdir)/tiltangles.h \
-											$(libdir)/et_vfuncs.c  	$(libdir)/et_vfuncs.h  	$(libdir)/et_vfuncs_private.h\
-											$(libdir)/vfunc.h \
-											$(libdir)/misc.c 				$(libdir)/misc.h \
-											$(libdir)/options.c 		$(libdir)/options.h \
-											$(libdir)/matvec3.c 		$(libdir)/matvec3.h \
-											$(libdir)/simd.h \
-											$(libdir)/CException.c 	$(libdir)/CException.h 	$(libdir)/CExceptionConfig.h
-#libetreco_a_LDFLAGS += $(OPENMP_CFLAGS)
+noinst_LIBRARIES = libCException.a libiniparser.a libutil.a libgfunc3.a libetai.a
 
-libiniparser_a_SOURCES = $(libdir)/iniparser.c  	$(libdir)/iniparser.h \
-												 $(libdir)/dictionary.c  	$(libdir)/dictionary.h
+libCException_a_SOURCES = $(lib_srcdir)/CException.c $(lib_srcdir)/CException.h \
+													$(lib_srcdir)/CExceptionConfig.h
+
+libiniparser_a_SOURCES = $(lib_srcdir)/iniparser.c  	$(lib_srcdir)/iniparser.h \
+												 $(lib_srcdir)/dictionary.c  	$(lib_srcdir)/dictionary.h
+
+libutil_a_SOURCES = $(lib_srcdir)/matvec3.c		$(lib_srcdir)/matvec3.h \
+										$(lib_srcdir)/misc.c 			$(lib_srcdir)/misc.h \
+										$(lib_srcdir)/simd.h										
+
+libgfunc3_a_SOURCES = $(lib_srcdir)/gfunc3.c  		$(lib_srcdir)/gfunc3.h \
+											$(lib_srcdir)/fft.c  				$(lib_srcdir)/fft.h \
+											$(lib_srcdir)/mrc.c  				$(lib_srcdir)/mrc.h \
+											$(lib_srcdir)/operators.c 	$(lib_srcdir)/operators.h \
+											$(lib_srcdir)/vfunc.h											
+
+libetai_a_SOURCES = $(lib_srcdir)/ai_options.c 		$(lib_srcdir)/ai_options.h \
+										$(lib_srcdir)/et_params.c  		$(lib_srcdir)/et_params.h \
+										$(lib_srcdir)/tiltangles.c  	$(lib_srcdir)/tiltangles.h \
+										$(lib_srcdir)/et_vfuncs.c  		$(lib_srcdir)/et_vfuncs.h \
+										$(lib_srcdir)/et_vfuncs_private.h \
+										$(lib_srcdir)/vfunc.h
+
+#lib??_a_LDFLAGS += $(OPENMP_CFLAGS)
+

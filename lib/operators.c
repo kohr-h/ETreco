@@ -28,12 +28,13 @@
 #include <math.h>
 
 #include "CException.h"
-#include "misc.h"
+
 #include "matvec3.h"
-#include "gfunc3.h"
+#include "misc.h"
+
 #include "fft.h"
-#include "tiltangles.h"
-#include "options.h"
+#include "gfunc3.h"
+#include "mrc.h"
 #include "operators.h"
 
 // TODO: descriptions

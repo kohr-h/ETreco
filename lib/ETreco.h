@@ -22,18 +22,21 @@
  */
 
 #include "CException.h"
+
 #include "dictionary.h"
-#include "et_vfuncs.h"
-#include "et_vfuncs_private.h"
-#include "fft.h"
-#include "gfunc3.h"
 #include "iniparser.h"
+
 #include "matvec3.h"
 #include "misc.h"
+#include "simd.h"
+
+#include "fft.h"
+#include "gfunc3.h"
 #include "mrc.h"
 #include "operators.h"
-#include "options.h"
-#include "params.h"
-#include "simd.h"
-#include "tiltangles.h"
 #include "vfunc.h"
+
+#include "ai_options.h"
+#include "et_params.h"
+#include "et_vfuncs.h"
+#include "tiltangles.h"

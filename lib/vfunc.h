@@ -28,10 +28,6 @@
 #include <config.h>
 #endif
 
-#include <fftw3.h>
-
-#include "params.h"
-
 /*-------------------------------------------------------------------------------------------------*/
 
 /* Vector function struct; to be called with VFUNC_EVAL (always use pointers) */

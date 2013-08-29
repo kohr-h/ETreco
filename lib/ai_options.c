@@ -31,16 +31,13 @@
 #include <string.h>
 #include <ctype.h>
 
-#if GNULIB_DIRNAME
-#include "dirname.h"
-#endif
-
 #include "CException.h"
-#include "misc.h"
-#include "options.h"
-#include "matvec3.h"
 
-#define REC_STR   "_rec"  /* append this before the file extension for the reco */
+#include "matvec3.h"
+#include "misc.h"
+
+#include "ai_options.h"
+
 
 #define BG_PATCH_SIZE  50 /* Default size of patch to compute background stats */
 #define FFT_PADDING    64 /* Default padding of functions before FFT */
@@ -275,30 +272,6 @@ print_help (char const *progname)
 
 /*-------------------------------------------------------------------------------------------------*/
 
-enum { COPYRIGHT_YEAR = 2013 };
-
-void 
-print_version_etc (char const *progname)
-{
-  printf ("%s (%s) %s\n", progname, PACKAGE_NAME, PACKAGE_VERSION);
-  printf ("Copyright (C) %d %s\n", COPYRIGHT_YEAR, AUTHORS);
-  
-  puts ("\
-\n\
-License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>.\n\
-This is free software: you are free to change and redistribute it.\n\
-There is NO WARRANTY, to the extent permitted by law.");
-  
-  printf ("\nReport bugs to: %s\n", PACKAGE_BUGREPORT);
-  #ifdef PACKAGE_URL
-  printf ("%s home page: <%s>\n", PACKAGE_NAME, PACKAGE_URL);
-  #endif
-
-  return;
-}
-
-/*-------------------------------------------------------------------------------------------------*/
-
 void 
 fname_rsplit_at_dot (char const *fname, char **pbase_str, char **pext_str)
 {
@@ -353,6 +326,8 @@ OptionData_set_fname_in (OptionData *od, char const *fname)
 }
 
 /*-------------------------------------------------------------------------------------------------*/
+
+#define REC_STR   "_rec"  /* append this before the file extension for the reco */
 
 void
 OptionData_assemble_fname_out (OptionData *od,  char const *base, char const *ext)

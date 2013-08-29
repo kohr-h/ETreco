@@ -27,24 +27,16 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <errno.h>
-#include <error.h>
-#include <sys/stat.h>
+#include <math.h>
+#include <string.h>
 
 #include "CException.h"
+
 #include "misc.h"
-#include "gfunc3.h"
+
 #include "mrc.h"
 
-#define XSTR(s) STR(s)
-#define STR(s) #s
-#define CONCAT(s, t, u) s t u
-#define XCONCAT(s, t, u) CONCAT (s, t, u)
-
-#define TEMPDIR_STR  "temp/"
-#define COUNT_DIGITS  3
-#define DIGIT_FMT XCONCAT ("%0", XSTR(COUNT_DIGITS), "d")
 
 /*-------------------------------------------------------------------------------------------------*/
 
@@ -64,49 +56,6 @@ ali16_malloc (size_t nbytes)
 
 /*-------------------------------------------------------------------------------------------------*/
 
-void
-temp_mrc_out (gfunc3 const *gf, char const *mrc_fbasename, int count)
-{
-  CAPTURE_NULL (gf);
-  CAPTURE_NULL (mrc_fbasename);
-  GFUNC_CHECK_INIT_STATUS (gf);
-  
-  CEXCEPTION_T e = EXC_NONE;
-  size_t flen = strlen (mrc_fbasename), templen = strlen (TEMPDIR_STR), extlen = strlen (".mrc");
-  char *mrc_fname;
-
-
-  Try
-  {
-    /* Try to create the tempdir. If it exists, continue. */
-    if (mkdir (TEMPDIR_STR, 0764) && (errno != EEXIST))
-      EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Unable to create directory '%s'.", TEMPDIR_STR);
-
-    mrc_fname = (char *) ali16_malloc (templen + flen + COUNT_DIGITS + extlen + 1);
-
-    strncpy (mrc_fname, TEMPDIR_STR, templen);
-    strncat (mrc_fname, mrc_fbasename, flen);
-    
-    if (count != 0)
-      snprintf (mrc_fname + templen + flen, COUNT_DIGITS + 1, DIGIT_FMT, count);
-      
-    strncat (mrc_fname, ".mrc", extlen);
-
-    printf ("Writing %s\n", mrc_fname);
-    gfunc3_to_mrc (gf, mrc_fname);
-    
-    free (mrc_fname);
-  }
-  Catch (e)
-  {
-    EXC_RETHROW_REPRINT (e);
-  }
-  
-  return;
-}
-
-/*-------------------------------------------------------------------------------------------------*/
-
 #if !GNULIB_DIRNAME
 char const *
 base_name (char const *filename)
@@ -121,5 +70,66 @@ base_name (char const *filename)
   return s;
 }
 #endif
+
+/*-------------------------------------------------------------------------------------------------*/
+
+enum { COPYRIGHT_YEAR = 2013 };
+
+void 
+print_version_etc (char const *progname)
+{
+  printf ("%s (%s) %s\n", progname, PACKAGE_NAME, PACKAGE_VERSION);
+  printf ("Copyright (C) %d %s\n", COPYRIGHT_YEAR, AUTHORS);
+  
+  puts ("\
+\n\
+License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>.\n\
+This is free software: you are free to change and redistribute it.\n\
+There is NO WARRANTY, to the extent permitted by law.");
+  
+  printf ("\nReport bugs to: %s\n", PACKAGE_BUGREPORT);
+  #ifdef PACKAGE_URL
+  printf ("%s home page: <%s>\n", PACKAGE_NAME, PACKAGE_URL);
+  #endif
+
+  return;
+}
+
+/*-------------------------------------------------------------------------------------------------*/
+
+#define SHIFT_PSI 0.0
+#define SHIFT_THETA 0.0
+#define SHIFT_PHI 0.0
+
+void
+compute_rotated_basis (vec3 const angles_deg, vec3 om_x, vec3 om_y, vec3 om_z)
+{
+  float alpha, beta, gamma;
+  
+  CAPTURE_NULL (angles_deg);
+  CAPTURE_NULL (om_x);
+  CAPTURE_NULL (om_y);
+  CAPTURE_NULL (om_z);
+
+  alpha = ONE_DEGREE * angles_deg[2] + SHIFT_PHI;
+  beta  = ONE_DEGREE * angles_deg[1] + SHIFT_THETA;
+  gamma = ONE_DEGREE * angles_deg[0] + SHIFT_PSI;
+
+  // We follow the "x" convention for the Euler angles; https://de.wikipedia.org/wiki/Eulersche_Winkel
+
+  om_x[0] = cosf (alpha) * cosf (gamma) - sinf (alpha) * cosf (beta) * sinf (gamma);
+  om_x[1] = sinf (alpha) * cosf (gamma) + cosf (alpha) * cosf (beta) * sinf (gamma);
+  om_x[2] = sinf (beta)  * sinf (gamma);
+
+  om_y[0] = -sinf (alpha) * cosf (gamma) - sinf (alpha) * cosf (beta) * cosf (gamma);
+  om_y[1] = -sinf (alpha) * sinf (gamma) + cosf (alpha) * cosf (beta) * cosf (gamma);
+  om_y[2] =  sinf (beta)  * cosf (gamma);
+
+  om_z[0] = sinf (alpha) * sinf (beta);
+  om_z[1] = cosf (alpha) * sinf (beta);
+  om_z[2] = cosf (beta);
+
+  return;
+}
 
 /*-------------------------------------------------------------------------------------------------*/
