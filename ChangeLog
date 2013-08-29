@@ -1,3 +1,14 @@
+2013-08-29  Holger Kohr  <kohr@num.uni-sb.de>
+
+ * Split libetreco.a into parts for better testability
+ 
+ * Rename options.[ch] -> ai_options.[ch] to distinguish them from potential 
+   new option code for other programs
+   
+ * Rename params.[ch] -> et_params.[ch] 
+
+
+
 2013-07-10  Holger Kohr  <kohr@num.uni-sb.de>
 
  * Unified vfunc concept for real and complex
