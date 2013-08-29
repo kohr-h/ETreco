@@ -1,5 +1,5 @@
 /*
- * options.h -- dispatch options via getopt
+ * ai_options.h -- dispatch options for ai_* programs via getopt
  * 
  * Copyright 2013 Holger Kohr <kohr@num.uni-sb.de>
  * 

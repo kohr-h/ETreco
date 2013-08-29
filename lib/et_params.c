@@ -1,5 +1,5 @@
 /*
- * params.c -- functions to handle input parameter structures
+ * et_params.c -- functions to handle ET input parameter structures
  * 
  * Copyright 2013 Holger Kohr <kohr@num.uni-sb.de>
  * 

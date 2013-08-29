@@ -1,5 +1,5 @@
 /*
- * options.c -- dispatch options via getopt
+ * ai_options.c -- dispatch options for ai_* programs via getopt
  * 
  * Copyright 2013 Holger Kohr <kohr@num.uni-sb.de>
  * 
@@ -209,6 +209,7 @@ void
 print_help (char const *progname)
 {
   mollifier_type iter;
+  // TODO: write double axis and conical tilt help
   
   printf ("Usage: %s -t <tiltangles-file> [options] tiltseries_file\n", progname);
   puts ("Options:");
@@ -572,6 +573,22 @@ OptionData_set_lambda_pow (OptionData *od, float l_a)
   od->lambda_pow = l_a;
   
   return;
+}
+
+/*-------------------------------------------------------------------------------------------------*/
+
+void
+OptionData_check_general (OptionData *od)
+{
+  /* Check for general conflicts, nonsense parameters etc. */
+}
+
+/*-------------------------------------------------------------------------------------------------*/
+
+void
+OptionData_check_single_axis (OptionData *od)
+{
+  /* Check for conflicts, nonsense parameters etc. wrt single axis geometry */
 }
 
 /*-------------------------------------------------------------------------------------------------*/
