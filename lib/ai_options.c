@@ -44,7 +44,7 @@
 
 /*-------------------------------------------------------------------------------------------------*/
 
-#define SHORT_OPTS "o:g:c:f:p:n:m:s:t:NILhvq"
+#define SHORT_OPTS "o:g:c:f:p:n:m:s:t:T:NILhvq"
 #define LONG_OPTS \
          /* These options set a flag. */                    \
          {"verbose",          no_argument, &verbosity_level, VERB_LEVEL_VERBOSE},  \
@@ -52,6 +52,7 @@
          {"normalize",        no_argument, &normalize_flag, 1}, \
          {"invert-contrast",  no_argument, &invert_contrast_flag, 1}, \
          /* These options don't set a flag. We distinguish them by their indices. */\
+         {"tilt-scheme",      required_argument, 0, 'T'}, \
          {"help",             no_argument, 0, 'h'}, \
          {"version",          no_argument, 0, 'V'}, \
          {"output-file",      required_argument, 0, 'o'}, \
@@ -71,14 +72,14 @@
 /*-------------------------------------------------------------------------------------------------*/
 
 int verbosity_level      = VERB_LEVEL_NORMAL;
-int use_gamma_flag       = 0;
 int truncate_ctf_flag    = 0;
 int normalize_flag       = 0;
 int invert_contrast_flag = 0;
 int use_lambda_flag      = 0;
 int fft_padding          = 0;
 
-char const *mollifiers[] = {"delta", "gaussian"};
+char const *mollifiers[]      = {"", "delta", "gaussian", ""};
+char const *tilting_schemes[] = {"", "single-axis", "double-axis", "conical", ""};
 
 /*-------------------------------------------------------------------------------------------------*/
 
@@ -96,6 +97,7 @@ new_OptionData (void)
     od->fname_out         = NULL;
     od->fname_reco_params = NULL;
     od->fname_tiltangles  = NULL;
+    od->tilting_scheme    = SINGLE_AXIS;
     od->gamma             = 0.0;
     od->ctf_trunc         = 0.0;
     od->moll_type         = DELTA;
@@ -145,6 +147,9 @@ OptionData_print (OptionData *od)
 {
   CAPTURE_NULL (od);
   
+  if (verbosity_level == VERB_LEVEL_QUIET)
+    return;
+  
   /* TODO: make dependent on verbosity */
   printf ("\n\n");
   puts ("Options from command line:");
@@ -154,12 +159,13 @@ OptionData_print (OptionData *od)
   printf ("Output file      : %s\n", od->fname_out);
   printf ("Reco params file : %s\n", od->fname_reco_params);
   printf ("Tiltangles file  : %s\n", od->fname_tiltangles);
+  
+  printf ("Tilting scheme   : ");
+  if      (od->tilting_scheme == SINGLE_AXIS)  printf ("single axis\n");
+  else if (od->tilting_scheme == DOUBLE_AXIS)  printf ("double axis\n");
+  else if (od->tilting_scheme == CONICAL)      printf ("conical\n");
 
-  printf ("gamma            : ");
-  if (use_gamma_flag)
-    printf ("%e\n", od->gamma);
-  else
-    printf ("(guessed from data)\n");
+  printf ("gamma            : %e\n", od->gamma);
 
   printf ("1/CTF cutoff     : ");
   if (truncate_ctf_flag)
@@ -178,8 +184,7 @@ OptionData_print (OptionData *od)
   printf ("Background patch : ");
   if (!normalize_flag)
     printf ("(unused, no normalization)\n");
-  // else if (od->bg_patch_ix0[2] == -1)
-    // printf ("size %dx%d (position guessed)\n", od->bg_patch_shape[0], od->bg_patch_shape[1]);
+
   else
     printf ("size %dx%d at (%d,%d)\n", od->bg_patch_shape[0], od->bg_patch_shape[1], 
     od->bg_patch_ix0[0], od->bg_patch_ix0[1]);
@@ -208,47 +213,56 @@ OptionData_print (OptionData *od)
 void 
 print_help (char const *progname)
 {
-  mollifier_type iter;
+  mollifier_type iter_m;
+  tiltscheme iter_t;
   // TODO: write double axis and conical tilt help
   
-  printf ("Usage: %s -t <tiltangles-file> [options] tiltseries_file\n", progname);
+  printf ("Usage: %s [options] tiltseries_file\n", progname);
   puts ("Options:");
   
+  puts ("  -T scheme, --tilting-scheme=scheme");
+  puts ("                 interpret data according to SCHEME. Possible values are:");
+  printf ("               ");
+  for (iter_t = T_START + 1; iter_t < T_END; iter_t++)
+    printf ("  %s", tilting_schemes[iter_t]);
+  printf ("\n");
+  puts ("                 Default: single-axis");
   puts ("  -t file, --tiltangles-file=file");
-  puts ("                 read tilt angles from this text file. This option is required.");
+  puts ("                 read tilt angles from FILE. REQUIRED OPTION.");
+  puts ("  -g value, --gamma=value");
+  puts ("                 set regularization parameter gamma to VALUE; magnitude");
+  puts ("                 should be in the order of detector pixel size [microns].");
+  puts ("                 REQUIRED OPTION.");
   puts ("  -p file, --reco-params-file=file");
-  puts ("                 read CTF and reconstruction parameters from this ini-style file.");
-  puts ("                 This option is required.");
+  puts ("                 read CTF and reconstruction parameters from FILE (INI-style).");
+  puts ("                 REQUIRED OPTION.");
   puts ("  -o file, --output-file=file");
-  puts ("                 write reconstruction to the specified file; if not given,");
+  puts ("                 write reconstruction to FILE; if no parameter is given, the");
   puts ("                 output file is determined from tiltseries_file by appending");
   puts ("                 `_rec' before its extension.");
-  puts ("  -g value, --gamma=value");
-  puts ("                 set value for regularization parameter gamma; magnitude");
-  puts ("                 should be in the order of detector pixel size [microns].");
   puts ("  -c value, --ctf-cutoff=value");
   puts ("                 set value for reciprocal CTF cutoff; in intervals where ");
-  puts ("                 1/CTF exceeds this value, it is replaced by a diff'able");
-  puts ("                 transition spline; must be > 1.0 and should not exceed ~5.0.");
+  puts ("                 1/CTF exceeds VALUE, it is replaced by a differentiable");
+  puts ("                 transition spline; must be > 1.0 and should not exceed ~10.0.");
   puts ("  -m name, --mollifier=name");
-  puts ("                 use the specified mollifier instead of delta; currently ");
-  printf ("                 supported are:");
-  for (iter = DELTA; iter < LAST; iter++)
-    printf ("  %s", mollifiers[iter]);
+  puts ("                 use the specified mollifier instead of delta; Supported values");
+  printf ("                 for NAME are:");
+  for (iter_m = M_START + 1; iter_m < M_END; iter_m++)
+    printf ("  %s", mollifiers[iter_m]);
   printf ("\n");
   puts ("  -N, --normalize");
   puts ("                 normalize the projection images based on their histograms.");
   puts ("  --background=index_x,index_y,size_x,size_y");
-  puts ("                 compute background statistics using a patch of size_x x size_y");
-  puts ("                 pixels with lower-left indices index_x, index_y.");
-  printf ("                 Default is 0,0,%d,%d in the case that this option is omitted.\n", 
+  puts ("                 compute background statistics using a patch of SIZE_X x SIZE_Y");
+  puts ("                 pixels with lower-left indices INDEX_X, INDEX_Y.");
+  printf ("                 Default: 0,0,%d,%d\n", 
     BG_PATCH_SIZE, BG_PATCH_SIZE);
   puts ("  -I, --invert-contrast");
-  puts ("                 invert the contrast during normalization; use this option if");
+  puts ("                 invert the contrast of the images; use this option if");
   puts ("                 objects are darker than the background.");
   puts ("  -L value, --lambda-pow=value");
   puts ("                 feature reconstruction: compute Lambda^a(f) instead of f,");
-  puts ("                 where Lambda = sqrt(-Laplacian) and a = value.");
+  puts ("                 where Lambda = sqrt(-Laplacian) and a = VALUE.");
   puts ("  -n N, --num-images=N");
   puts ("                 override image number determined from input file by N; useful");
   puts ("                 for recostruction with only a subset of the data.");
@@ -269,6 +283,31 @@ print_help (char const *progname)
   puts ("                 output version information and exit");
   
   return;
+}
+
+/*-------------------------------------------------------------------------------------------------*/
+
+void
+OptionData_set_tilting_scheme (OptionData *od, char *scheme)
+{
+  tiltscheme iter;
+  char *p;
+  
+  for (p = scheme; *p; p++) 
+    *p = tolower (*p);
+  
+  for (iter = T_START + 1; iter < T_END; iter++)
+    {
+      if (strcmp (scheme, tilting_schemes[iter]) == 0)
+        {
+          od->tilting_scheme = iter;
+          return;
+        }
+    }
+    
+  fprintf (stderr, "Unknown tilting scheme `%s'\n", scheme);
+  exit (EXIT_FAILURE);
+
 }
 
 /*-------------------------------------------------------------------------------------------------*/
@@ -525,7 +564,7 @@ OptionData_set_moll_type (OptionData *od, char *moll_str)
   for (p = moll_str; *p; p++) 
     *p = tolower (*p);
   
-  for (iter = DELTA; iter < LAST; iter++)
+  for (iter = M_START + 1; iter < M_END; iter++)
     {
       if (strcmp (moll_str, mollifiers[iter]) == 0)
         {
@@ -599,7 +638,6 @@ OptionData_assign_from_args (OptionData *od, int argc, char **argv)
   CAPTURE_NULL (od);
 
   /* Aux variables */
-  CEXCEPTION_T e = EXC_NONE;
   int c;
   char const *progname = base_name(argv[0]);
   float gamma;
@@ -609,14 +647,16 @@ OptionData_assign_from_args (OptionData *od, int argc, char **argv)
   float l_a;
   
   /* Internal flags for the short options */
-  static int o_flag = 0;
-  static int n_flag = 0;
-  static int s_flag = 0;
-  static int t_flag = 0;
-  static int m_flag = 0;
-  static int P_flag = 0;
-  static int p_flag = 0;
-  static int F_flag = 0;
+  int F_flag = 0;
+  int g_flag = 0;
+  int m_flag = 0;
+  int n_flag = 0;
+  int o_flag = 0;
+  int p_flag = 0;
+  int P_flag = 0;
+  int s_flag = 0;
+  int t_flag = 0;
+  int T_flag = 0;
  
   if (argc == 1)
     {
@@ -626,263 +666,274 @@ OptionData_assign_from_args (OptionData *od, int argc, char **argv)
       exit (EXIT_SUCCESS);
     }
  
-  Try
-  {
-    while (1)
-      {
-        static struct option long_options[] = { LONG_OPTS };
+  while (1)
+    {
+      static struct option long_options[] = { LONG_OPTS };
 
-        /* getopt_long stores the option index here. */
-        int option_index = 0;
-   
-        c = getopt_long (argc, argv, SHORT_OPTS, long_options, &option_index);
-   
-        /* Detect the end of the options. */
-        if (c == -1)
+      /* getopt_long stores the option index here. */
+      int option_index = 0;
+ 
+      c = getopt_long (argc, argv, SHORT_OPTS, long_options, &option_index);
+ 
+      /* Detect the end of the options. */
+      if (c == -1)
+        break;
+ 
+      switch (c)
+        {
+        case 0:
+          /* If this option set a flag, do nothing else now. */
+          if (long_options[option_index].flag != 0) 
+            break;
+          // This case should never occur!
+          printf ("This should never occur! Option %s", long_options[option_index].name);
+          if (optarg)
+            printf (" with arg %s", optarg);
+          printf ("\n");
           break;
-   
-        switch (c)
-          {
-          case 0:
-            /* If this option set a flag, do nothing else now. */
-            if (long_options[option_index].flag != 0) 
-              break;
-            // This case should never occur!
-            printf ("This should never occur! Option %s", long_options[option_index].name);
-            if (optarg)
-              printf (" with arg %s", optarg);
-            printf ("\n");
-            break;
 
-          case 'c':
-            if (truncate_ctf_flag != 0)
-              {
-                fputs ("Invalid multiple use of `-c' (`--ctf-cutoff') option.", stderr);
-                exit (EXIT_FAILURE);
-              }
+        case 'c':
+          if (truncate_ctf_flag != 0)
+            {
+              fputs ("Invalid multiple use of `-c' (`--ctf-cutoff') option.", stderr);
+              exit (EXIT_FAILURE);
+            }
 
-            ctf_cut = atof (optarg);
-            OptionData_set_ctf_trunc (od, ctf_cut);
-            truncate_ctf_flag = 1;
-            break;
+          ctf_cut = atof (optarg);
+          OptionData_set_ctf_trunc (od, ctf_cut);
+          truncate_ctf_flag = 1;
+          break;
 
-          case 'F':
-            if (F_flag != 0)
-              {
-                fputs ("Invalid multiple use of `--fft-padding' option.", stderr);
-                exit (EXIT_FAILURE);
-              }
+        case 'F':
+          if (F_flag != 0)
+            {
+              fputs ("Invalid multiple use of `--fft-padding' option.", stderr);
+              exit (EXIT_FAILURE);
+            }
+          
+          if (optarg)
+            {
+              fft_padding = atoi (optarg);
+              if (fft_padding < 0)
+                {
+                  fputs ("Parameter of `--fft-padding' must be nonnegative.", stderr);
+                  exit (EXIT_FAILURE);
+                }
+            }
+          else
+            fft_padding = FFT_PADDING;
             
-            if (optarg)
-              {
-                fft_padding = atoi (optarg);
-                if (fft_padding < 0)
-                  {
-                    fputs ("Parameter of `--fft-padding' must be nonnegative.", stderr);
-                    exit (EXIT_FAILURE);
-                  }
-              }
-            else
-              fft_padding = FFT_PADDING;
-              
-            F_flag = 1;
-            break;
-   
-          case 'g':
-            if (use_gamma_flag != 0)
-              {
-                fputs ("Invalid multiple use of `-g' (`--gamma') option.", stderr);
-                exit (EXIT_FAILURE);
-              }
+          F_flag = 1;
+          break;
+ 
+        case 'g':
+          if (g_flag != 0)
+            {
+              fputs ("Invalid multiple use of `-g' (`--gamma') option.", stderr);
+              exit (EXIT_FAILURE);
+            }
 
-            gamma = atof (optarg);
-            OptionData_set_gamma (od, gamma);
-            use_gamma_flag = 1;
-            break;
-   
-          case 'I':
-            /* invert_contrast_flag = 1; */
-            break;
+          gamma = atof (optarg);
+          OptionData_set_gamma (od, gamma);
+          g_flag = 1;
+          break;
+ 
+        case 'I':
+          /* invert_contrast_flag = 1; */
+          break;
 
-          case 'L':
-            if (use_lambda_flag != 0)
-              {
-                fputs ("Invalid multiple use of `-L' (`--lambda-pow') option.", stderr);
-                exit (EXIT_FAILURE);
-              }
+        case 'L':
+          if (use_lambda_flag != 0)
+            {
+              fputs ("Invalid multiple use of `-L' (`--lambda-pow') option.", stderr);
+              exit (EXIT_FAILURE);
+            }
 
-            l_a = atof (optarg);
-            OptionData_set_lambda_pow (od, l_a);
-            use_lambda_flag = 1;
-            break;
-   
-          case 'm':
-            if (m_flag != 0)
-              {
-                fputs ("Invalid multiple use of `-m' (`--mollifier') option.", stderr);
-                exit (EXIT_FAILURE);
-              }
+          l_a = atof (optarg);
+          OptionData_set_lambda_pow (od, l_a);
+          use_lambda_flag = 1;
+          break;
+ 
+        case 'm':
+          if (m_flag != 0)
+            {
+              fputs ("Invalid multiple use of `-m' (`--mollifier') option.", stderr);
+              exit (EXIT_FAILURE);
+            }
 
-            OptionData_set_moll_type (od, optarg);
-            m_flag = 1;
-            break;
-   
-          case 'n':
-            if (n_flag != 0)
-              {
-                fputs ("Invalid multiple use of `-n' (`--num-images') option.", stderr);
-                exit (EXIT_FAILURE);
-              }
+          OptionData_set_moll_type (od, optarg);
+          m_flag = 1;
+          break;
+ 
+        case 'n':
+          if (n_flag != 0)
+            {
+              fputs ("Invalid multiple use of `-n' (`--num-images') option.", stderr);
+              exit (EXIT_FAILURE);
+            }
 
-            n_images = atoi (optarg);
-            OptionData_set_num_images (od, n_images);
-            n_flag = 1;
-            break;
+          n_images = atoi (optarg);
+          OptionData_set_num_images (od, n_images);
+          n_flag = 1;
+          break;
 
-          case 'N':
-            /* normalize_flag = 1; */
-            break;
-   
-          case 'o':
-            if (o_flag != 0)
-              {
-                fputs ("Invalid multiple use of `-o' (`--output-file') option.", stderr);
-                exit (EXIT_FAILURE);
-              }
+        case 'N':
+          /* normalize_flag = 1; */
+          break;
+ 
+        case 'o':
+          if (o_flag != 0)
+            {
+              fputs ("Invalid multiple use of `-o' (`--output-file') option.", stderr);
+              exit (EXIT_FAILURE);
+            }
 
-            OptionData_set_fname_out (od, optarg);
-            o_flag = 1;
-            break;
-   
-          case 'p':
-            if (p_flag != 0)
-              {
-                fputs ("Invalid multiple use of `-p' (`--reco-params-file') option.", stderr);
-                exit (EXIT_FAILURE);
-              }
+          OptionData_set_fname_out (od, optarg);
+          o_flag = 1;
+          break;
+ 
+        case 'p':
+          if (p_flag != 0)
+            {
+              fputs ("Invalid multiple use of `-p' (`--reco-params-file') option.", stderr);
+              exit (EXIT_FAILURE);
+            }
 
-            OptionData_set_fname_reco_params (od, optarg);
-            p_flag = 1;
-            break;
-   
-          case 'P':
-            if (P_flag != 0)
-              {
-                fputs ("Invalid multiple use of `--background' option.", stderr);
-                exit (EXIT_FAILURE);
-              }
+          OptionData_set_fname_reco_params (od, optarg);
+          p_flag = 1;
+          break;
+ 
+        case 'P':
+          if (P_flag != 0)
+            {
+              fputs ("Invalid multiple use of `--background' option.", stderr);
+              exit (EXIT_FAILURE);
+            }
 
-            OptionData_set_bg_params (od, optarg);
-            P_flag = 1;
-            break;
-   
-          case 'q':
-            if (verbosity_level != VERB_LEVEL_NORMAL)
-              {
-                fputs ("Invalid multiple use of `-q' (`--quiet') or `-v' (`--verbose') options.", 
-                  stderr);
-                exit (EXIT_FAILURE);
-              }
-              
-            verbosity_level = VERB_LEVEL_QUIET;
-            break;
-   
-          case 's':
-            if (s_flag != 0)
-              {
-                fputs ("Invalid multiple use of `-s' (`--start-index') option.", stderr);
-                exit (EXIT_FAILURE);
-              }
+          OptionData_set_bg_params (od, optarg);
+          P_flag = 1;
+          break;
+ 
+        case 'q':
+          if (verbosity_level != VERB_LEVEL_NORMAL)
+            {
+              fputs ("Invalid multiple use of `-q' (`--quiet') or `-v' (`--verbose') options.", 
+                stderr);
+              exit (EXIT_FAILURE);
+            }
+            
+          verbosity_level = VERB_LEVEL_QUIET;
+          break;
+ 
+        case 's':
+          if (s_flag != 0)
+            {
+              fputs ("Invalid multiple use of `-s' (`--start-index') option.", stderr);
+              exit (EXIT_FAILURE);
+            }
 
-            nstart = atoi (optarg);
-            OptionData_set_start_index (od, nstart);
-            s_flag = 1;
-            break;
-   
-          case 't':
-            if (t_flag != 0)
-              {
-                fputs ("Invalid multiple use of `-t' (`--tiltangles-file') option.", stderr);
-                exit (EXIT_FAILURE);
-              }
+          nstart = atoi (optarg);
+          OptionData_set_start_index (od, nstart);
+          s_flag = 1;
+          break;
+ 
+        case 't':
+          if (t_flag != 0)
+            {
+              fputs ("Invalid multiple use of `-t' (`--tiltangles-file') option.", stderr);
+              exit (EXIT_FAILURE);
+            }
 
-            OptionData_set_fname_tiltangles (od, optarg);
-            t_flag = 1;
-            break;
-   
-          case 'v':
-            if (verbosity_level != VERB_LEVEL_NORMAL)
-              {
-                fputs ("Invalid multiple use of `-q' (`--quiet') or `-v' (`--verbose') options.", 
-                  stderr);
-                exit (EXIT_FAILURE);
-              }
-              
-            verbosity_level = VERB_LEVEL_VERBOSE;
-            break;
-   
-          case 'V':
-            print_version_etc (progname);
-            exit (EXIT_SUCCESS);
-            break;
-   
-          case '?':
-            /* getopt_long printed an error message. */
-            fprintf(stderr, "`%s --help' provides further information.\n", progname);
-            exit (EXIT_FAILURE);
+          OptionData_set_fname_tiltangles (od, optarg);
+          t_flag = 1;
+          break;
+ 
+        case 'T':
+          if (T_flag != 0)
+            {
+              fputs ("Invalid multiple use of `-T' (`--tilting-scheme') option.", stderr);
+              exit (EXIT_FAILURE);
+            }
 
-          case 'h':
+          OptionData_set_tilting_scheme (od, optarg);
+          T_flag = 1;
+          break;
+ 
+        case 'v':
+          if (verbosity_level != VERB_LEVEL_NORMAL)
+            {
+              fputs ("Invalid multiple use of `-q' (`--quiet') or `-v' (`--verbose') options.", 
+                stderr);
+              exit (EXIT_FAILURE);
+            }
+            
+          verbosity_level = VERB_LEVEL_VERBOSE;
+          break;
+ 
+        case 'V':
+          print_version_etc (progname);
+          exit (EXIT_SUCCESS);
+          break;
+ 
+        case '?':
+          /* getopt_long printed an error message. */
+          fprintf(stderr, "`%s --help' provides further information.\n", progname);
+          exit (EXIT_FAILURE);
 
-          default:
-            print_help (progname);
-            exit (EXIT_FAILURE);
-          }
-      }
+        case 'h':
 
-    /* Handle various option conflicts */
-    
-    if (!t_flag)
-      {
-        fprintf (stderr, "No tiltangles file given.\n\n" 
-          "`%s --help' provides further information.", progname);
-        exit (EXIT_FAILURE);
-      }
+        default:
+          print_help (progname);
+          exit (EXIT_FAILURE);
+        }
+    }
 
-    if (!p_flag)
-      {
-        fprintf (stderr, "No reco parameters file given.\n\n" 
-          "`%s --help' provides further information.", progname);
-        exit (EXIT_FAILURE);
-      }
+  /* Handle various option conflicts */
+  
+  if (!t_flag)
+    {
+      fprintf (stderr, "No tiltangles file given.\n\n" 
+        "`%s --help' provides further information.", progname);
+      exit (EXIT_FAILURE);
+    }
 
-    if ((!normalize_flag) && P_flag)
-      {
-        fprintf (stderr, "The `--backgound' option can only be used if the "
-          "`-N' (`--normalize') option is enabled.\n\n" 
-          "`%s --help' provides further information.", progname);
-        exit (EXIT_FAILURE);
-      }
+  if (!g_flag)
+    {
+      fprintf (stderr, "No parameter gamma given.\n\n" 
+        "`%s --help' provides further information.", progname);
+      exit (EXIT_FAILURE);
+    }
 
-      
-    /* Process any remaining command line arguments (not options). */
-    if ((argc - optind) != 1 )
-      {
-        print_help (progname);
-        exit (EXIT_FAILURE);
-      }
+  if (!p_flag)
+    {
+      fprintf (stderr, "No reco parameters file given.\n\n" 
+        "`%s --help' provides further information.", progname);
+      exit (EXIT_FAILURE);
+    }
 
-    OptionData_set_fname_in (od, argv[optind]);
+  if ((!normalize_flag) && P_flag)
+    {
+      fprintf (stderr, "The `--backgound' option can only be used if the "
+        "`-N' (`--normalize') option is enabled.\n\n" 
+        "`%s --help' provides further information.", progname);
+      exit (EXIT_FAILURE);
+    }
 
     
-    if (o_flag == 0)
-      OptionData_determine_fname_out (od, argv[optind]);
-    
-  }
-  Catch (e)
-  {
-    EXC_RETHROW_REPRINT (e);
-  }
-    
+  /* Process any remaining command line arguments (not options). */
+  if ((argc - optind) != 1 )
+    {
+      print_help (progname);
+      exit (EXIT_FAILURE);
+    }
+
+  OptionData_set_fname_in (od, argv[optind]);
+
+  
+  if (!o_flag)
+    OptionData_determine_fname_out (od, argv[optind]);
+  
+ 
   return;
 }
 
