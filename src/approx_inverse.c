@@ -1,5 +1,5 @@
 /*
- * ai_single_axis.c -- approximate inverse for single-axis ET data
+ * approx_inverse.c -- approximate inverse for ET data
  * 
  * Copyright 2013 Holger Kohr <kohr@num.uni-sb.de>
  * 
