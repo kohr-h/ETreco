@@ -151,14 +151,8 @@ RecParams_assign_from_OptionData (RecParams *rec_p, const OptionData *od)
   /* Regularization */
 
   /* TODO: implement anisotropic mollifier (3 gamma's) */
-  /* TODO: which scaling of gamma to use? */
-  if (use_gamma_flag)
-    {
-      vec3_set_all (rec_p->gamma, od->gamma * ONE_MICROMETER);
-      rec_p->moll_ft = moll_types[od->moll_type];
-    }
-  else
-    rec_p->moll_ft = moll_types[DELTA];
+  vec3_set_all (rec_p->gamma, od->gamma * ONE_MICROMETER);
+  rec_p->moll_ft = moll_types[od->moll_type];
 
 
   /* Geometry part */
@@ -294,11 +288,6 @@ RecParams_assign_from_OptionData (RecParams *rec_p, const OptionData *od)
 
   /* Regularization part 2 */
 
-  /* TODO: implement anisotropic mollifier (3 gamma's) */
-  /* TODO: which scaling of gamma is best? */
-  if (use_gamma_flag)
-    vec3_set_all (rec_p->gamma, od->gamma * ONE_MICROMETER);
-  
   if (use_ctf_flag && truncate_ctf_flag)
     rec_p->ctf_trunc = od->ctf_trunc;
     
