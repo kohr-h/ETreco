@@ -1,1 +1,5 @@
-ETreco was written by Holger Kohr <kohr@num.uni-sb.de>
+ETreco was written by H. Kohr <http://kohr-h.github.io/ETreco/>
+
+iniParser was written by N. Devillard <http://ndevilla.free.fr/iniparser/>
+
+CException was written by M. VanderVoord <http://throwtheswitch.org/white-papers/cexception-intro.html>
