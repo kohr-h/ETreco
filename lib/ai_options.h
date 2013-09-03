@@ -61,6 +61,11 @@ typedef struct {
   /* Tilt scheme */
   tiltscheme tilting_scheme;
   
+  /* Additional files for double axis */
+  char *fname_in_axis2;
+  char *fname_reco_params_axis2;
+  char *fname_tiltangles_axis2;
+  
   /* Regularization parameters */
   float gamma;
   float ctf_trunc;

@@ -87,36 +87,35 @@ OptionData *
 new_OptionData (void)
 {
   CEXCEPTION_T e = EXC_NONE;
-  OptionData *od;
+  OptionData *od = NULL;
   
-  Try
-  {
-    od = (OptionData *) ali16_malloc (sizeof (OptionData));
-    
-    od->fname_in          = NULL;
-    od->fname_out         = NULL;
-    od->fname_reco_params = NULL;
-    od->fname_tiltangles  = NULL;
-    od->tilting_scheme    = SINGLE_AXIS;
-    od->gamma             = 0.0;
-    od->ctf_trunc         = 0.0;
-    od->moll_type         = DELTA;
-    od->num_images        = 0;
-    od->start_index       = 0;
-    od->lambda_pow        = 0.0;
-    od->bg_patch_ix0[2]   = -1;
-    od->bg_patch_shape[0] = BG_PATCH_SIZE;
-    od->bg_patch_shape[1] = BG_PATCH_SIZE;
-    od->bg_patch_shape[2] = 1;
-    
-    return od;
-  }
+  Try { od = (OptionData *) ali16_malloc (sizeof (OptionData)); }
   Catch (e)
   {
     EXC_RETHROW_REPRINT (e);
+    return NULL;
   }
   
-  return NULL;
+  od->fname_in                = NULL;
+  od->fname_out               = NULL;
+  od->fname_reco_params       = NULL;
+  od->fname_tiltangles        = NULL;
+  od->tilting_scheme          = SINGLE_AXIS;
+  od->fname_in_axis2          = NULL;
+  od->fname_reco_params_axis2 = NULL;
+  od->fname_tiltangles_axis2  = NULL;
+  od->gamma                   = 0.0;
+  od->ctf_trunc               = 0.0;
+  od->moll_type               = DELTA;
+  od->num_images              = 0;
+  od->start_index             = 0;
+  od->lambda_pow              = 0.0;
+  od->bg_patch_ix0[2]         = -1;
+  od->bg_patch_shape[0]       = BG_PATCH_SIZE;
+  od->bg_patch_shape[1]       = BG_PATCH_SIZE;
+  od->bg_patch_shape[2]       = 1;
+  
+  return od;
 }
 
 /*-------------------------------------------------------------------------------------------------*/
@@ -134,6 +133,9 @@ OptionData_free (OptionData **pod)
   free ((*pod)->fname_out);
   free ((*pod)->fname_reco_params);
   free ((*pod)->fname_tiltangles);
+  free ((*pod)->fname_in_axis2);
+  free ((*pod)->fname_reco_params_axis2);
+  free ((*pod)->fname_tiltangles_axis2);
 
   free (*pod);
   
@@ -155,33 +157,40 @@ OptionData_print (OptionData *od)
   puts ("Options from command line:");
   puts ("==========================\n");
 
-  printf ("Input file       : %s\n", od->fname_in);
-  printf ("Output file      : %s\n", od->fname_out);
-  printf ("Reco params file : %s\n", od->fname_reco_params);
-  printf ("Tiltangles file  : %s\n", od->fname_tiltangles);
-  
-  printf ("Tilting scheme   : ");
+  printf ("Input file            : %s\n", od->fname_in);
+  printf ("Output file           : %s\n", od->fname_out);
+  printf ("Reco parameter file   : %s\n", od->fname_reco_params);
+  printf ("Tiltangles file       : %s\n", od->fname_tiltangles);
+
+  printf ("Tilting scheme        : ");
   if      (od->tilting_scheme == SINGLE_AXIS)  printf ("single axis\n");
   else if (od->tilting_scheme == DOUBLE_AXIS)  printf ("double axis\n");
   else if (od->tilting_scheme == CONICAL)      printf ("conical\n");
 
-  printf ("gamma            : %e\n", od->gamma);
+  if (od->tilting_scheme == DOUBLE_AXIS)
+    {
+      printf ("Input file 2          : %s\n", od->fname_in_axis2);
+      printf ("Reco parameter file 2 : %s\n", od->fname_reco_params_axis2);
+      printf ("Tiltangles file 2     : %s\n", od->fname_tiltangles_axis2);
+    }
+  
+  printf ("gamma                 : %e\n", od->gamma);
 
-  printf ("1/CTF cutoff     : ");
+  printf ("1/CTF cutoff          : ");
   if (truncate_ctf_flag)
     printf ("%e\n", od->ctf_trunc);
   else
     printf ("(ignored)\n");
     
-  printf ("Mollifier        : %s\n", mollifiers[od->moll_type]); 
+  printf ("Mollifier             : %s\n", mollifiers[od->moll_type]); 
 
-  printf ("Normalization    : " );
+  printf ("Normalization         : " );
   if (normalize_flag)
     printf ("yes\n");
   else
     printf ("no\n");
   
-  printf ("Background patch : ");
+  printf ("Background patch      : ");
   if (!normalize_flag)
     printf ("(unused, no normalization)\n");
 
@@ -189,21 +198,21 @@ OptionData_print (OptionData *od)
     printf ("size %dx%d at (%d,%d)\n", od->bg_patch_shape[0], od->bg_patch_shape[1], 
     od->bg_patch_ix0[0], od->bg_patch_ix0[1]);
 
-  printf ("Number of images : ");
+  printf ("Number of images      : ");
   if (od->num_images == -1)
     printf ("(determined from data)\n");
   else
     printf ("%d\n", od->num_images);
 
-  printf ("Start index      : %d\n", od->start_index);
+  printf ("Start index           : %d\n", od->start_index);
 
-  printf ("Lambda           : ");
+  printf ("Lambda                : ");
   if (use_lambda_flag)
     printf ("Lambda^a with a=%f\n", od->lambda_pow);
   else  
     printf ("(not used)\n");
   
-  printf ("FFT zero-padding : %d\n", fft_padding);
+  printf ("FFT zero-padding      : %d\n", fft_padding);
   
   return;
 }
@@ -218,8 +227,19 @@ print_help (char const *progname)
   // TODO: write double axis and conical tilt help
   
   printf ("Usage: %s [options] tiltseries_file\n", progname);
+  puts ("");
+  puts ("Required parameters:");
+  puts ("");
+  puts ("  -t file, --tiltangles-file=file");
+  puts ("                 read tilt angles from FILE.");
+  puts ("  -g value, --gamma=value");
+  puts ("                 set regularization parameter gamma to VALUE; magnitude");
+  puts ("                 should be in the order of detector pixel size [microns].");
+  puts ("  -p file, --reco-params-file=file");
+  puts ("                 read CTF and reconstruction parameters from FILE (INI-style).");
+  puts ("");
   puts ("Options:");
-  
+  puts ("");
   puts ("  -T scheme, --tilting-scheme=scheme");
   puts ("                 interpret data according to SCHEME. Possible values are:");
   printf ("               ");
@@ -227,15 +247,12 @@ print_help (char const *progname)
     printf ("  %s", tilting_schemes[iter_t]);
   printf ("\n");
   puts ("                 Default: single-axis");
-  puts ("  -t file, --tiltangles-file=file");
-  puts ("                 read tilt angles from FILE. REQUIRED OPTION.");
-  puts ("  -g value, --gamma=value");
-  puts ("                 set regularization parameter gamma to VALUE; magnitude");
-  puts ("                 should be in the order of detector pixel size [microns].");
-  puts ("                 REQUIRED OPTION.");
-  puts ("  -p file, --reco-params-file=file");
-  puts ("                 read CTF and reconstruction parameters from FILE (INI-style).");
-  puts ("                 REQUIRED OPTION.");
+  puts ("                 NOTE: if double-axis is selected, the programm automatically");
+  puts ("                 looks for tiltseries, reco params and tiltangles files ");
+  puts ("                 corresponding to axis 2. The naming scheme is");
+  puts ("                 file[a/A/0/1/(none)].extension -> file[b/B/1/2/2].extension.");
+  puts ("                 Example: par1.cfg -> par2.cfg, seriesA.mrc -> seriesB.mrc,");
+  puts ("                          tiltangles.txt -> tiltangles2.txt");
   puts ("  -o file, --output-file=file");
   puts ("                 write reconstruction to FILE; if no parameter is given, the");
   puts ("                 output file is determined from tiltseries_file by appending");
@@ -331,15 +348,18 @@ fname_rsplit_at_dot (char const *fname, char **pbase_str, char **pext_str)
   Try
   {
     *pbase_str = (char *) ali16_malloc (base_len + 1);
-    strncpy (*pbase_str, fname, base_len);  (*pbase_str)[base_len] = '\0';
-    
     *pext_str = (char *) ali16_malloc (ext_len + 1);
-    strncpy (*pext_str, pext, ext_len);  (*pext_str)[ext_len] = '\0';
   }
   Catch (e)
   {
     EXC_RETHROW_REPRINT (e);
+    free (*pbase_str);
+    free (*pext_str);
+    return;
   }
+
+  strncpy (*pbase_str, fname, base_len);  (*pbase_str)[base_len] = '\0';
+  strncpy (*pext_str, pext, ext_len);  (*pext_str)[ext_len] = '\0';
 
   return;
 }
@@ -484,6 +504,92 @@ OptionData_set_fname_tiltangles (OptionData *od, char const *fname)
   {
     EXC_RETHROW_REPRINT (e);
   }
+  
+  return;
+}
+
+/*-------------------------------------------------------------------------------------------------*/
+
+void
+assemble_fname_axis2 (char **pfname_axis2, char const *fname_axis1)
+{
+  CEXCEPTION_T e = EXC_NONE;
+  
+  int len;
+  char indicator, *base, *ext;
+
+  Try { fname_rsplit_at_dot (fname_axis1, &base, &ext); }
+  Catch (e) { EXC_RETHROW_REPRINT (e); return; }
+  
+  len = strlen (base);
+  indicator = base[len - 1];
+  
+  Try { *pfname_axis2 = (char *) ali16_malloc (strlen (fname_axis1) + 2); }
+  Catch (e) 
+  {
+    EXC_RETHROW_REPRINT (e);
+    free (base);
+    free (ext);
+    return;
+  }
+  
+  strcpy (*pfname_axis2, base);
+  
+  switch (indicator)
+    {
+      case '0': (*pfname_axis2)[len - 1] = '1'; break;
+      case '1': (*pfname_axis2)[len - 1] = '2'; break;
+      case 'a': (*pfname_axis2)[len - 1] = 'b'; break;
+      case 'A': (*pfname_axis2)[len - 1] = 'B'; break;
+      
+      default: 
+        (*pfname_axis2)[len]      = '2';
+        (*pfname_axis2)[len + 1]  = '\0';
+    }
+    
+  strcat (*pfname_axis2, ext);
+  
+  free (base);
+  free (ext);
+  
+  return;
+}
+
+/*-------------------------------------------------------------------------------------------------*/
+
+void
+OptionData_assemble_fname_in_axis2 (OptionData *od)
+{
+  CEXCEPTION_T e = EXC_NONE;
+  
+  Try { assemble_fname_axis2 (&od->fname_in_axis2, od->fname_in); }
+  Catch (e) { EXC_RETHROW_REPRINT (e); }
+  
+  return;
+}
+
+/*-------------------------------------------------------------------------------------------------*/
+
+void
+OptionData_assemble_fname_reco_params_axis2 (OptionData *od)
+{
+  CEXCEPTION_T e = EXC_NONE;
+  
+  Try { assemble_fname_axis2 (&od->fname_reco_params_axis2, od->fname_reco_params); }
+  Catch (e) { EXC_RETHROW_REPRINT (e); }
+  
+  return;
+}
+
+/*-------------------------------------------------------------------------------------------------*/
+
+void
+OptionData_assemble_fname_tiltangles_axis2 (OptionData *od)
+{
+  CEXCEPTION_T e = EXC_NONE;
+  
+  Try { assemble_fname_axis2 (&od->fname_tiltangles_axis2, od->fname_tiltangles); }
+  Catch (e) { EXC_RETHROW_REPRINT (e); }
   
   return;
 }
@@ -635,6 +741,8 @@ OptionData_check_single_axis (OptionData *od)
 void
 OptionData_assign_from_args (OptionData *od, int argc, char **argv)
 {
+  CEXCEPTION_T e = EXC_NULL;
+
   CAPTURE_NULL (od);
 
   /* Aux variables */
@@ -877,7 +985,7 @@ OptionData_assign_from_args (OptionData *od, int argc, char **argv)
  
         case '?':
           /* getopt_long printed an error message. */
-          fprintf(stderr, "`%s --help' provides further information.\n", progname);
+          fprintf(stderr, "`%s --help' provides further information.\n\n", progname);
           exit (EXIT_FAILURE);
 
         case 'h':
@@ -892,22 +1000,22 @@ OptionData_assign_from_args (OptionData *od, int argc, char **argv)
   
   if (!t_flag)
     {
-      fprintf (stderr, "No tiltangles file given.\n\n" 
-        "`%s --help' provides further information.", progname);
+      fprintf (stderr, "Error: `--tiltangles-file` option missing.\n\n" 
+        "`%s --help' provides further information.\n\n", progname);
       exit (EXIT_FAILURE);
     }
 
   if (!g_flag)
     {
-      fprintf (stderr, "No parameter gamma given.\n\n" 
-        "`%s --help' provides further information.", progname);
+      fprintf (stderr, "Error: `--gamma` option missing.\n\n" 
+        "`%s --help' provides further information.\n\n", progname);
       exit (EXIT_FAILURE);
     }
 
   if (!p_flag)
     {
-      fprintf (stderr, "No reco parameters file given.\n\n" 
-        "`%s --help' provides further information.", progname);
+      fprintf (stderr, "Error: `--reco-params-file` option missing.\n\n" 
+        "`%s --help' provides further information.\n\n", progname);
       exit (EXIT_FAILURE);
     }
 
@@ -915,7 +1023,7 @@ OptionData_assign_from_args (OptionData *od, int argc, char **argv)
     {
       fprintf (stderr, "The `--backgound' option can only be used if the "
         "`-N' (`--normalize') option is enabled.\n\n" 
-        "`%s --help' provides further information.", progname);
+        "`%s --help' provides further information.\n\n", progname);
       exit (EXIT_FAILURE);
     }
 
@@ -933,7 +1041,23 @@ OptionData_assign_from_args (OptionData *od, int argc, char **argv)
   if (!o_flag)
     OptionData_determine_fname_out (od, argv[optind]);
   
- 
+  
+  /* In case of double axis tilt, set the names for the 2nd axis files */
+  if (od->tilting_scheme == DOUBLE_AXIS)
+    {
+      Try
+      {
+        OptionData_assemble_fname_in_axis2 (od);
+        OptionData_assemble_fname_reco_params_axis2 (od);
+        OptionData_assemble_fname_tiltangles_axis2 (od);
+      }
+      Catch (e)
+      {
+        EXC_RETHROW_REPRINT (e);
+        return;
+      }
+    }
+  
   return;
 }
 

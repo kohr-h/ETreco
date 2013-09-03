@@ -13,6 +13,8 @@ Urgent goals are (from most to least urgent, but still urgent):
 
 - Re-organize the code such that it is better re-usable for further programs (e.g. options)
 
+- Fix exception handling: move code depending on success out of Try blocks
+
 - Implement varying defocus with strip-wise deconvolution
 
 - Use OpenMP to speed up further (first test if CException is thread-safe!)
