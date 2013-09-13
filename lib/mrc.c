@@ -299,7 +299,7 @@ write_zero_bytes (size_t num, FILE *fp, size_t pos)
 /*-------------------------------------------------------------------------------------------------*/
 
 void
-gfunc3_init_mrc (gfunc3 *gf, char const *mrc_fname, FILE **pfp_out, int *pn_img_out, mrc_ftype type)
+gfunc3_init_mrc (gfunc3 *gf, char const *mrc_fname, FILE **pfp_in, int *pn_img, mrc_ftype type)
 {
   CEXCEPTION_T e = EXC_NONE;
   
@@ -386,8 +386,8 @@ gfunc3_init_mrc (gfunc3 *gf, char const *mrc_fname, FILE **pfp_out, int *pn_img_
   
     if (type == STACK)
       {
-        if (pn_img_out != NULL)
-          *pn_img_out = gf->shape[2];
+        if (pn_img != NULL)
+          *pn_img = gf->shape[2];
           
         gf->shape[2] = 1;
       }
@@ -452,8 +452,8 @@ gfunc3_init_mrc (gfunc3 *gf, char const *mrc_fname, FILE **pfp_out, int *pn_img_
           mode, mrc_fname);
       }
     
-    if (pfp_out != NULL)
-      *pfp_out = fp;
+    if (pfp_in != NULL)
+      *pfp_in = fp;
     else
       fclose (fp);
   

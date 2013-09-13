@@ -35,7 +35,7 @@ typedef enum { VOLUME, STACK } mrc_ftype;
 /*-------------------------------------------------------------------------------------------------*/
 
 void
-gfunc3_init_mrc (gfunc3 *gf, char const *mrc_fname, FILE **pfp_out, int *pn_img_out, mrc_ftype type);
+gfunc3_init_mrc (gfunc3 *gf, char const *mrc_fname, FILE **pfp_in, int *pn_img, mrc_ftype type);
 
 void
 gfunc3_read_from_stack (gfunc3 *gf, FILE *fp, int stackpos);
