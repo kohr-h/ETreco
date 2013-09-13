@@ -39,6 +39,7 @@ main (int argc, char **argv)
 {
   CEXCEPTION_T e = EXC_NONE;
   char *fname1, *fname2, *fname_out;
+  char const *progname = base_name (argv[0]);
   float lambda;
   float min1, min2, max1, max2;
   
@@ -48,8 +49,8 @@ main (int argc, char **argv)
   {
     if (argc != 5)
       {
-        print_version_etc (base_name (argv[0]));
-        fprintf (stderr, "\nUsage: %s <file1> <file2> <lambda> <outfile>\n\n", base_name (argv[0]));
+        print_version_etc (progname);
+        fprintf (stderr, "\nUsage: %s <file1> <file2> <lambda> <outfile>\n\n", progname);
         return 0;
       }
     
