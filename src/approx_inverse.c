@@ -61,8 +61,9 @@ main (int argc, char *argv[])
     OptionData_assign_from_args (opt_data, argc, argv);
     OptionData_print (opt_data);
   
-    OptionData_free (&opt_data);
-    return 0;
+    // /* For testing double-axis */
+    // OptionData_free (&opt_data);
+    // return 0;
     
     /* Initialize reconstruction parameters */
     rec_p = new_RecParams ();

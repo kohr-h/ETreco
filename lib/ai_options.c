@@ -1045,6 +1045,9 @@ OptionData_assign_from_args (OptionData *od, int argc, char **argv)
   /* In case of double axis tilt, set the names for the 2nd axis files */
   if (od->tilting_scheme == DOUBLE_AXIS)
     {
+      /* For the moment, exit here - no support yet */
+      fprintf (stderr, "Double axis not supported yet - sorry.\n\n");
+      exit (EXIT_SUCCESS);
       Try
       {
         OptionData_assemble_fname_in_axis2 (od);
