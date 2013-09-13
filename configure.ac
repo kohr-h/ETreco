@@ -1,5 +1,5 @@
 # Preliminaries
-AC_INIT([ETreco], [20130903], [kohr(at)num.uni-sb.de], [], [https://github.com/kohr-h/ETreco])
+AC_INIT([ETreco], [20130913], [kohr(at)num.uni-sb.de], [], [https://github.com/kohr-h/ETreco])
 AC_CONFIG_SRCDIR([src/approx_inverse.c])
 AC_CONFIG_AUX_DIR([build-aux])
 AM_INIT_AUTOMAKE([-Wall -Werror])
