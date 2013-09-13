@@ -13,9 +13,11 @@ Urgent goals are (from most to least urgent, but still urgent):
 
 - Re-organize the code such that it is better re-usable for further programs (e.g. options)
 
+- Introduce `--ignore-origin' option to set origin to 0 irrespective of the header
+
 - Fix exception handling: move code depending on success out of Try blocks
 
-- Implement varying defocus with strip-wise deconvolution
+- Implement varying defocus with strip-wise deconvolution (maybe sum of sinc*kernel's??)
 
 - Use OpenMP to speed up further (first test if CException is thread-safe!)
 
