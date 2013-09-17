@@ -61,7 +61,7 @@ main (int argc, char *argv[])
     OptionData_assign_from_args (opt_data, argc, argv);
     OptionData_print (opt_data);
   
-    // /* For testing double-axis */
+    // /* To test double-axis */
     // OptionData_free (&opt_data);
     // return 0;
     
@@ -69,21 +69,15 @@ main (int argc, char *argv[])
     rec_p = new_RecParams ();
     RecParams_assign_from_OptionData (rec_p, opt_data);
     RecParams_print (rec_p);
-  
+
     proj_image = new_gfunc3 ();
     gfunc3_init_mrc (proj_image, opt_data->fname_in, &fp, &nz, STACK);
   
-    if (rec_p->detector_px_size[0] != 0.0)  /* Detector pixel size is set in config file */
-      gfunc3_set_csize (proj_image, rec_p->detector_px_size);
-    
     if (opt_data->num_images == 0)  /* Not specified by option, so taken from data */
       opt_data->num_images = nz - opt_data->start_index;
   
     last_index = opt_data->start_index + opt_data->num_images - 1;
   
-    if (verbosity_level >= VERB_LEVEL_NORMAL)
-      gfunc3_print_grid (proj_image, "Data grid");
-    
     /* Initialize tilt angles */
     tilts = new_tiltangles ();
     tiltangles_assign_from_file (tilts, opt_data->fname_tiltangles);
@@ -95,6 +89,7 @@ main (int argc, char *argv[])
     volume = new_gfunc3 ();
     gfunc3_init (volume, NULL, rec_p->vol_csize, rec_p->vol_shape, REAL);
     gfunc3_scale_grid (volume, rec_p->magnification);
+    RecParams_apply_to_volume (rec_p, volume);
     if (verbosity_level >= VERB_LEVEL_NORMAL)
       gfunc3_print_grid (volume, "volume");
   
@@ -108,16 +103,15 @@ main (int argc, char *argv[])
     
     for (i = opt_data->start_index; i <= last_index; i++)
       {
-        printf ("Image %3d of %3d\n", i - opt_data->start_index + 1, opt_data->num_images);
-        
-        /* Initialize and rotate image to align tilt axis with x axis */
+        /* Initialize image and normalize if desired */
         gfunc3_read_from_stack (proj_image, fp, i);
-        image_rotation (proj_image, -rec_p->tilt_axis);
-        
-        if (DEBUGGING)
-          temp_mrc_out (proj_image, "rotated_", i + 1);
-        
-        /* Normalization of the current image */
+        RecParams_apply_to_proj_image (rec_p, proj_image);
+
+        if ((verbosity_level >= VERB_LEVEL_NORMAL) && i == opt_data->start_index)
+          gfunc3_print_grid (proj_image, "Data grid");
+
+        printf ("Image %3d of %3d\n", i - opt_data->start_index + 1, opt_data->num_images);
+       
         if (normalize_flag)
           {
             histogram_normalization (proj_image, opt_data->bg_patch_ix0, opt_data->bg_patch_shape);
@@ -126,10 +120,16 @@ main (int argc, char *argv[])
             // probability_normalization (proj_image);
             // gfunc3_to_mrc (proj_image, "normalized2_.mrc");
           }
-        
+
         if (invert_contrast_flag)
           gfunc3_scale (proj_image, -1.0);
         
+        /* Rotate image to align tilt axis with x axis */
+        image_rotation (proj_image, -rec_p->tilt_axis);
+
+        if (DEBUGGING)
+          temp_mrc_out (proj_image, "rotated_", i + 1);
+
         /* Fourier transform the image */
         fft_forward (proj_image);
         if (verbosity_level >= VERB_LEVEL_VERBOSE)
@@ -143,9 +143,7 @@ main (int argc, char *argv[])
             float nul[2] = {0.0f, 0.0f};
             gfunc3_init_from_foreign_grid (rk, proj_image);
             gfunc3_set_all (rk, nul);
-            if (DEBUGGING)
-              temp_mrc_out (rk, "ft_rk_zero_", i + 1);
-            
+
             vfunc_init_ft_rk_single_axis_x (&vf_rk, rec_p);
             gfunc3_assign_fvals_from_vfunc (rk, &vf_rk);
   
@@ -161,9 +159,11 @@ main (int argc, char *argv[])
         /* Initialize reciprocal detector MTF (only once) */
         if ((i == opt_data->start_index) && use_mtf_flag)
           {
+            float nul[2] = {0.0f, 0.0f};
             gfunc3_init_from_foreign_grid (recip_mtf, proj_image);
             gfunc3_set_csize (recip_mtf, ones);
             gfunc3_compute_xmin_xmax (recip_mtf);
+            gfunc3_set_all (recip_mtf, nul);
   
             vfunc_init_detector_recip_mtf (&vf_recip_mtf, rec_p);
             gfunc3_assign_fvals_from_vfunc (recip_mtf, &vf_recip_mtf);
@@ -175,8 +175,11 @@ main (int argc, char *argv[])
   
         /* Apply reciprocal MTF */
         if (use_mtf_flag)
-          gfunc3_mul (proj_image, recip_mtf);
-  
+          {
+            gfunc3_mul (proj_image, recip_mtf);
+            if (DEBUGGING)
+              temp_mrc_out (proj_image, "multiplied_mtf_", i + 1);
+          }  
   
         /* Apply lambda if desired */
         if (use_lambda_flag)
@@ -199,6 +202,7 @@ main (int argc, char *argv[])
           printf ("theta = %f degrees\n", angles[1]);
         
         xray_backprojection_sax (proj_image, angles[1], volume);
+        // xray_backprojection (proj_image, angles, volume);
       }
   
     // gfunc3_make_nonneg (volume);
