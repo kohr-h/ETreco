@@ -1,3 +1,16 @@
+2013-09-17  Holger Kohr  <kohr@num.uni-sb.de>
+
+ * Rename ai_single_axis.c -> approx_inverse.c (shall include other tilting
+   schemes later)
+   
+ * operators.c: image_rotation() and xray_backprojection_sax() now account for
+   shifts (volume z shift is still ignored, though)
+   
+ * Bugfix: backprojection does no longer produce zero if volume projection 
+   exceeds image 
+
+
+
 2013-08-29  Holger Kohr  <kohr@num.uni-sb.de>
 
  * Split libetreco.a into parts for better testability
