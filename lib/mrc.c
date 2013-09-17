@@ -399,12 +399,12 @@ gfunc3_init_mrc (gfunc3 *gf, char const *mrc_fname, FILE **pfp_in, int *pn_img, 
     read_float     (&amax,        fp, 80);  // Bytes   80 -- 84: amax
     read_float     (&amean,       fp, 84);  // Bytes   84 -- 88: amean
     
-    read_float_arr (gf->x0, 3,    fp, 196); // Bytes 196 -- 208: image origin (pixels)
-    vec3_mul (gf->x0, gf->csize);
-    
+
     /* TODO: find out how origin is really handled (if meaningful at all) */
     /* In the meantime, we take zero 
      */
+    read_float_arr (gf->x0, 3,    fp, 196); // Bytes 196 -- 208: image origin (pixels)
+    vec3_mul (gf->x0, gf->csize);
     vec3_set_all (gf->x0, 0.0);
   
     gf->ntotal = idx3_product (gf->shape);
@@ -508,6 +508,14 @@ gfunc3_read_from_stack (gfunc3 *gf, FILE *fp, int stackpos)
   
   Try
   {
+    /* Re-read shape and origin and re-compute min and max */
+    read_int32_arr (gf->shape, 3, fp,  0);  // Bytes    0 -- 12: shape
+    gf->shape[2] = 1;
+    gf->ntotal = idx3_product (gf->shape);
+    // read_float_arr (gf->x0, 3,    fp, 196); // Bytes 196 -- 208: image origin (pixels)
+    // vec3_mul (gf->x0, gf->csize);
+    gfunc3_compute_xmin_xmax (gf);
+    
     read_int32 (&nz  , fp,  8);
     read_int32 (&mode, fp, 12);
     read_int32 (&next, fp, 92);
