@@ -3,15 +3,18 @@ TODO file for ETreco.
 
 Urgent goals are (from most to least urgent, but still urgent):
 
-- Fix bad scaling when volume is larger than projection 
+- Introduce option to automatically center the volume above the data
 
-- Implement the shifted backprojection
+- Find out how to account for z shift
+
+- Implement shift for general backprojection
 
 - Introduce tests to check if parameter values make sense
 
 - Implement anisotropic mollifier by z shrink factor and corresponding flag
 
 - Re-organize the code such that it is better re-usable for further programs (e.g. options)
+  Think about per-module options!
 
 - Introduce `--ignore-origin' option to set origin to 0 irrespective of the header
 
