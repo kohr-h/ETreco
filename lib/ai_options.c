@@ -847,7 +847,7 @@ OptionData_assign_from_args (OptionData *od, int argc, char **argv)
           break;
  
         case 'I':
-          /* invert_contrast_flag = 1; */
+          invert_contrast_flag = 1;  // Long option already sets the flag, but short one doesn't
           break;
 
         case 'L':
