@@ -118,7 +118,7 @@ xray_backprojection_sax (gfunc3 const *proj_img, float const theta_deg, gfunc3 *
 {
   CEXCEPTION_T e = EXC_NONE;
   int ix, iy, iz;
-  size_t idx = 0, fiy, fi;
+  size_t idx = 0l, fiy, fi;
   float Pxmin_y, Pdy, Pdz, Pvy, Pvy0;
   float cos_theta, sin_theta;
   float x, *wlx, *wux, idxf_x, wly, wuy, idxf_y;
@@ -135,7 +135,8 @@ xray_backprojection_sax (gfunc3 const *proj_img, float const theta_deg, gfunc3 *
   cos_theta = cosf (theta_deg * ONE_DEGREE);
   sin_theta = sinf (theta_deg * ONE_DEGREE);
 
-  Pxmin_y = cos_theta * volume->xmin[1] + sin_theta * volume->xmin[2];
+  Pxmin_y = volume->x0[1] + cos_theta * (volume->xmin[1]- volume->x0[1]) 
+    + sin_theta * (volume->xmin[2] - volume->x0[2]);
 
   Pdy = cos_theta * volume->csize[1];
   Pdz = sin_theta * volume->csize[2];
@@ -153,6 +154,7 @@ xray_backprojection_sax (gfunc3 const *proj_img, float const theta_deg, gfunc3 *
         if ((x <= proj_img->xmin[0]) || (x >= proj_img->xmax[0]))
           {
             idx_x[ix] = -1;
+            x += volume->csize[0];
             continue;
           }
           
@@ -173,7 +175,11 @@ xray_backprojection_sax (gfunc3 const *proj_img, float const theta_deg, gfunc3 *
         for (iy = 0; iy < volume->shape[1]; iy++)
           {
             if ((Pvy <= proj_img->xmin[1]) || (Pvy >= proj_img->xmax[1]))
-              continue;
+              {
+                Pvy += Pdy;
+                idx += volume->shape[0];
+                continue;
+              }
             
             idxf_y = (Pvy - proj_img->xmin[1]) / proj_img->csize[1];
             idx_y = (int) idxf_y;
@@ -267,12 +273,14 @@ image_rotation (gfunc3 *proj_img, float const psi_deg)
 {
   CEXCEPTION_T e = EXC_NONE;
   int ix, iy;
-  size_t idx = 0;
+  int Nx_new, Ny_new;
+  size_t idx = 0, ntotal_new;
   float cos_psi, sin_psi;
   float dx_rot[2], dy_rot[2];
+  float xlen, ylen, xlen_new, ylen_new, xmin_new, ymin_new;
   float vx0[2];
-  vec3 v = {0.0, 0.0, 0.0};
-  float *fvals_rot;
+  vec3 v = {0.0, 0.0, 0.0}, img_x0;
+  float *fvals_rot = NULL;
   
   CAPTURE_NULL (proj_img);
   GFUNC_CHECK_INIT_STATUS (proj_img);
@@ -290,45 +298,65 @@ image_rotation (gfunc3 *proj_img, float const psi_deg)
    */
   cos_psi = cosf (psi_deg * ONE_DEGREE);
   sin_psi = sinf (psi_deg * ONE_DEGREE);
+
+  /* Shift image to origin for intrinsic rotation; origin is stored for backup */
+  vec3_copy (img_x0, proj_img->x0);
+  vec3_set_all (proj_img->x0, 0.0);
+  gfunc3_compute_xmin_xmax (proj_img);
+  
+  /* Enlarge the grid such that all rotated points are inside */
+  xlen = proj_img->xmax[0] - proj_img->xmin[0];
+  ylen = proj_img->xmax[1] - proj_img->xmin[1];
+
+  xlen_new = xlen * fabsf (cos_psi) + ylen * fabsf (sin_psi);
+  ylen_new = xlen * fabsf (sin_psi) + ylen * fabsf (cos_psi);
+  Nx_new = (int) (ceilf (xlen_new / proj_img->csize[0]));
+  Ny_new = (int) (ceilf (ylen_new / proj_img->csize[1]));
+  ntotal_new = (size_t) Nx_new * Ny_new;
+  
+  xmin_new = proj_img->x0[0] -  Nx_new / 2 * proj_img->csize[0];
+  ymin_new = proj_img->x0[1] -  Ny_new / 2 * proj_img->csize[1];
+  
+  v[0] = cos_psi * xmin_new - sin_psi * ymin_new;
+  v[1] = sin_psi * xmin_new + cos_psi * ymin_new;
   
   /* Rotated increments */
   dx_rot[0] =  cos_psi * proj_img->csize[0];
   dx_rot[1] =  sin_psi * proj_img->csize[0];
   dy_rot[0] = -sin_psi * proj_img->csize[1];
   dy_rot[1] =  cos_psi * proj_img->csize[1];
-  
-  /* Rotated xmin = starting point */
-  v[0] = cos_psi * proj_img->xmin[0] - sin_psi * proj_img->xmin[1];
-  v[1] = sin_psi * proj_img->xmin[0] + cos_psi * proj_img->xmin[1];
-  
-  Try
-  {
-    fvals_rot = (float *) ali16_malloc (proj_img->ntotal * sizeof (float));
 
-    /* TODO: inline the interpolation */
-    for (iy = 0; iy < proj_img->shape[1]; iy++)
-      {
-        vx0[0] = v[0];
-        vx0[1] = v[1];
-        
-        for (ix = 0; ix < proj_img->shape[0]; ix++, idx++)
-          {
-            fvals_rot[idx] = gfunc3_interp_linear_2d (proj_img, v);
-            v[0] += dx_rot[0];
-            v[1] += dx_rot[1];
-          }
-          
-        v[0] = vx0[0] + dy_rot[0];
-        v[1] = vx0[1] + dy_rot[1];
-      }
+  /* Initialize new array */
+  Try { fvals_rot = (float *) ali16_malloc (ntotal_new * sizeof (float)); }
+  Catch (e) { EXC_RETHROW_REPRINT (e); return; }
+  for (idx = 0; idx < ntotal_new; idx++) fvals_rot[idx] = 0.0;
+
+
+  /* TODO: inline the interpolation */
+  for (iy = 0, idx = 0; iy < Ny_new; iy++)
+    {
+      vx0[0] = v[0];
+      vx0[1] = v[1];
       
-    free (proj_img->fvals);
-    proj_img->fvals = fvals_rot;
-  }
-  Catch (e)
-  {
-    EXC_RETHROW_REPRINT (e);
-  }
+      for (ix = 0; ix < Nx_new; ix++, idx++)
+        {
+          fvals_rot[idx] = gfunc3_interp_linear_2d (proj_img, v);
+          v[0] += dx_rot[0];
+          v[1] += dx_rot[1];
+        }
+        
+      v[0] = vx0[0] + dy_rot[0];
+      v[1] = vx0[1] + dy_rot[1];
+    }
+    
+  free (proj_img->fvals);
+  proj_img->fvals     = fvals_rot;
+  proj_img->shape[0]  = Nx_new;
+  proj_img->shape[1]  = Ny_new;
+  proj_img->ntotal    = ntotal_new;
+  vec3_copy (proj_img->x0, img_x0);
+  gfunc3_compute_xmin_xmax (proj_img);
+  
   
   return;
 }
@@ -375,7 +403,7 @@ histogram_normalization (gfunc3 *proj_img, idx3 bg_ix0, idx3 const bg_shp)
     free (idcs);
     
     if (DEBUGGING)
-      temp_mrc_out (bg_patch, "bg_patch", count); 
+      temp_mrc_out (bg_patch, "bg_patch_", count); 
     
     /* Compute statistics */
     bg_avg = gfunc3_mean (bg_patch);
@@ -384,7 +412,7 @@ histogram_normalization (gfunc3 *proj_img, idx3 bg_ix0, idx3 const bg_shp)
     PRINT_VERBOSE ("Background mean    : %f\n", bg_avg);
     PRINT_VERBOSE ("Background variance: %f\n", bg_var);
         
-    /* Normalize proj_img -> (proj_img - bg_avg) / sqrt(bg_var) [*(-1)] */
+    /* Normalize proj_img -> (proj_img - bg_avg) / sqrt(bg_var) */
     gfunc3_add_constant (proj_img, -bg_avg);
     
     gfunc3_scale (proj_img, 1.0 / sqrtf (bg_var));
