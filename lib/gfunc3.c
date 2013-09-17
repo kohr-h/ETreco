@@ -195,6 +195,20 @@ gfunc3_set_csize (gfunc3 *gf, vec3 const cs)
 /*-------------------------------------------------------------------------------------------------*/
 
 void
+gfunc3_set_x0 (gfunc3 *gf, vec3 const x0)
+{
+  CAPTURE_NULL (gf);
+  CAPTURE_NULL (x0);
+
+  vec3_copy (gf->x0, x0);
+  gfunc3_compute_xmin_xmax (gf);
+  
+  return;
+}
+
+/*-------------------------------------------------------------------------------------------------*/
+
+void
 gfunc3_compute_xmin_xmax (gfunc3 *gf)
 {
   CAPTURE_NULL (gf);
