@@ -30,6 +30,8 @@
 
 #include "matvec3.h"
 
+#include "gfunc3.h"
+
 #include "ai_options.h"
 
 // TODO: write descriptions
@@ -45,6 +47,7 @@ typedef struct
   /* Reconstrtuction grid parameters */
   idx3 vol_shape;
   vec3 vol_csize;
+  vec3 vol_shift_px;
   
   /* Necessary CTF parameters */
   float acc_voltage;
@@ -57,6 +60,7 @@ typedef struct
   float cond_ap_angle;
   float defocus_nominal;
   vec3 detector_px_size;
+  vec3 detector_shift_px;
   float mtf_a;
   float mtf_b;
   float mtf_c;
@@ -98,6 +102,13 @@ RecParams_assign_from_OptionData (RecParams *rec_p, const OptionData *od);
 
 void
 RecParams_print (const RecParams *rec_p);
+
+void
+RecParams_apply_to_volume (RecParams const *rec_p, gfunc3 *vol);
+
+void
+RecParams_apply_to_proj_image (RecParams const *rec_p, gfunc3 *proj_img);
+
 
 /*-------------------------------------------------------------------------------------------------*/
 

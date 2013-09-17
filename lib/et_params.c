@@ -38,6 +38,8 @@
 #include "matvec3.h"
 #include "misc.h"
 
+#include "gfunc3.h"
+
 #include "ai_options.h"
 #include "et_params.h"
 #include "et_vfuncs.h"
@@ -58,7 +60,7 @@
 // Parameter for secant method
 #define MAX_STEPS    15
 
-mollifier_ft_function moll_types[] = {ft_delta, ft_gaussian};
+mollifier_ft_function moll_types[] = {NULL, ft_delta, ft_gaussian, NULL};
 
 /*-------------------------------------------------------------------------------------------------*/
 
@@ -71,11 +73,10 @@ RecParams *
 new_RecParams (void)
 {
   CEXCEPTION_T e = EXC_NONE;
-  RecParams *rp;
+  RecParams *rp = NULL;
   
-  Try
-  {
-    rp = (RecParams *) ali16_malloc (sizeof (RecParams));
+  Try { rp = (RecParams *) ali16_malloc (sizeof (RecParams)); }
+  Catch (e) { EXC_RETHROW_REPRINT (e); }
     
     rp->acc_voltage      = 0.0;
     rp->energy_spread    = 0.0;
@@ -102,11 +103,6 @@ new_RecParams (void)
     rp->moll_ft          = NULL;
 
     return rp;
-  }
-  Catch (e)
-  {
-    EXC_RETHROW_REPRINT (e);
-  }
   
   return NULL;
 }
@@ -177,6 +173,11 @@ RecParams_assign_from_OptionData (RecParams *rec_p, const OptionData *od)
 
   vec3_set_all (rec_p->vol_csize, (float) dtmp);
 
+  /* Overrides MRC header */
+  rec_p->vol_shift_px[0] = (float) iniparser_getdouble (dict, "volume:shift_x", FLT_MAX);
+  rec_p->vol_shift_px[1] = (float) iniparser_getdouble (dict, "volume:shift_y", FLT_MAX);
+  rec_p->vol_shift_px[2] = (float) iniparser_getdouble (dict, "volume:shift_z", FLT_MAX);
+
   if ((dtmp = iniparser_getdouble (dict, "geometry:tilt_axis", -1.0)) == -1.0)
     EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Key 'tilt_axis' not found in %s.", od->fname_reco_params);
 
@@ -188,12 +189,14 @@ RecParams_assign_from_OptionData (RecParams *rec_p, const OptionData *od)
 
   rec_p->magnification = (float) dtmp;
   
-
-  /* If not found, this parameter is computed from the MRC header */
+  /* Overrides MRC header */
   dtmp = iniparser_getdouble (dict, "detector:pixel_size", 0.0);
   rec_p->detector_px_size[0] = (float) dtmp * ONE_MICROMETER;
   rec_p->detector_px_size[1] = (float) dtmp * ONE_MICROMETER;
   rec_p->detector_px_size[2] = 1.0;
+
+  rec_p->detector_shift_px[0] = (float) iniparser_getdouble (dict, "detector:shift_x", FLT_MAX);
+  rec_p->detector_shift_px[1] = (float) iniparser_getdouble (dict, "detector:shift_y", FLT_MAX);
 
 
   /* CTF part */
@@ -345,15 +348,29 @@ RecParams_print (RecParams const *rec_p)
   puts ("Geometry part:");
   puts ("------------\n");
   
-  printf ("vol_shape = (%d, %d, %d)\n", rec_p->vol_shape[0], rec_p->vol_shape[1], 
+  printf ("vol_shape    : (%d, %d, %d)\n", rec_p->vol_shape[0], rec_p->vol_shape[1], 
   rec_p->vol_shape[2]);
-  printf ("vol_csize = % 7.2f [nm]\n", rec_p->vol_csize[0]);
-  printf ("\n");
-  printf ("detector_px_size:");
-  if (rec_p->detector_px_size[0] != 0.0)
-    printf ("% 7.2f\n", rec_p->detector_px_size[0]);
-  else
-    printf ("(computed from data)\n");
+  printf ("vol_csize    : % 7.2f [nm]\n", rec_p->vol_csize[0]);
+  printf ("vol_shift_px : (");
+  for (i = 0; i < 3; i++)
+    {
+      if (rec_p->vol_shift_px[i] == FLT_MAX)  printf ("(from data)");
+      else  printf ("%7.2f", rec_p->vol_shift_px[i]);
+      if (i != 2)  printf (", ");
+    }
+  printf (")\n\n");
+
+  printf ("detector_px_size  :");
+  if (rec_p->detector_px_size[0] != 0.0)  printf ("% 7.2f\n", rec_p->detector_px_size[0]);
+  else  printf ("(from data)\n");
+  printf ("detector_shift_px : (");
+  for (i = 0; i < 2; i++)
+    {
+      if (rec_p->detector_shift_px[i] == FLT_MAX)  printf ("(from data)");
+      else  printf ("%7.2f", rec_p->detector_shift_px[i]);
+      if (i != 1)  printf (", ");
+    }
+  printf (")\n\n");
   printf ("tilt_axis       : % 7.2f [degrees]\n", rec_p->tilt_axis);
   printf ("\n");
   if (!use_ctf_flag)
@@ -380,6 +397,56 @@ RecParams_print (RecParams const *rec_p)
             rec_p->xover_cspline_coeff[i][3]);
         }
     }
+  return;
+}
+
+/*-------------------------------------------------------------------------------------------------*/
+
+void
+RecParams_apply_to_volume (RecParams const *rec_p, gfunc3 *vol)
+{
+  int i;
+  
+  CAPTURE_NULL (rec_p);
+  CAPTURE_NULL (vol);
+  
+  for (i = 0; i < 3; i++)
+    {
+      if (rec_p->vol_shift_px[i] == FLT_MAX)  continue;
+      
+      vol->x0[i] = rec_p->vol_shift_px[i] * vol->csize[i];
+    }
+  
+  gfunc3_compute_xmin_xmax (vol);
+  
+  return;
+}
+
+/*-------------------------------------------------------------------------------------------------*/
+
+void
+RecParams_apply_to_proj_image (RecParams const *rec_p, gfunc3 *proj_img)
+{
+  int i;
+  
+  CAPTURE_NULL (rec_p);
+  CAPTURE_NULL (proj_img);
+  
+  if (!GFUNC_IS_2D (proj_img))
+    EXC_THROW_CUSTOMIZED_PRINT (EXC_GFDIM, "proj_img must be 2-dimensional");
+  
+  if (rec_p->detector_px_size[0] != 0.0)  /* Detector pixel size is set in config file */
+    gfunc3_set_csize (proj_img, rec_p->detector_px_size);
+    
+  for (i = 0; i < 2; i++)
+    {
+      if (rec_p->vol_shift_px[i] == FLT_MAX)  continue;
+      
+      proj_img->x0[i] = rec_p->vol_shift_px[i] * proj_img->csize[i];
+    }
+  
+  gfunc3_compute_xmin_xmax (proj_img);
+  
   return;
 }
 
