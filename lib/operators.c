@@ -311,9 +311,6 @@ image_rotation (gfunc3 *proj_img, float const psi_deg)
       sin_psi = sinf (psi_deg * ONE_DEGREE);
     }
     
-  printf ("cos_psi: %e\n", cos_psi);
-  printf ("sin_psi: %e\n", sin_psi);
-
   /* Shift image to origin for intrinsic rotation; origin is stored for backup */
   vec3_copy (img_x0, proj_img->x0);
   vec3_set_all (proj_img->x0, 0.0);
@@ -329,14 +326,6 @@ image_rotation (gfunc3 *proj_img, float const psi_deg)
   Ny_new = (int) (ceilf (ylen_new / proj_img->csize[1])) + 1;
   ntotal_new = (size_t) Nx_new * Ny_new;
  
-<<<<<<< HEAD
-=======
-  printf ("xlen: %e  new: %e\n", xlen, xlen_new);
-  printf ("ylen: %e  new: %e\n", ylen, ylen_new);
-  printf ("Nx  : %d  new: %d\n", proj_img->shape[0], Nx_new);
-  printf ("Ny  : %d  new: %d\n", proj_img->shape[1], Ny_new);
-  
->>>>>>> 9e18b204dbf3d4f038ed2f4f287265f3dbbdf644
   xmin_new = proj_img->x0[0] -  Nx_new / 2 * proj_img->csize[0];
   ymin_new = proj_img->x0[1] -  Ny_new / 2 * proj_img->csize[1];
   
