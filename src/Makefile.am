@@ -27,13 +27,13 @@ endif
 AM_CPPFLAGS += $(OPENMP_CFLAGS)
 
 
-bin_PROGRAMS =  approx_inverse generate_tiltangles convex_comb
+bin_PROGRAMS =  ai_single_axis generate_tiltangles convex_comb
 
 # CAUTION: order of libraries matters! Order from "most dependent" to "least dependent"
 # (or list each library twice)
 
-approx_inverse_SOURCES = $(srcdir)/approx_inverse.c $(top_srcdir)/lib/ETreco.h
-approx_inverse_LDADD = 	$(lib_libdir)/libetai.a $(lib_libdir)/libgfunc3.a $(lib_libdir)/libutil.a \
+ai_single_axis_SOURCES = $(srcdir)/ai_single_axis.c $(top_srcdir)/lib/ETreco.h
+ai_single_axis_LDADD = 	$(lib_libdir)/libetai.a $(lib_libdir)/libgfunc3.a $(lib_libdir)/libutil.a \
 												$(lib_libdir)/libiniparser.a $(lib_libdir)/libCException.a \
 												$(gnulib_libdir)/libgnu.a 
 												
