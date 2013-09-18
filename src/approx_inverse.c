@@ -46,6 +46,7 @@ main (int argc, char *argv[])
   OptionData *opt_data;
 
   int i, nz, last_index;
+  float weight, theta_last, theta_cur, theta_next;
   vec3 angles, ones = {1.0, 1.0, 1.0};
   FILE *fp = NULL;
   
@@ -100,6 +101,11 @@ main (int argc, char *argv[])
      * Add conditions here that cause the reco kernel to be dependent on tilt. 
      */
     kernel_varies_with_tilt = use_lambda_flag;
+
+
+    /* Initialize current theta */
+    tiltangles_get_angles (tilts, angles, 0);
+    theta_cur = angles[1];
     
     for (i = opt_data->start_index; i <= last_index; i++)
       {
@@ -121,8 +127,31 @@ main (int argc, char *argv[])
             // gfunc3_to_mrc (proj_image, "normalized2_.mrc");
           }
 
+        /* Get next tilt angles, compute integration weight and scale image accordingly */
+        if (i != last_index)
+          {
+            tiltangles_get_angles (tilts, angles, i + 1);
+            theta_next = angles[1];
+          }
+
+        if (i == opt_data->start_index)
+          weight = (theta_next - theta_cur) / 2.0;
+        else if (i == last_index)
+          weight = (theta_cur - theta_last) / 2.0;
+        else
+          weight = (theta_next - theta_last) / 2.0;
+
+        if (verbosity_level >= VERB_LEVEL_NORMAL)
+          {
+            printf ("theta = %f degrees\n", theta_cur);
+            printf ("weight = %f\n", weight);
+          }
+
         if (invert_contrast_flag)
-          gfunc3_scale (proj_image, -1.0);
+          weight = -weight;
+          
+        gfunc3_scale (proj_image, weight);
+
         
         /* Rotate image to align tilt axis with x axis */
         image_rotation (proj_image, -rec_p->tilt_axis);
@@ -194,18 +223,14 @@ main (int argc, char *argv[])
         if (DEBUGGING)
           temp_mrc_out (proj_image, "filtered_", i + 1);
         
-        /* Get current tilt angles and compute backprojection; Since we assume single axis geometry, 
-         * use only angles[1] (theta).
-         */
-        tiltangles_get_angles (tilts, angles, i);
-        if (verbosity_level >= VERB_LEVEL_VERBOSE)
-          printf ("theta = %f degrees\n", angles[1]);
+        /* Compute backprojection */
+        xray_backprojection_sax (proj_image, theta_cur, volume);
         
-        xray_backprojection_sax (proj_image, angles[1], volume);
-        // xray_backprojection (proj_image, angles, volume);
+        /* Update thetas */
+        theta_last = theta_cur;
+        theta_cur  = theta_next;
       }
   
-    // gfunc3_make_nonneg (volume);
     gfunc3_to_mrc (volume, opt_data->fname_out);
     printf ("Reconstructed volume written to %s\n", opt_data->fname_out);
   
