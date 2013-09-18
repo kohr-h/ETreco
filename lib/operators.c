@@ -288,6 +288,9 @@ image_rotation (gfunc3 *proj_img, float const psi_deg)
   if (!GFUNC_IS_2D(proj_img))
     EXC_THROW_CUSTOMIZED_PRINT (EXC_GFDIM, "Only 2d functions supported.");
 
+  if (fabsf (psi_deg) > 180.0)
+    EXC_THROW_CUSTOMIZED_PRINT (EXC_BADARG, "Rotation angle must be between -180 and +180 degrees");
+
   if (psi_deg == 0.0)
     return;
 
@@ -295,9 +298,21 @@ image_rotation (gfunc3 *proj_img, float const psi_deg)
 
   /* Image is rotated counter-clockwise with angle psi_deg, so the original function is evaluated
    * (interpolated) at the inversely rotated points.
+   * 
+   * Use exact sine and cosine values in the four corner cases
    */
-  cos_psi = cosf (psi_deg * ONE_DEGREE);
-  sin_psi = sinf (psi_deg * ONE_DEGREE);
+  
+  if      (psi_deg ==  90.0)          { cos_psi =  0.0; sin_psi =  1.0; }
+  else if (psi_deg == -90.0)          { cos_psi =  0.0; sin_psi = -1.0; }
+  else if (fabsf (psi_deg == 180.0))  { cos_psi = -1.0; sin_psi =  0.0; }
+  else
+    {
+      cos_psi = cosf (psi_deg * ONE_DEGREE);
+      sin_psi = sinf (psi_deg * ONE_DEGREE);
+    }
+    
+  printf ("cos_psi: %e\n", cos_psi);
+  printf ("sin_psi: %e\n", sin_psi);
 
   /* Shift image to origin for intrinsic rotation; origin is stored for backup */
   vec3_copy (img_x0, proj_img->x0);
@@ -310,9 +325,14 @@ image_rotation (gfunc3 *proj_img, float const psi_deg)
 
   xlen_new = xlen * fabsf (cos_psi) + ylen * fabsf (sin_psi);
   ylen_new = xlen * fabsf (sin_psi) + ylen * fabsf (cos_psi);
-  Nx_new = (int) (ceilf (xlen_new / proj_img->csize[0]));
-  Ny_new = (int) (ceilf (ylen_new / proj_img->csize[1]));
+  Nx_new = (int) (ceilf (xlen_new / proj_img->csize[0])) + 1;
+  Ny_new = (int) (ceilf (ylen_new / proj_img->csize[1])) + 1;
   ntotal_new = (size_t) Nx_new * Ny_new;
+ 
+  printf ("xlen: %e  new: %e\n", xlen, xlen_new);
+  printf ("ylen: %e  new: %e\n", ylen, ylen_new);
+  printf ("Nx  : %d  new: %d\n", proj_img->shape[0], Nx_new);
+  printf ("Ny  : %d  new: %d\n", proj_img->shape[1], Ny_new);
   
   xmin_new = proj_img->x0[0] -  Nx_new / 2 * proj_img->csize[0];
   ymin_new = proj_img->x0[1] -  Ny_new / 2 * proj_img->csize[1];
@@ -327,8 +347,7 @@ image_rotation (gfunc3 *proj_img, float const psi_deg)
   dy_rot[1] =  cos_psi * proj_img->csize[1];
 
   /* Initialize new array */
-  Try { fvals_rot = (float *) ali16_malloc (ntotal_new * sizeof (float)); }
-  Catch (e) { EXC_RETHROW_REPRINT (e); return; }
+  Try { fvals_rot = (float *) ali16_malloc (ntotal_new * sizeof (float)); }  CATCH_RETURN_VOID (e);
   for (idx = 0; idx < ntotal_new; idx++) fvals_rot[idx] = 0.0;
 
 
