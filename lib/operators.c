@@ -311,9 +311,6 @@ image_rotation (gfunc3 *proj_img, float const psi_deg)
       sin_psi = sinf (psi_deg * ONE_DEGREE);
     }
     
-  printf ("cos_psi: %e\n", cos_psi);
-  printf ("sin_psi: %e\n", sin_psi);
-
   /* Shift image to origin for intrinsic rotation; origin is stored for backup */
   vec3_copy (img_x0, proj_img->x0);
   vec3_set_all (proj_img->x0, 0.0);
