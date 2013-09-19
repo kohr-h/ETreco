@@ -120,7 +120,7 @@ do { \
 
 #define CATCH_RETURN_VOID(_exc) Catch (_exc) {EXC_RETHROW_REPRINT (_exc); return;}
 #define CATCH_RETURN(_exc, _retval) Catch (_exc) {EXC_RETHROW_REPRINT (_exc); return _retval;}
-#define CATCH_EXIT_FAIL(_exc) Catch (_exc) {EXC_RETHROW_REPRINT (_exc); exit (EXIT_FAILURE);}
+#define CATCH_EXIT_FAIL(_exc) Catch (_exc) {EXC_REPRINT; exit (EXIT_FAILURE);}
 
 
 /*-------------------------------------------------------------------------------------------------*/
