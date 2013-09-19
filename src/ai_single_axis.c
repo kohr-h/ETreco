@@ -55,44 +55,49 @@ main (int argc, char *argv[])
   gfunc3 *proj_image, *rk, *recip_mtf, *volume;
   tiltangles *tilts;
 
-  /* Initialize options from command line */
-  Try { opt_data = new_OptionData (); }  CATCH_EXIT_FAIL (e);
-  Try { OptionData_assign_from_args (opt_data, argc, argv); } CATCH_EXIT_FAIL (e);
-  OptionData_print (opt_data);
+  /* Create structures */
+  Try 
+  { 
+    opt_data = new_OptionData (); 
+    rec_p = new_RecParams ();
+    proj_image = new_gfunc3 ();
+    tilts = new_tiltangles ();
+    volume = new_gfunc3 ();
+    rk  = new_gfunc3 ();
+    recip_mtf = new_gfunc3 ();
+  }  CATCH_EXIT_FAIL (e);
 
-  /* Initialize reconstruction parameters */
-  Try { rec_p = new_RecParams (); }  CATCH_EXIT_FAIL (e);
-  Try { RecParams_assign_from_OptionData (rec_p, opt_data); }  CATCH_EXIT_FAIL (e);
-  RecParams_print (rec_p);
+  /* Initialize command-line options, reconstruction parameters, first projection image, 
+   * tilt angles and volume
+   */
+  Try 
+  { 
+    OptionData_assign_from_args (opt_data, argc, argv); 
+    RecParams_assign_from_OptionData (rec_p, opt_data);
+    gfunc3_init_mrc (proj_image, opt_data->fname_in, &fp, &nz, STACK);
+    tiltangles_assign_from_file (tilts, opt_data->fname_tiltangles);
+    gfunc3_init (volume, NULL, rec_p->vol_csize, rec_p->vol_shape, REAL);
+  } CATCH_EXIT_FAIL (e);
 
-  Try { proj_image = new_gfunc3 (); }  CATCH_EXIT_FAIL (e);
-  Try { gfunc3_init_mrc (proj_image, opt_data->fname_in, &fp, &nz, STACK); }  CATCH_EXIT_FAIL (e);
+  /* Scale and shift volume according to the reco parameters */
+  Try 
+  { 
+    gfunc3_scale_grid (volume, rec_p->magnification); 
+    RecParams_apply_to_volume (rec_p, volume); 
+  }  CATCH_EXIT_FAIL (e);
 
+
+
+  /* Set some parameters and resolve conflicts */
   if (opt_data->num_images == 0)  /* Not specified by option, so taken from data */
     opt_data->num_images = nz - opt_data->start_index;
 
   last_index = opt_data->start_index + opt_data->num_images - 1;
 
-  /* Initialize tilt angles */
-  Try { tilts = new_tiltangles (); }  CATCH_EXIT_FAIL (e);
-  Try { tiltangles_assign_from_file (tilts, opt_data->fname_tiltangles); }  CATCH_EXIT_FAIL (e);
-  
   Try {
   if (last_index >= tilts->ntilts)
     EXC_THROW_CUSTOMIZED_PRINT (EXC_BADARG, "Image indices (max: %d) from input stack must be "
     "smaller\n than the number of tiltangles (%d).\n", last_index, tilts->ntilts);
-  }  CATCH_EXIT_FAIL (e);
-
-  Try { volume = new_gfunc3 (); }  CATCH_EXIT_FAIL (e);
-  Try { gfunc3_init (volume, NULL, rec_p->vol_csize, rec_p->vol_shape, REAL); }  CATCH_EXIT_FAIL (e);
-  Try { gfunc3_scale_grid (volume, rec_p->magnification); }  CATCH_EXIT_FAIL (e);
-  Try { RecParams_apply_to_volume (rec_p, volume); }  CATCH_EXIT_FAIL (e);
-  if (verbosity_level >= VERB_LEVEL_NORMAL)
-    gfunc3_print_grid (volume, "volume");
-
-  Try {
-  rk  = new_gfunc3 ();
-  recip_mtf = new_gfunc3 ();
   }  CATCH_EXIT_FAIL (e);
 
   /* If zero, skip computation of kernel from the second image on.
@@ -101,20 +106,32 @@ main (int argc, char *argv[])
   kernel_varies_with_tilt = use_lambda_flag;
 
 
-  /* Initialize current theta */
+  /* Print summary of everything before the real work starts */
+  OptionData_print (opt_data);
+  RecParams_print (rec_p);
+  if (verbosity_level >= VERB_LEVEL_NORMAL)
+    gfunc3_print_grid (volume, "Volume grid:");
+
+
+  /* Initialize current theta for the loop */
   Try { tiltangles_get_angles (tilts, angles, 0); }  CATCH_EXIT_FAIL (e);
   theta_cur = angles[1];
+
   
   for (i = opt_data->start_index; i <= last_index; i++)
     {
       /* Initialize image and normalize if desired */
-      Try { gfunc3_read_from_stack (proj_image, fp, i); }  CATCH_EXIT_FAIL (e);
-      Try { RecParams_apply_to_proj_image (rec_p, proj_image); }  CATCH_EXIT_FAIL (e);
+      Try 
+      { 
+        gfunc3_read_from_stack (proj_image, fp, i);
+        RecParams_apply_to_proj_image (rec_p, proj_image); 
+      }  CATCH_EXIT_FAIL (e);
 
-      if ((verbosity_level >= VERB_LEVEL_NORMAL) && i == opt_data->start_index)
-        gfunc3_print_grid (proj_image, "Data grid");
+      if ((verbosity_level >= VERB_LEVEL_VERBOSE) && (i == opt_data->start_index))
+        gfunc3_print_grid (proj_image, "Data grid:");
 
-      printf ("Image %3d of %3d\n", i - opt_data->start_index + 1, opt_data->num_images);
+      if (verbosity_level >= VERB_LEVEL_NORMAL)
+        printf ("Image %3d of %3d\n", i - opt_data->start_index + 1, opt_data->num_images);
      
       if (normalize_flag)
         {
@@ -161,7 +178,7 @@ main (int argc, char *argv[])
 
       /* Fourier transform the image */
       Try { fft_forward (proj_image); }   CATCH_EXIT_FAIL (e);
-      if (verbosity_level >= VERB_LEVEL_VERBOSE)
+      if ((verbosity_level >= VERB_LEVEL_VERBOSE) && (i == opt_data->start_index))
         gfunc3_print_grid (proj_image, "Image FT grid");
       if (DEBUGGING)
         temp_mrc_out (proj_image, "ft_image_", i + 1);
