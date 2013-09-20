@@ -36,10 +36,12 @@ typedef enum { TRAPEZOIDAL } integration_rule; /* TODO: consider other rules */
 /*-------------------------------------------------------------------------------------------------*/
 
 void
-xray_backprojection (gfunc3 const *proj_img, vec3 const angles_deg, gfunc3 *volume);
+xray_backprojection (gfunc3 const *proj_img, vec3 const angles_deg, vec3 const axis_shift_px, 
+                     gfunc3 *volume);
 
 void
-xray_backprojection_sax (gfunc3 const *proj_img, float const theta_deg, gfunc3 *volume);
+xray_backprojection_sax (gfunc3 const *proj_img, float const theta_deg, float const axis_shift_y_px, 
+                         gfunc3 *volume);
 
 void
 image_rotation (gfunc3 *proj_img, float const psi_deg);

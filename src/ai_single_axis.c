@@ -241,9 +241,17 @@ main (int argc, char *argv[])
         temp_mrc_out (proj_image, "filtered_", i + 1);
       
       /* Compute backprojection */
-      Try { xray_backprojection_sax (proj_image, theta_cur, volume); }  CATCH_EXIT_FAIL (e);
+      Try 
+      { 
+        xray_backprojection_sax (proj_image, theta_cur, rec_p->tilt_axis_par_shift_px, volume); 
+      } CATCH_EXIT_FAIL (e);
       // Try { tiltangles_get_angles (tilts, angles, i); }  CATCH_EXIT_FAIL (e);
-      // Try { xray_backprojection (proj_image, angles, volume); }  CATCH_EXIT_FAIL (e);
+      // Try 
+      // { 
+        // vec3 nul = {0.0f, 0.0f};
+        // xray_backprojection (proj_image, angles, nul, volume); 
+      // } CATCH_EXIT_FAIL (e);
+    
       
       /* Update thetas */
       theta_last = theta_cur;

@@ -42,7 +42,8 @@
 /*-------------------------------------------------------------------------------------------------*/
 
 void
-xray_backprojection (gfunc3 const *proj_img, vec3 const angles_deg, gfunc3 *volume)
+xray_backprojection (gfunc3 const *proj_img, vec3 const angles_deg, vec3 const axis_shift_px, 
+                     gfunc3 *volume)
 {
   CEXCEPTION_T e = EXC_NONE;
   int ix, iy, iz;
@@ -67,6 +68,7 @@ xray_backprojection (gfunc3 const *proj_img, vec3 const angles_deg, gfunc3 *volu
   vec3_axpby (1, xm, -1, proj_img->x0);
   Pxmin[0] = vec3_dot (omega_x, xm);
   Pxmin[1] = vec3_dot (omega_y, xm);
+  // TODO: include tilt axis shift
 
   Pdx[0] = omega_x[0] * volume->csize[0];
   Pdx[1] = omega_y[0] * volume->csize[0];
@@ -118,7 +120,8 @@ xray_backprojection (gfunc3 const *proj_img, vec3 const angles_deg, gfunc3 *volu
 /*-------------------------------------------------------------------------------------------------*/
 
 void
-xray_backprojection_sax (gfunc3 const *proj_img, float const theta_deg, gfunc3 *volume)
+xray_backprojection_sax (gfunc3 const *proj_img, float const theta_deg, float const axis_shift_y_px, 
+                         gfunc3 *volume)
 {
   CEXCEPTION_T e = EXC_NONE;
   int ix, iy, iz;
@@ -138,7 +141,8 @@ xray_backprojection_sax (gfunc3 const *proj_img, float const theta_deg, gfunc3 *
   cos_theta = cosf (theta_deg * ONE_DEGREE);
   sin_theta = sinf (theta_deg * ONE_DEGREE);
 
-  Pxmin_y = cos_theta * (volume->xmin[1] - proj_img->x0[1]) + sin_theta * volume->xmin[2];
+  Pxmin_y = cos_theta * volume->xmin[1] + sin_theta * volume->xmin[2] 
+    + axis_shift_y_px * proj_img->csize[1];
 
   Pdy = cos_theta * volume->csize[1];
   Pdz = sin_theta * volume->csize[2];
