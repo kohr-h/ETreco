@@ -60,7 +60,6 @@ typedef struct
   float cond_ap_angle;
   float defocus_nominal;
   vec3 detector_px_size;
-  vec3 detector_shift_px;
   float mtf_a;
   float mtf_b;
   float mtf_c;
@@ -70,6 +69,7 @@ typedef struct
   int mtf_q;
   float acr;
   float tilt_axis_rotation;
+  float tilt_axis_par_shift_px;
 
   /* Derived CTF parameters */
   float wave_number;
