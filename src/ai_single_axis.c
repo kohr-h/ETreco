@@ -242,6 +242,8 @@ main (int argc, char *argv[])
       
       /* Compute backprojection */
       Try { xray_backprojection_sax (proj_image, theta_cur, volume); }  CATCH_EXIT_FAIL (e);
+      // Try { tiltangles_get_angles (tilts, angles, i); }  CATCH_EXIT_FAIL (e);
+      // Try { xray_backprojection (proj_image, angles, volume); }  CATCH_EXIT_FAIL (e);
       
       /* Update thetas */
       theta_last = theta_cur;
