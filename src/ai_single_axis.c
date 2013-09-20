@@ -171,7 +171,7 @@ main (int argc, char *argv[])
 
       
       /* Rotate image to align tilt axis with x axis */
-      Try { image_rotation (proj_image, -rec_p->tilt_axis); }  CATCH_EXIT_FAIL (e);
+      Try { image_rotation (proj_image, -rec_p->tilt_axis_rotation); }  CATCH_EXIT_FAIL (e);
 
       if (DEBUGGING)
         temp_mrc_out (proj_image, "rotated_", i + 1);

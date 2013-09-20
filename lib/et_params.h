@@ -69,7 +69,7 @@ typedef struct
   int mtf_p;
   int mtf_q;
   float acr;
-  float tilt_axis;
+  float tilt_axis_rotation;
 
   /* Derived CTF parameters */
   float wave_number;

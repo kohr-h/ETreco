@@ -78,29 +78,29 @@ new_RecParams (void)
   Try { rp = (RecParams *) ali16_malloc (sizeof (RecParams)); }
   Catch (e) { EXC_RETHROW_REPRINT (e); }
     
-    rp->acc_voltage      = 0.0;
-    rp->energy_spread    = 0.0;
-    rp->magnification    = 0.0;
-    rp->cs               = 0.0;
-    rp->cc               = 0.0;
-    rp->aperture         = 0.0;
-    rp->focal_length     = 0.0;
-    rp->cond_ap_angle    = 0.0;
-    rp->defocus_nominal  = 0.0;
-    rp->mtf_a            = 0.0;
-    rp->mtf_b            = 0.0;
-    rp->mtf_c            = 0.0;
-    rp->mtf_alpha        = 0.0;
-    rp->mtf_beta         = 0.0;
-    rp->mtf_p            = 0;
-    rp->mtf_q            = 0;
-    rp->acr              = 0.0;
-    rp->tilt_axis        = 0.0;
-    rp->wave_number      = 0.0;
-    rp->cc1              = 0.0;
-    rp->aper_cutoff      = 0.0;
-    rp->ctf_trunc        = 0.0;
-    rp->moll_ft          = NULL;
+    rp->acc_voltage         = 0.0;
+    rp->energy_spread       = 0.0;
+    rp->magnification       = 0.0;
+    rp->cs                  = 0.0;
+    rp->cc                  = 0.0;
+    rp->aperture            = 0.0;
+    rp->focal_length        = 0.0;
+    rp->cond_ap_angle       = 0.0;
+    rp->defocus_nominal     = 0.0;
+    rp->mtf_a               = 0.0;
+    rp->mtf_b               = 0.0;
+    rp->mtf_c               = 0.0;
+    rp->mtf_alpha           = 0.0;
+    rp->mtf_beta            = 0.0;
+    rp->mtf_p               = 0;
+    rp->mtf_q               = 0;
+    rp->acr                 = 0.0;
+    rp->tilt_axis_rotation  = 0.0;
+    rp->wave_number         = 0.0;
+    rp->cc1                 = 0.0;
+    rp->aper_cutoff         = 0.0;
+    rp->ctf_trunc           = 0.0;
+    rp->moll_ft             = NULL;
 
     return rp;
   
@@ -181,7 +181,7 @@ RecParams_assign_from_OptionData (RecParams *rec_p, const OptionData *od)
   if ((dtmp = iniparser_getdouble (dict, "geometry:tilt_axis", -1.0)) == -1.0)
     EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Key 'tilt_axis' not found in %s.", od->fname_reco_params);
 
-  rec_p->tilt_axis = (float) dtmp;
+  rec_p->tilt_axis_rotation = (float) dtmp;
 
   if ((dtmp = iniparser_getdouble (dict, "optics:magnification", -1.0)) == -1.0)
     EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Key 'magnification' not found in %s.", 
@@ -371,7 +371,7 @@ RecParams_print (RecParams const *rec_p)
       if (i != 1)  printf (", ");
     }
   printf (")\n\n");
-  printf ("tilt_axis       : % 7.2f [degrees]\n", rec_p->tilt_axis);
+  printf ("tilt_axis       : % 7.2f [degrees]\n", rec_p->tilt_axis_rotation);
   printf ("\n");
   if (!use_ctf_flag)
     {
