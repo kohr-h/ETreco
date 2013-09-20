@@ -48,6 +48,7 @@ xray_backprojection (gfunc3 const *proj_img, vec3 const angles_deg, gfunc3 *volu
   int ix, iy, iz;
   size_t idx = 0;
   vec3 omega_x, omega_y, omega;
+  vec3 xm;
   float Pxmin[2], Pdx[2], Pdy[2], Pdz[2], Pv[3], Pvx0[2], Pvy0[2];
   
   CAPTURE_NULL (proj_img);
@@ -58,11 +59,14 @@ xray_backprojection (gfunc3 const *proj_img, vec3 const angles_deg, gfunc3 *volu
   
   compute_rotated_basis (angles_deg, omega_x, omega_y, omega);
 
-  // The projections of the increments in x, y and z directions as well as xmin are precomputed for 
-  // speed reasons.
-  // The letter "P" stands for "projected"
-  Pxmin[0] = vec3_dot (omega_x, volume->xmin);
-  Pxmin[1] = vec3_dot (omega_y, volume->xmin);
+  /* The projections of the increments in x, y and z directions as well as xmin are precomputed for 
+   * speed reasons.
+   * The letter "P" stands for "projected"
+   */
+  vec3_copy (xm, volume->xmin);
+  vec3_axpby (1, xm, -1, proj_img->x0);
+  Pxmin[0] = vec3_dot (omega_x, xm);
+  Pxmin[1] = vec3_dot (omega_y, xm);
 
   Pdx[0] = omega_x[0] * volume->csize[0];
   Pdx[1] = omega_y[0] * volume->csize[0];
@@ -121,8 +125,8 @@ xray_backprojection_sax (gfunc3 const *proj_img, float const theta_deg, gfunc3 *
   size_t idx = 0l, fiy, fi;
   float Pxmin_y, Pdy, Pdz, Pvy, Pvy0;
   float cos_theta, sin_theta;
-  float x, *wlx, *wux, idxf_x, wly, wuy, idxf_y;
-  int *idx_x, idx_y;
+  float x, *wlx = NULL, *wux = NULL, idxf_x, wly, wuy, idxf_y;
+  int *idx_x = NULL, idx_y;
   float fv;
   
   CAPTURE_NULL (proj_img);
@@ -131,12 +135,10 @@ xray_backprojection_sax (gfunc3 const *proj_img, float const theta_deg, gfunc3 *
   GFUNC_CHECK_INIT_STATUS (volume);
   
   /* The projections of the increments in y and z directions as well as xmin are precomputed */
-
   cos_theta = cosf (theta_deg * ONE_DEGREE);
   sin_theta = sinf (theta_deg * ONE_DEGREE);
 
-  Pxmin_y = volume->x0[1] + cos_theta * (volume->xmin[1]- proj_img->x0[1]) 
-    + sin_theta * (volume->xmin[2]);
+  Pxmin_y = cos_theta * (volume->xmin[1] - proj_img->x0[1]) + sin_theta * volume->xmin[2];
 
   Pdy = cos_theta * volume->csize[1];
   Pdz = sin_theta * volume->csize[2];
@@ -147,73 +149,69 @@ xray_backprojection_sax (gfunc3 const *proj_img, float const theta_deg, gfunc3 *
     wlx = (float *) ali16_malloc (volume->shape[0] * sizeof (float));
     wux = (float *) ali16_malloc (volume->shape[0] * sizeof (float));
     idx_x = (int *) ali16_malloc (volume->shape[0] * sizeof (int));
+  }  CATCH_RETURN_VOID (e);
 
-    x = volume->xmin[0];
-    for (ix = 0; ix < volume->shape[0]; ix++)
-      {
-        if ((x <= proj_img->xmin[0]) || (x >= proj_img->xmax[0]))
-          {
-            idx_x[ix] = -1;
-            x += volume->csize[0];
-            continue;
-          }
+  x = volume->xmin[0];
+  for (ix = 0; ix < volume->shape[0]; ix++)
+    {
+      if ((x <= proj_img->xmin[0]) || (x >= proj_img->xmax[0]))
+        {
+          idx_x[ix] = -1;
+          x += volume->csize[0];
+          continue;
+        }
+        
+      idxf_x    = (x - proj_img->xmin[0]) / proj_img->csize[0];
+      idx_x[ix] = (int) idxf_x;
+      wux[ix]   = idxf_x - idx_x[ix];
+      wlx[ix]   = 1.0 - wux[ix];
+      
+      x += volume->csize[0];
+    }
+
+  
+  Pvy = Pxmin_y;
+  for (iz = 0; iz < volume->shape[2]; iz++)
+    {
+      Pvy0 = Pvy;
+      
+      for (iy = 0; iy < volume->shape[1]; iy++)
+        {
+          if ((Pvy <= proj_img->xmin[1]) || (Pvy >= proj_img->xmax[1]))
+            {
+              Pvy += Pdy;
+              idx += volume->shape[0];
+              continue;
+            }
           
-        idxf_x    = (x - proj_img->xmin[0]) / proj_img->csize[0];
-        idx_x[ix] = (int) idxf_x;
-        wux[ix]   = idxf_x - idx_x[ix];
-        wlx[ix]   = 1.0 - wux[ix];
-        
-        x += volume->csize[0];
-      }
+          idxf_y = (Pvy - proj_img->xmin[1]) / proj_img->csize[1];
+          idx_y = (int) idxf_y;
+          wuy = idxf_y - idx_y;
+          wly = 1.0f - wuy;
+          
+          fiy = idx_y * proj_img->shape[0];
 
-    
-    Pvy = Pxmin_y;
-    for (iz = 0; iz < volume->shape[2]; iz++)
-      {
-        Pvy0 = Pvy;
-        
-        for (iy = 0; iy < volume->shape[1]; iy++)
-          {
-            if ((Pvy <= proj_img->xmin[1]) || (Pvy >= proj_img->xmax[1]))
-              {
-                Pvy += Pdy;
-                idx += volume->shape[0];
+          for (ix = 0; ix < volume->shape[0]; ix++, idx++)
+            {
+              if (idx_x[ix] == -1)
                 continue;
-              }
-            
-            idxf_y = (Pvy - proj_img->xmin[1]) / proj_img->csize[1];
-            idx_y = (int) idxf_y;
-            wuy = idxf_y - idx_y;
-            wly = 1.0f - wuy;
-            
-            fiy = idx_y * proj_img->shape[0];
 
-            for (ix = 0; ix < volume->shape[0]; ix++, idx++)
-              {
-                if (idx_x[ix] == -1)
-                  continue;
+              fi = fiy + idx_x[ix];
+              
+              fv  = (wlx[ix] * proj_img->fvals[fi] + wux[ix] * proj_img->fvals[fi + 1]) * wly;
+              fi += proj_img->shape[0];
+              fv += (wlx[ix] * proj_img->fvals[fi] + wux[ix] * proj_img->fvals[fi + 1]) * wuy;
 
-                fi = fiy + idx_x[ix];
-                
-                fv  = (wlx[ix] * proj_img->fvals[fi] + wux[ix] * proj_img->fvals[fi + 1]) * wly;
-                fi += proj_img->shape[0];
-                fv += (wlx[ix] * proj_img->fvals[fi] + wux[ix] * proj_img->fvals[fi + 1]) * wuy;
+              volume->fvals[idx] += fv;
+            }
+          Pvy += Pdy;
+        }
+      Pvy = Pvy0 + Pdz;
+    }
 
-                volume->fvals[idx] += fv;
-              }
-            Pvy += Pdy;
-          }
-        Pvy = Pvy0 + Pdz;
-      }
-
-    free (wlx);
-    free (wux);
-    free (idx_x);
-  }
-  Catch (e)
-  {
-    EXC_RETHROW_REPRINT (e);
-  }
+  free (wlx);
+  free (wux);
+  free (idx_x);
   
   return;
 }
