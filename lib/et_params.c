@@ -440,9 +440,9 @@ RecParams_apply_to_proj_image (RecParams const *rec_p, gfunc3 *proj_img)
     
   for (i = 0; i < 2; i++)
     {
-      if (rec_p->vol_shift_px[i] == FLT_MAX)  continue;
+      if (rec_p->detector_shift_px[i] == FLT_MAX)  continue;
       
-      proj_img->x0[i] = rec_p->vol_shift_px[i] * proj_img->csize[i];
+      proj_img->x0[i] = rec_p->detector_shift_px[i] * proj_img->csize[i];
     }
   
   gfunc3_compute_xmin_xmax (proj_img);
