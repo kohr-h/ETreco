@@ -44,13 +44,14 @@
 
 /*-------------------------------------------------------------------------------------------------*/
 
-#define SHORT_OPTS "o:g:c:f:p:n:m:s:t:T:NILhvq"
+#define SHORT_OPTS "o:g:c:f:p:n:m:s:t:T:ANILhvq"
 #define LONG_OPTS \
          /* These options set a flag. */                    \
          {"verbose",          no_argument, &verbosity_level, VERB_LEVEL_VERBOSE},  \
          {"quiet",            no_argument, &verbosity_level, VERB_LEVEL_QUIET}, \
          {"normalize",        no_argument, &normalize_flag, 1}, \
          {"invert-contrast",  no_argument, &invert_contrast_flag, 1}, \
+         {"autocenter-volume",no_argument, &autocenter_vol_flag, 1}, \
          /* These options don't set a flag. We distinguish them by their indices. */\
          {"tilt-scheme",      required_argument, 0, 'T'}, \
          {"help",             no_argument, 0, 'h'}, \
@@ -74,6 +75,7 @@
 int verbosity_level      = VERB_LEVEL_NORMAL;
 int truncate_ctf_flag    = 0;
 int normalize_flag       = 0;
+int autocenter_vol_flag  = 0;
 int invert_contrast_flag = 0;
 int use_lambda_flag      = 0;
 int fft_padding          = 0;
@@ -184,6 +186,12 @@ OptionData_print (OptionData *od)
     
   printf ("Mollifier             : %s\n", mollifiers[od->moll_type]); 
 
+  printf ("Autocenter volume     :" );
+  if (autocenter_vol_flag)
+    printf ("yes\n");
+  else
+    printf ("no\n");
+
   printf ("Normalization         : " );
   if (normalize_flag)
     printf ("yes\n");
@@ -267,6 +275,8 @@ print_help (char const *progname)
   for (iter_m = M_START + 1; iter_m < M_END; iter_m++)
     printf ("  %s", mollifiers[iter_m]);
   printf ("\n");
+  puts ("  -A, --autocenter-volume");
+  puts ("                 automatically center the volume over the tilt-axis.");
   puts ("  -N, --normalize");
   puts ("                 normalize the projection images based on their histograms.");
   puts ("  --background=index_x,index_y,size_x,size_y");
@@ -800,6 +810,16 @@ OptionData_assign_from_args (OptionData *od, int argc, char **argv)
           printf ("\n");
           break;
 
+        case 'A':
+          if (autocenter_vol_flag != 0)
+            {
+              fputs ("Invalid multiple use of `-A' (`--autocenter-volume') option.", stderr);
+              exit (EXIT_FAILURE);
+            }
+            
+          autocenter_vol_flag = 1;
+          break;
+          
         case 'c':
           if (truncate_ctf_flag != 0)
             {

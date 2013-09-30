@@ -37,6 +37,8 @@
 #include "mrc.h"
 #include "operators.h"
 
+#include "ai_options.h"
+
 // TODO: descriptions
 
 /*-------------------------------------------------------------------------------------------------*/
@@ -141,7 +143,14 @@ xray_backprojection_sax (gfunc3 const *proj_img, float const theta_deg, float co
   cos_theta = cosf (theta_deg * ONE_DEGREE);
   sin_theta = sinf (theta_deg * ONE_DEGREE);
 
-  Pxmin_y = cos_theta * (volume->xmin[1] + axis_shift_y_px * proj_img->csize[1]) 
+  if (autocenter_vol_flag)
+    {
+      volume->x0[0] = proj_img->x0[0];
+      volume->x0[1] = proj_img->x0[1] + axis_shift_y_px * proj_img->csize[1];
+      gfunc3_compute_xmin_xmax (volume);
+    }
+
+  Pxmin_y = cos_theta * (volume->xmin[1] - axis_shift_y_px * proj_img->csize[1]) 
     + sin_theta * volume->xmin[2];
 
   Pdy = cos_theta * volume->csize[1];

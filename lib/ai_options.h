@@ -42,6 +42,7 @@ extern int use_gamma_flag;
 extern int truncate_ctf_flag;
 extern int normalize_flag;
 extern int invert_contrast_flag;
+extern int autocenter_vol_flag;
 extern int use_lambda_flag;
 extern int fft_padding;
 
