@@ -141,8 +141,8 @@ xray_backprojection_sax (gfunc3 const *proj_img, float const theta_deg, float co
   cos_theta = cosf (theta_deg * ONE_DEGREE);
   sin_theta = sinf (theta_deg * ONE_DEGREE);
 
-  Pxmin_y = cos_theta * volume->xmin[1] + sin_theta * volume->xmin[2] 
-    + axis_shift_y_px * proj_img->csize[1];
+  Pxmin_y = cos_theta * (volume->xmin[1] + axis_shift_y_px * proj_img->csize[1]) 
+    + sin_theta * volume->xmin[2];
 
   Pdy = cos_theta * volume->csize[1];
   Pdz = sin_theta * volume->csize[2];
