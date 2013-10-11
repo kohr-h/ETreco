@@ -3,9 +3,13 @@ TODO file for ETreco.
 
 Urgent goals are (from most to least urgent, but still urgent):
 
+- Implement shift for general backprojection
+
 - Implement conical tilt
 
-- Implement shift for general backprojection
+- Fix exception handling: move code depending on success out of Try blocks
+
+- Document if a function can thrown an exception
 
 - Introduce tests to check if parameter values make sense
 
@@ -13,8 +17,6 @@ Urgent goals are (from most to least urgent, but still urgent):
 
 - Re-organize the code such that it is better re-usable for further programs (e.g. options)
   Think about per-module options!
-
-- Fix exception handling: move code depending on success out of Try blocks
 
 - Implement varying defocus with strip-wise deconvolution (maybe sum of sinc*kernel's??)
 
