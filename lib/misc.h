@@ -77,14 +77,19 @@
 
 #if ARG_CHECKING
 
-#define CAPTURE_NULL(X) \
+#define CAPTURE_NULL(X, _retval) \
 do { \
-  if ((X) == NULL) \
-    EXC_THROW_PRINT (EXC_NULL); \
+  if ((X) == NULL) { EXC_THROW_PRINT (EXC_NULL); return _retval; }\
+} while (0)
+
+#define CAPTURE_NULL_VOID(X) \
+do { \
+  if ((X) == NULL) { EXC_THROW_PRINT (EXC_NULL); return; }\
 } while (0)
 
 #else
-#define CAPTURE_NULL(X)  /* empty */
+#define CAPTURE_NULL(X, _retval)  /* empty */
+#define CAPTURE_NULL_VOID(X)  /* empty */
 
 #endif  /* ARG_CHECKING */
 
