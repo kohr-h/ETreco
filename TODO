@@ -3,7 +3,7 @@ TODO file for ETreco.
 
 Urgent goals are (from most to least urgent, but still urgent):
 
-- Introduce option to automatically center the volume above the data
+- Implement conical tilt
 
 - Implement shift for general backprojection
 
@@ -13,8 +13,6 @@ Urgent goals are (from most to least urgent, but still urgent):
 
 - Re-organize the code such that it is better re-usable for further programs (e.g. options)
   Think about per-module options!
-
-- Introduce `--ignore-origin' option to set origin to 0 irrespective of the header
 
 - Fix exception handling: move code depending on success out of Try blocks
 
@@ -34,8 +32,6 @@ Urgent goals are (from most to least urgent, but still urgent):
 
 
 Further things to do in the future (not so urgent):
-
-- Thoroughly test implementation of CTF, reco kernel and detector MTF
 
 - Write unit tests and integrate them with DejaGnu or some other testing framework
 
