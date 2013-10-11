@@ -90,10 +90,15 @@ do { \
 // Allocation
 /*-------------------------------------------------------------------------------------------------*/
 
+/* Create a new gfunc3 structure and return a pointer to it.
+ * May throw other exceptions
+ */
 gfunc3 *
 new_gfunc3 (void);
 
-// Free memory of gfunc3 structure
+/* Free memory of gfunc3 structure.
+ * Does not throw
+ */
 void
 gfunc3_free (gfunc3 **pgf);
 
@@ -101,7 +106,12 @@ gfunc3_free (gfunc3 **pgf);
 // Structure initialization
 /*-------------------------------------------------------------------------------------------------*/
 
-// 
+/* Initialize the grid of GF with the provided parameters X0, CS and SHP. The function type 
+ * GF_TYPE (REAL or HALFCOMPLEX) determines the layout of the data array, which is allocated 
+ * according to the grid shape SHP.
+ * May throw EXC_NULL
+ * Max throw other exceptions.
+ */
 void
 gfunc3_init (gfunc3 *gf, vec3 const x0, vec3 const cs, idx3 const shp, gfunc_type gf_type);
 

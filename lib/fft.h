@@ -24,8 +24,6 @@
 #ifndef __FFT_H__
 #define __FFT_H__
 
-// TODO: write descriptions
-
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
@@ -35,29 +33,30 @@
 #include "gfunc3.h"
 #include "vfunc.h"
 
-/* TODO: update descriptions */
 
-// Replace the grid of GF by its reciprocal (half-complex shape)
-/* may throw EXC_NULL */
+/* Replace the grid of GF by its reciprocal (half-complex shape).
+ * May throw EXC_NULL
+ */
 void
 gfunc3_grid_fwd_reciprocal (gfunc3 *gf);
 
-// Replace the reciprocal grid of GF (half-complex shape) by the original one 
-/* may throw EXC_NULL */
+/* Replace the reciprocal grid of GF (half-complex shape) by the original one.
+ * May throw EXC_NULL
+ */
 void
 gfunc3_hc_grid_bwd_reciprocal (gfunc3 *gf_hc);
 
-// The forward Fourier transform of GF, stored as half-complex array
-/* may throw EXC_NULL */
-/* may throw EXC_GFINIT */
-/* may throw EXC_GFTYPE */
+/* The forward Fourier transform of GF, stored as half-complex array.
+ * May throw EXC_NULL
+ * May throw other exceptions
+ */
 void
 fft_forward (gfunc3 *gf);
 
-// The backward Fourier transform of the half-complex GF
-/* may throw EXC_NULL */
-/* may throw EXC_GFINIT */
-/* may throw EXC_GFTYPE */
+/* The backward Fourier transform of the half-complex GF.
+ * May throw EXC_NULL
+ * May throw other exceptions
+ */
 void
 fft_backward (gfunc3 *gf_hc);
 
