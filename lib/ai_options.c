@@ -91,12 +91,7 @@ new_OptionData (void)
   CEXCEPTION_T e = EXC_NONE;
   OptionData *od = NULL;
   
-  Try { od = (OptionData *) ali16_malloc (sizeof (OptionData)); }
-  Catch (e)
-  {
-    EXC_RETHROW_REPRINT (e);
-    return NULL;
-  }
+  Try { od = (OptionData *) ali16_malloc (sizeof (OptionData)); } CATCH_RETURN (e, NULL);
   
   od->fname_in                = NULL;
   od->fname_out               = NULL;
@@ -140,7 +135,6 @@ OptionData_free (OptionData **pod)
   free ((*pod)->fname_tiltangles_axis2);
 
   free (*pod);
-  
   return;
 }
 
@@ -149,7 +143,7 @@ OptionData_free (OptionData **pod)
 void
 OptionData_print (OptionData *od)
 {
-  CAPTURE_NULL (od);
+  CAPTURE_NULL_VOID (od);
   
   if (verbosity_level == VERB_LEVEL_QUIET)
     return;
@@ -314,31 +308,6 @@ print_help (char const *progname)
 
 /*-------------------------------------------------------------------------------------------------*/
 
-void
-OptionData_set_tilting_scheme (OptionData *od, char *scheme)
-{
-  tiltscheme iter;
-  char *p;
-  
-  for (p = scheme; *p; p++) 
-    *p = tolower (*p);
-  
-  for (iter = T_START + 1; iter < T_END; iter++)
-    {
-      if (strcmp (scheme, tilting_schemes[iter]) == 0)
-        {
-          od->tilting_scheme = iter;
-          return;
-        }
-    }
-    
-  fprintf (stderr, "Unknown tilting scheme `%s'\n", scheme);
-  exit (EXIT_FAILURE);
-
-}
-
-/*-------------------------------------------------------------------------------------------------*/
-
 void 
 fname_rsplit_at_dot (char const *fname, char **pbase_str, char **pext_str)
 {
@@ -355,22 +324,19 @@ fname_rsplit_at_dot (char const *fname, char **pbase_str, char **pext_str)
   base_len = pext - fname;
   ext_len  = fname_len - base_len;
   
-  Try
-  {
+  Try {
     *pbase_str = (char *) ali16_malloc (base_len + 1);
     *pext_str = (char *) ali16_malloc (ext_len + 1);
-  }
-  Catch (e)
+  } Catch (e)
   {
     EXC_RETHROW_REPRINT (e);
-    free (*pbase_str);
-    free (*pext_str);
+    free (*pbase_str); *pbase_str = NULL;
+    free (*pext_str);  *pext_str  = NULL;
     return;
   }
 
   strncpy (*pbase_str, fname, base_len);  (*pbase_str)[base_len] = '\0';
   strncpy (*pext_str, pext, ext_len);  (*pext_str)[ext_len] = '\0';
-
   return;
 }
 
@@ -382,16 +348,8 @@ OptionData_set_fname_in (OptionData *od, char const *fname)
   CEXCEPTION_T e = EXC_NONE;
   int len = strlen (fname);
   
-  Try
-  {
-    od->fname_in = (char *) ali16_malloc (len + 1);
-    strncpy (od->fname_in, fname, len);
-  }
-  Catch (e)
-  {
-    EXC_RETHROW_REPRINT (e);
-  }  
-  
+  Try { od->fname_in = (char *) ali16_malloc (len + 1); } CATCH_RETURN_VOID (e);
+  strncpy (od->fname_in, fname, len);
   return;
 }
 
@@ -410,23 +368,17 @@ OptionData_assemble_fname_out (OptionData *od,  char const *base, char const *ex
   rec_len  = strlen (REC_STR);
   ext_len  = strlen (ext);
   
-  Try
-  {
-    od->fname_out = (char *) ali16_malloc (base_len + rec_len + ext_len + 1);
+  Try { od->fname_out = (char *) ali16_malloc (base_len + rec_len + ext_len + 1); }
+  CATCH_RETURN_VOID (e);
     
-    p_tmp = od->fname_out;
-    strncpy (p_tmp, base, base_len);
-    
-    p_tmp += base_len;
-    strncpy (p_tmp, REC_STR, rec_len);
-    
-    p_tmp += rec_len;
-    strncpy (p_tmp, ext, ext_len);
-  }
-  Catch (e)
-  {
-    EXC_RETHROW_REPRINT (e);
-  }
+  p_tmp = od->fname_out;
+  strncpy (p_tmp, base, base_len);
+  
+  p_tmp += base_len;
+  strncpy (p_tmp, REC_STR, rec_len);
+  
+  p_tmp += rec_len;
+  strncpy (p_tmp, ext, ext_len);
     
   return;
 }
@@ -439,19 +391,11 @@ OptionData_determine_fname_out (OptionData *od, char *fname_in)
   CEXCEPTION_T e = EXC_NONE;
   char *bs, *ex;
   
-  Try
-  {
-    fname_rsplit_at_dot (fname_in, &bs, &ex);
-    OptionData_assemble_fname_out (od, bs, ex);
+  Try { fname_rsplit_at_dot (fname_in, &bs, &ex); } CATCH_RETURN_VOID (e);
+  Try { OptionData_assemble_fname_out (od, bs, ex); } CATCH_RETURN_VOID (e);
     
-    free (bs);
-    free (ex);
-  }
-  Catch (e)
-  {
-    EXC_RETHROW_REPRINT (e);
-  }  
-  
+  free (bs);
+  free (ex);
   return;
 }
 
@@ -463,16 +407,8 @@ OptionData_set_fname_out (OptionData *od, char const *fname)
   CEXCEPTION_T e = EXC_NONE;
   int len = strlen (fname);
  
-  Try
-  {
-    od->fname_out = (char *) ali16_malloc (len + 1);
-    strncpy (od->fname_out, fname, len);
-  }
-  Catch (e)
-  {
-    EXC_RETHROW_REPRINT (e);
-  }
-    
+  Try { od->fname_out = (char *) ali16_malloc (len + 1); } CATCH_RETURN_VOID (e);
+  strncpy (od->fname_out, fname, len);
   return;
 }
 
@@ -484,16 +420,8 @@ OptionData_set_fname_reco_params (OptionData *od, char const *fname)
   CEXCEPTION_T e = EXC_NONE;
   int len = strlen (fname);
 
-  Try
-  {
-    od->fname_reco_params = (char *) ali16_malloc (len + 1);
-    strncpy (od->fname_reco_params, fname, len);
-  }
-  Catch (e)
-  {
-    EXC_RETHROW_REPRINT (e);
-  }
-  
+  Try { od->fname_reco_params = (char *) ali16_malloc (len + 1); } CATCH_RETURN_VOID (e);
+  strncpy (od->fname_reco_params, fname, len);
   return;
 }
 
@@ -505,119 +433,108 @@ OptionData_set_fname_tiltangles (OptionData *od, char const *fname)
   CEXCEPTION_T e = EXC_NONE;
   int len = strlen (fname);
   
-  Try
-  {
-    od->fname_tiltangles = (char *) ali16_malloc (len + 1);
-    strncpy (od->fname_tiltangles, fname, len);
-  }
-  Catch (e)
-  {
-    EXC_RETHROW_REPRINT (e);
-  }
-  
+  Try { od->fname_tiltangles = (char *) ali16_malloc (len + 1); } CATCH_RETURN_VOID (e);
+  strncpy (od->fname_tiltangles, fname, len);
   return;
 }
 
+// /*-------------------------------------------------------------------------------------------------*/
+// 
+// void
+// assemble_fname_axis2 (char **pfname_axis2, char const *fname_axis1)
+// {
+  // CEXCEPTION_T e = EXC_NONE;
+  // 
+  // int len;
+  // char indicator, *base, *ext;
+// 
+  // Try { fname_rsplit_at_dot (fname_axis1, &base, &ext); } CATCH_RETURN_VOID (e);
+  // 
+  // len = strlen (base);
+  // indicator = base[len - 1];
+  // 
+  // Try { *pfname_axis2 = (char *) ali16_malloc (strlen (fname_axis1) + 2); }
+  // Catch (e) 
+  // {
+    // EXC_RETHROW_REPRINT (e);
+    // free (base);
+    // free (ext);
+    // return;
+  // }
+  // 
+  // strcpy (*pfname_axis2, base);
+  // 
+  // switch (indicator)
+    // {
+      // case '0': (*pfname_axis2)[len - 1] = '1'; break;
+      // case '1': (*pfname_axis2)[len - 1] = '2'; break;
+      // case 'a': (*pfname_axis2)[len - 1] = 'b'; break;
+      // case 'A': (*pfname_axis2)[len - 1] = 'B'; break;
+      // 
+      // default: 
+        // (*pfname_axis2)[len]      = '2';
+        // (*pfname_axis2)[len + 1]  = '\0';
+    // }
+    // 
+  // strcat (*pfname_axis2, ext);
+  // 
+  // free (base);
+  // free (ext);
+  // 
+  // return;
+// }
+// 
+// /*-------------------------------------------------------------------------------------------------*/
+// 
+// void
+// OptionData_assemble_fname_in_axis2 (OptionData *od)
+// {
+  // CEXCEPTION_T e = EXC_NONE;
+  // 
+  // Try { assemble_fname_axis2 (&od->fname_in_axis2, od->fname_in); }
+  // Catch (e) { EXC_RETHROW_REPRINT (e); }
+  // 
+  // return;
+// }
+// 
+// /*-------------------------------------------------------------------------------------------------*/
+// 
+// void
+// OptionData_assemble_fname_reco_params_axis2 (OptionData *od)
+// {
+  // CEXCEPTION_T e = EXC_NONE;
+  // 
+  // Try { assemble_fname_axis2 (&od->fname_reco_params_axis2, od->fname_reco_params); }
+  // Catch (e) { EXC_RETHROW_REPRINT (e); }
+  // 
+  // return;
+// }
+// 
+// /*-------------------------------------------------------------------------------------------------*/
+// 
+// void
+// OptionData_assemble_fname_tiltangles_axis2 (OptionData *od)
+// {
+  // CEXCEPTION_T e = EXC_NONE;
+  // 
+  // Try { assemble_fname_axis2 (&od->fname_tiltangles_axis2, od->fname_tiltangles); }
+  // Catch (e) { EXC_RETHROW_REPRINT (e); }
+  // 
+  // return;
+// }
+// 
 /*-------------------------------------------------------------------------------------------------*/
 
-void
-assemble_fname_axis2 (char **pfname_axis2, char const *fname_axis1)
-{
-  CEXCEPTION_T e = EXC_NONE;
-  
-  int len;
-  char indicator, *base, *ext;
-
-  Try { fname_rsplit_at_dot (fname_axis1, &base, &ext); }
-  Catch (e) { EXC_RETHROW_REPRINT (e); return; }
-  
-  len = strlen (base);
-  indicator = base[len - 1];
-  
-  Try { *pfname_axis2 = (char *) ali16_malloc (strlen (fname_axis1) + 2); }
-  Catch (e) 
-  {
-    EXC_RETHROW_REPRINT (e);
-    free (base);
-    free (ext);
-    return;
-  }
-  
-  strcpy (*pfname_axis2, base);
-  
-  switch (indicator)
-    {
-      case '0': (*pfname_axis2)[len - 1] = '1'; break;
-      case '1': (*pfname_axis2)[len - 1] = '2'; break;
-      case 'a': (*pfname_axis2)[len - 1] = 'b'; break;
-      case 'A': (*pfname_axis2)[len - 1] = 'B'; break;
-      
-      default: 
-        (*pfname_axis2)[len]      = '2';
-        (*pfname_axis2)[len + 1]  = '\0';
-    }
-    
-  strcat (*pfname_axis2, ext);
-  
-  free (base);
-  free (ext);
-  
-  return;
-}
-
-/*-------------------------------------------------------------------------------------------------*/
-
-void
-OptionData_assemble_fname_in_axis2 (OptionData *od)
-{
-  CEXCEPTION_T e = EXC_NONE;
-  
-  Try { assemble_fname_axis2 (&od->fname_in_axis2, od->fname_in); }
-  Catch (e) { EXC_RETHROW_REPRINT (e); }
-  
-  return;
-}
-
-/*-------------------------------------------------------------------------------------------------*/
-
-void
-OptionData_assemble_fname_reco_params_axis2 (OptionData *od)
-{
-  CEXCEPTION_T e = EXC_NONE;
-  
-  Try { assemble_fname_axis2 (&od->fname_reco_params_axis2, od->fname_reco_params); }
-  Catch (e) { EXC_RETHROW_REPRINT (e); }
-  
-  return;
-}
-
-/*-------------------------------------------------------------------------------------------------*/
-
-void
-OptionData_assemble_fname_tiltangles_axis2 (OptionData *od)
-{
-  CEXCEPTION_T e = EXC_NONE;
-  
-  Try { assemble_fname_axis2 (&od->fname_tiltangles_axis2, od->fname_tiltangles); }
-  Catch (e) { EXC_RETHROW_REPRINT (e); }
-  
-  return;
-}
-
-/*-------------------------------------------------------------------------------------------------*/
-
-/* TODO: change fputs..exit to exceptions */
 void
 OptionData_set_gamma (OptionData *od, float gamma)
 {
   if (gamma <= 0.0)
     {
-      fputs ("Parameter of `-g' (`--gamma') must be positive.", stderr);
-      exit (EXIT_FAILURE);
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_BADARG, "Parameter of `-g' (`--gamma') must be positive.");
+      return;
     }
-  
+    
   od->gamma = gamma;
-  
   return;
 }
 
@@ -628,12 +545,11 @@ OptionData_set_ctf_trunc (OptionData *od, float ctf_cut)
 {
   if (ctf_cut <= 0.0)
     {
-      fputs ("Parameter of `-c' (`--ctf-cutoff') must be positive.", stderr);
-      exit (EXIT_FAILURE);
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_BADARG, "Parameter of `-c' (`--ctf-cutoff') must be positive.");
+      return;
     }
-  
+    
   od->ctf_trunc = ctf_cut;
-  
   return;
 }
 
@@ -644,12 +560,11 @@ OptionData_set_num_images (OptionData *od, int n_images)
 {
   if (n_images <= 0)
     {
-      fputs ("Parameter of `-n' (`--num-images') must be positive.", stderr);
-      exit (EXIT_FAILURE);
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_BADARG, "Parameter of `-n' (`--num-images') must be positive.");
+      return;
     }
   
   od->num_images = n_images;
-  
   return;
 }
 
@@ -660,12 +575,12 @@ OptionData_set_start_index (OptionData *od, int nstart)
 {
   if (nstart < 0)
     {
-      fputs ("Parameter of `-s' (`--start-index') must be nonnegative.", stderr);
-      exit (EXIT_FAILURE);
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_BADARG, 
+        "Parameter of `-s' (`--start-index') must be nonnegative.");
+      return;
     }
   
   od->start_index = nstart;
-  
   return;
 }
 
@@ -689,8 +604,8 @@ OptionData_set_moll_type (OptionData *od, char *moll_str)
         }
     }
     
-  fprintf (stderr, "Unknown mollifier `%s'\n", moll_str);
-  exit (EXIT_FAILURE);
+  EXC_THROW_CUSTOMIZED_PRINT (EXC_BADARG, "Unknown mollifier `%s'\n", moll_str);
+  return;
 }
 
 /*-------------------------------------------------------------------------------------------------*/
@@ -733,27 +648,9 @@ OptionData_set_lambda_pow (OptionData *od, float l_a)
 /*-------------------------------------------------------------------------------------------------*/
 
 void
-OptionData_check_general (OptionData *od)
-{
-  /* Check for general conflicts, nonsense parameters etc. */
-}
-
-/*-------------------------------------------------------------------------------------------------*/
-
-void
-OptionData_check_single_axis (OptionData *od)
-{
-  /* Check for conflicts, nonsense parameters etc. wrt single axis geometry */
-}
-
-/*-------------------------------------------------------------------------------------------------*/
-
-void
 OptionData_assign_from_args (OptionData *od, int argc, char **argv)
 {
-  CEXCEPTION_T e = EXC_NULL;
-
-  CAPTURE_NULL (od);
+  CAPTURE_NULL_VOID (od);
 
   /* Aux variables */
   int c;
@@ -774,7 +671,6 @@ OptionData_assign_from_args (OptionData *od, int argc, char **argv)
   int P_flag = 0;
   int s_flag = 0;
   int t_flag = 0;
-  int T_flag = 0;
  
   if (argc == 1)
     {
@@ -976,17 +872,6 @@ OptionData_assign_from_args (OptionData *od, int argc, char **argv)
           t_flag = 1;
           break;
  
-        case 'T':
-          if (T_flag != 0)
-            {
-              fputs ("Invalid multiple use of `-T' (`--tilting-scheme') option.", stderr);
-              exit (EXIT_FAILURE);
-            }
-
-          OptionData_set_tilting_scheme (od, optarg);
-          T_flag = 1;
-          break;
- 
         case 'v':
           if (verbosity_level != VERB_LEVEL_NORMAL)
             {
@@ -1060,26 +945,6 @@ OptionData_assign_from_args (OptionData *od, int argc, char **argv)
   
   if (!o_flag)
     OptionData_determine_fname_out (od, argv[optind]);
-  
-  
-  /* In case of double axis tilt, set the names for the 2nd axis files */
-  if (od->tilting_scheme == DOUBLE_AXIS)
-    {
-      /* For the moment, exit here - no support yet */
-      fprintf (stderr, "Double axis not supported yet - sorry.\n\n");
-      exit (EXIT_SUCCESS);
-      Try
-      {
-        OptionData_assemble_fname_in_axis2 (od);
-        OptionData_assemble_fname_reco_params_axis2 (od);
-        OptionData_assemble_fname_tiltangles_axis2 (od);
-      }
-      Catch (e)
-      {
-        EXC_RETHROW_REPRINT (e);
-        return;
-      }
-    }
   
   return;
 }
