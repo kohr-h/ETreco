@@ -215,7 +215,7 @@ fft_fwd_postmod (gfunc3 *gf_hc)
 void
 fft_forward (gfunc3 *gf)
 {
-  CEXCEPTION_T e = EXC_NONE;
+  CEXCEPTION_T _e = EXC_NONE;
   int nx;
   size_t n_ft;
   idx3 padding = {0, 0, 0};
@@ -225,50 +225,46 @@ fft_forward (gfunc3 *gf)
   CAPTURE_NULL_VOID (gf);
   GFUNC_CAPTURE_UNINIT_VOID (gf);
   if (gf->is_halfcomplex)
-    EXC_THROW_CUSTOMIZED_PRINT (EXC_GFTYPE, "Expected REAL type function.");
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_GFTYPE, "Expected REAL type function.");
+      return;
+    }
 
   /* Zero-padding first */
 
-  Try
-  {
-    if (fft_padding > 0)
-      {
-        idx3_set_all (padding, fft_padding);
-        
-        if (GFUNC_IS_2D (gf))
-          padding[2] = 0;
-        
-        gfunc3_zeropad (gf, padding);
-      }
-
-    nx = gf->shape[0] / 2 + 1;
-    n_ft = nx * gf->shape[1] * gf->shape[2];
-    d_ft = (fftwf_complex *) ali16_malloc (n_ft * sizeof(fftw_complex));
-
-    fft_fwd_premod (gf);
-
-    if (GFUNC_IS_2D (gf))
-      p = fftwf_plan_dft_r2c_2d (gf->shape[1], gf->shape[0], gf->fvals, d_ft, FFTW_ESTIMATE);
-
-    else
-      p = fftwf_plan_dft_r2c_3d (gf->shape[2], gf->shape[1], gf->shape[0], 
-        gf->fvals, d_ft, FFTW_ESTIMATE);
+  if (fft_padding > 0)
+    {
+      idx3_set_all (padding, fft_padding);
       
-    fftwf_execute (p);
-    fftwf_destroy_plan (p);
+      if (GFUNC_IS_2D (gf))
+        padding[2] = 0;
+      
+      Try { gfunc3_zeropad (gf, padding) } CATCH_RETURN_VOID (_e);
+    }
 
-    fftwf_free (gf->fvals);
-    gf->fvals = (float *) d_ft;
+  nx = gf->shape[0] / 2 + 1;
+  n_ft = nx * gf->shape[1] * gf->shape[2];
+  Try { d_ft = (fftwf_complex *) ali16_malloc (n_ft * sizeof(fftw_complex)); } CATCH_RETURN_VOID (_e);
 
-    gf->is_halfcomplex = 1;
-    gfunc3_grid_fwd_reciprocal (gf);
+  fft_fwd_premod (gf);
 
-    fft_fwd_postmod (gf);
-  }
-  Catch (e)
-  {
-    EXC_RETHROW_REPRINT (e);
-  }
+  if (GFUNC_IS_2D (gf))
+    p = fftwf_plan_dft_r2c_2d (gf->shape[1], gf->shape[0], gf->fvals, d_ft, FFTW_ESTIMATE);
+
+  else
+    p = fftwf_plan_dft_r2c_3d (gf->shape[2], gf->shape[1], gf->shape[0], 
+      gf->fvals, d_ft, FFTW_ESTIMATE);
+    
+  fftwf_execute (p);
+  fftwf_destroy_plan (p);
+
+  fftwf_free (gf->fvals);
+  gf->fvals = (float *) d_ft;
+
+  gf->is_halfcomplex = 1;
+  gfunc3_grid_fwd_reciprocal (gf);
+
+  fft_fwd_postmod (gf);
   
   return;
 }
@@ -379,6 +375,7 @@ fft_bwd_postmod (gfunc3 *gf)
 void
 fft_backward (gfunc3 *gf)
 {
+  CEXCEPTION_T _e = EXC_NONE;
   size_t n_ift;
   float *d_ift;
   idx3 padding = {0, 0, 0};
@@ -387,10 +384,13 @@ fft_backward (gfunc3 *gf)
   CAPTURE_NULL_VOID (gf);
   GFUNC_CAPTURE_UNINIT_VOID (gf);
   if (!gf->is_halfcomplex)
-    EXC_THROW_CUSTOMIZED_PRINT (EXC_GFTYPE, "Expected HALFCOMPLEX type function.");
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_GFTYPE, "Expected HALFCOMPLEX type function.");
+      return;
+    }
 
   n_ift = gf->_ntmp * gf->shape[1] * gf->shape[2];
-  d_ift = (float *) ali16_malloc (n_ift * sizeof (float));
+  d_ift = Try { (float *) ali16_malloc (n_ift * sizeof (float)); } CATCH_RETURN_VOID (_e);
 
   fft_bwd_premod (gf);
 
@@ -418,7 +418,7 @@ fft_backward (gfunc3 *gf)
       if (GFUNC_IS_2D (gf))
         padding[2] = 0;
         
-      gfunc3_unpad (gf, padding);
+      Try { gfunc3_unpad (gf, padding); } CATCH_RETURN_VOID (_e);
     }
 
   fft_bwd_postmod (gf);
