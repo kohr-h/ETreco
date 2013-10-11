@@ -76,10 +76,14 @@ typedef struct
 
 #define GFUNC_IS_2D(_pgf) ((_pgf)->shape[2] == 1)
 
-#define GFUNC_CHECK_INIT_STATUS(_pgf)  \
+#define GFUNC_CAPTURE_UNINIT(_pgf, _retval)  \
 do { \
-  if ((_pgf)->is_initialized == 0) \
-    EXC_THROW_PRINT (EXC_GFINIT); \
+  if ((_pgf)->is_initialized == 0) { EXC_THROW_PRINT (EXC_GFINIT); return _retval; }\
+} while (0)
+
+#define GFUNC_CAPTURE_UNINIT_VOID(_pgf)  \
+do { \
+  if ((_pgf)->is_initialized == 0) { EXC_THROW_PRINT (EXC_GFINIT); return; }\
 } while (0)
 
 /*-------------------------------------------------------------------------------------------------*/
