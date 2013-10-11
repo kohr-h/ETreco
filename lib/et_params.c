@@ -75,45 +75,35 @@ new_RecParams (void)
   CEXCEPTION_T e = EXC_NONE;
   RecParams *rp = NULL;
   
-  Try { rp = (RecParams *) ali16_malloc (sizeof (RecParams)); }
-  Catch (e) { EXC_RETHROW_REPRINT (e); }
+  Try { rp = (RecParams *) ali16_malloc (sizeof (RecParams)); }  CATCH_RETURN (e, NULL);
     
-    rp->acc_voltage             = 0.0;
-    rp->energy_spread           = 0.0;
-    rp->magnification           = 0.0;
-    rp->cs                      = 0.0;
-    rp->cc                      = 0.0;
-    rp->aperture                = 0.0;
-    rp->focal_length            = 0.0;
-    rp->cond_ap_angle           = 0.0;
-    rp->defocus_nominal         = 0.0;
-    rp->mtf_a                   = 0.0;
-    rp->mtf_b                   = 0.0;
-    rp->mtf_c                   = 0.0;
-    rp->mtf_alpha               = 0.0;
-    rp->mtf_beta                = 0.0;
-    rp->mtf_p                   = 0;
-    rp->mtf_q                   = 0;
-    rp->acr                     = 0.0;
-    rp->tilt_axis_rotation      = 0.0;
-    rp->tilt_axis_par_shift_px  = 0.0;
-    rp->wave_number             = 0.0;
-    rp->cc1                     = 0.0;
-    rp->aper_cutoff             = 0.0;
-    rp->ctf_trunc               = 0.0;
-    rp->moll_ft                 = NULL;
+  rp->acc_voltage             = 0.0;
+  rp->energy_spread           = 0.0;
+  rp->magnification           = 0.0;
+  rp->cs                      = 0.0;
+  rp->cc                      = 0.0;
+  rp->aperture                = 0.0;
+  rp->focal_length            = 0.0;
+  rp->cond_ap_angle           = 0.0;
+  rp->defocus_nominal         = 0.0;
+  rp->mtf_a                   = 0.0;
+  rp->mtf_b                   = 0.0;
+  rp->mtf_c                   = 0.0;
+  rp->mtf_alpha               = 0.0;
+  rp->mtf_beta                = 0.0;
+  rp->mtf_p                   = 0;
+  rp->mtf_q                   = 0;
+  rp->acr                     = 0.0;
+  rp->tilt_axis_rotation      = 0.0;
+  rp->tilt_axis_par_shift_px  = 0.0;
+  rp->wave_number             = 0.0;
+  rp->cc1                     = 0.0;
+  rp->aper_cutoff             = 0.0;
+  rp->ctf_trunc               = 0.0;
+  rp->moll_ft                 = NULL;
 
-    return rp;
-  
-  return NULL;
+  return rp;
 }
-
-/*-------------------------------------------------------------------------------------------------*
- * Internal declaration
- *-------------------------------------------------------------------------------------------------*/
-
-void
-compute_xover_spline_params (RecParams *rec_p);
 
 /*-------------------------------------------------------------------------------------------------*/
 
@@ -130,6 +120,11 @@ RecParams_free (RecParams **prec_p)
 
 /*-------------------------------------------------------------------------------------------------*/
 
+/* Internal declaration */
+void
+compute_xover_spline_params (RecParams *rec_p);
+
+
 void
 RecParams_assign_from_OptionData (RecParams *rec_p, const OptionData *od)
 {
@@ -138,13 +133,15 @@ RecParams_assign_from_OptionData (RecParams *rec_p, const OptionData *od)
   double dtmp;
   dictionary *dict;
 
-  CAPTURE_NULL (rec_p);
-  CAPTURE_NULL (od);
+  CAPTURE_NULL_VOID (rec_p);
+  CAPTURE_NULL_VOID (od);
 
   if ((dict = iniparser_load (od->fname_reco_params)) == NULL)
-    EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Unable to read reco parameters from %s.", 
-      od->fname_reco_params);
-
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Unable to read reco parameters from %s.", 
+        od->fname_reco_params);
+      return;
+    }
 
   /* Regularization */
 
@@ -156,22 +153,34 @@ RecParams_assign_from_OptionData (RecParams *rec_p, const OptionData *od)
   /* Geometry part */
 
   if ((itmp = rec_p->mtf_p = iniparser_getint (dict, "volume:nx", -1)) == -1)
-    EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Key 'nx' not found in %s.", od->fname_reco_params);
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Key 'nx' not found in %s.", od->fname_reco_params);
+      return;
+    }
 
   rec_p->vol_shape[0] = itmp;
   
   if ((itmp = rec_p->mtf_p = iniparser_getint (dict, "volume:ny", -1)) == -1)
-    EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Key 'ny' not found in %s.", od->fname_reco_params);
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Key 'ny' not found in %s.", od->fname_reco_params);
+      return;
+    }
 
   rec_p->vol_shape[1] = itmp;
 
   if ((itmp = rec_p->mtf_p = iniparser_getint (dict, "volume:nz", -1)) == -1)
-    EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Key 'nz' not found in %s.", od->fname_reco_params);
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Key 'nz' not found in %s.", od->fname_reco_params);
+      return;
+    }
 
   rec_p->vol_shape[2] = itmp;
 
   if ((dtmp = iniparser_getdouble (dict, "volume:voxel_size", -1.0)) == -1.0)
-    EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Key 'voxel_size' not found in %s.", od->fname_reco_params);
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Key 'voxel_size' not found in %s.", od->fname_reco_params);
+      return;
+    }
 
   vec3_set_all (rec_p->vol_csize, (float) dtmp);
 
@@ -190,8 +199,11 @@ RecParams_assign_from_OptionData (RecParams *rec_p, const OptionData *od)
     + ta_sy * cosf (rec_p->tilt_axis_rotation * ONE_DEGREE);
 
   if ((dtmp = iniparser_getdouble (dict, "optics:magnification", -1.0)) == -1.0)
-    EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Key 'magnification' not found in %s.", 
-      od->fname_reco_params);
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Key 'magnification' not found in %s.", 
+        od->fname_reco_params);
+      return;
+    }
 
   rec_p->magnification = (float) dtmp;
   
@@ -208,6 +220,7 @@ RecParams_assign_from_OptionData (RecParams *rec_p, const OptionData *od)
   if ((dtmp = iniparser_getdouble (dict, "electronbeam:acc_voltage", 0.0)) == 0.0)
     {
       use_ctf_flag = 0;
+      iniparser_freedict (dict);
       return;
     }
 
@@ -215,40 +228,62 @@ RecParams_assign_from_OptionData (RecParams *rec_p, const OptionData *od)
   rec_p->acc_voltage = (float) dtmp * ONE_KILOVOLT;
 
   if ((dtmp = iniparser_getdouble (dict, "electronbeam:energy_spread", -1.0)) == -1.0)
-    EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Key 'energy_spread' not found in %s.", 
-      od->fname_reco_params);
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Key 'energy_spread' not found in %s.", 
+        od->fname_reco_params);
+      return;
+    }
 
   rec_p->energy_spread = (float) dtmp;
 
   if ((dtmp = iniparser_getdouble (dict, "optics:cs", -1.0)) == -1.0)
-    EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Key 'cs' not found in %s.", od->fname_reco_params);
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Key 'cs' not found in %s.", od->fname_reco_params);
+      return;
+    }
 
   rec_p->cs = (float) dtmp * ONE_MILLIMETER;
 
   if ((dtmp = iniparser_getdouble (dict, "optics:cc", -1.0)) == -1.0)
-    EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Key 'cc' not found in %s.", od->fname_reco_params);
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Key 'cc' not found in %s.", od->fname_reco_params);
+      return;
+    }
 
   rec_p->cc = (float) dtmp * ONE_MILLIMETER;
 
   if ((dtmp = iniparser_getdouble (dict, "optics:aperture", -1.0)) == -1.0)
-    EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Key 'aperture' not found in %s.", od->fname_reco_params);
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Key 'aperture' not found in %s.", od->fname_reco_params);
+      return;
+    }
 
   rec_p->aperture = (float) dtmp * ONE_MICROMETER;
 
   if ((dtmp = iniparser_getdouble (dict, "optics:focal_length", -1.0)) == -1.0)
-    EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Key 'focal_length' not found in %s.", od->fname_reco_params);
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Key 'focal_length' not found in %s.", 
+        od->fname_reco_params);
+      return;
+    }
 
   rec_p->focal_length = (float) dtmp * ONE_MILLIMETER;
 
   if ((dtmp = iniparser_getdouble (dict, "optics:cond_ap_angle", -1.0)) == -1.0)
-    EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Key 'cond_ap_angle' not found in %s.", 
-      od->fname_reco_params);
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Key 'cond_ap_angle' not found in %s.", 
+        od->fname_reco_params);
+      return;
+    }
 
   rec_p->cond_ap_angle = (float) dtmp * ONE_MILLIRADIAN;
 
   if ((dtmp = iniparser_getdouble (dict, "optics:defocus_nominal", -1.0)) == -1.0)
-    EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Key 'defocus_nominal' not found in %s.", 
-      od->fname_reco_params);
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Key 'defocus_nominal' not found in %s.", 
+        od->fname_reco_params);
+      return;
+    }
 
   rec_p->defocus_nominal = (float) dtmp * ONE_MICROMETER;
 
@@ -311,7 +346,7 @@ RecParams_print (RecParams const *rec_p)
 {
   int i;
   
-  CAPTURE_NULL (rec_p);
+  CAPTURE_NULL_VOID (rec_p);
 
   /* TODO: fix alignment of printout */
   /* TODO: make dependent on verbosity */
@@ -402,8 +437,8 @@ RecParams_apply_to_volume (RecParams const *rec_p, gfunc3 *vol)
 {
   int i;
   
-  CAPTURE_NULL (rec_p);
-  CAPTURE_NULL (vol);
+  CAPTURE_NULL_VOID (rec_p);
+  CAPTURE_NULL_VOID (vol);
   
   for (i = 0; i < 3; i++)
     {
@@ -422,11 +457,14 @@ RecParams_apply_to_volume (RecParams const *rec_p, gfunc3 *vol)
 void
 RecParams_apply_to_proj_image (RecParams const *rec_p, gfunc3 *proj_img)
 {
-  CAPTURE_NULL (rec_p);
-  CAPTURE_NULL (proj_img);
+  CAPTURE_NULL_VOID (rec_p);
+  CAPTURE_NULL_VOID (proj_img);
   
   if (!GFUNC_IS_2D (proj_img))
-    EXC_THROW_CUSTOMIZED_PRINT (EXC_GFDIM, "proj_img must be 2-dimensional");
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_GFDIM, "proj_img must be 2-dimensional");
+      return;
+    }
   
   if (rec_p->detector_px_size[0] != 0.0)  /* Detector pixel size is set in config file */
     gfunc3_set_csize (proj_img, rec_p->detector_px_size);
