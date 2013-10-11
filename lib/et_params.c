@@ -497,9 +497,12 @@ approx_ctf_xval (float yval, RecParams const *rec_p, float xstart0, float xstart
     }
 
   if (n == MAX_STEPS)
-    EXC_THROW_CUSTOMIZED_PRINT (EXC_COMPUTE, "Error finding cutoff value: no convergence after"
-      " %d secant steps (last update = %e)!\n", n, update);
-
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_COMPUTE, "Error finding cutoff value: no convergence after"
+        " %d secant steps (last update = %e)!\n", n, update);
+      return FLT_MAX;
+    }
+    
   if (pdf != NULL)
     *pdf = dfval;
 
