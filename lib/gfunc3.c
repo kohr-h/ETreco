@@ -53,24 +53,37 @@ gfunc3 *
 new_gfunc3 (void)
 {
   gfunc3 *gf;
-  CEXCEPTION_T e = EXC_NONE;
+  CEXCEPTION_T _e = EXC_NONE;
   
-  Try
-  {
-    gf = (gfunc3 *) ali16_malloc (sizeof (gfunc3));
+  Try { gf = (gfunc3 *) ali16_malloc (sizeof (gfunc3)); }  CATCH_RETURN (_e, NULL);
+        
+  gf->is_initialized = 0;
+  gf->is_halfcomplex = 0;
+  gf->fvals          = NULL;
     
-    gf->is_initialized = 0;
-    gf->is_halfcomplex = 0;
-    gf->fvals          = NULL;
-    
-    return gf;
-  }
-  Catch (e)
-  {
-    EXC_RETHROW_REPRINT (e);
-  }
+  return gf;
+}
+
+/*-------------------------------------------------------------------------------------------------*/
+
+void
+gfunc3_free (gfunc3 **pgf)
+{
+  if (pgf == NULL)
+    return;
   
-  return NULL;
+  if ((*pgf) == NULL)
+    return;
+  
+  if ((*pgf)->fvals != NULL)
+    free ((*pgf)->fvals);
+  
+  (*pgf)->is_initialized = 0;
+  (*pgf)->is_halfcomplex = 0;
+
+  free (*pgf);
+
+  return;
 }
 
 /*-------------------------------------------------------------------------------------------------*/
@@ -80,7 +93,7 @@ new_gfunc3 (void)
 void
 gfunc3_init (gfunc3 *gf, vec3 const x0, vec3 const cs, idx3 const shp, gfunc_type gf_type)
 {
-  CEXCEPTION_T e = EXC_NONE;
+  CEXCEPTION_T _e = EXC_NONE;
   float nul[2] = {0.0f, 0.0f};
   
   CAPTURE_NULL_VOID (gf);
@@ -112,19 +125,10 @@ gfunc3_init (gfunc3 *gf, vec3 const x0, vec3 const cs, idx3 const shp, gfunc_typ
 
   gfunc3_compute_xmin_xmax (gf);
 
-  Try
-  {
-    /* Allocate memory for values and zero array */
-    gf->fvals = (float *) ali16_malloc (gf->ntotal * sizeof (float));
+  Try { gf->fvals = (float *) ali16_malloc (gf->ntotal * sizeof (float)); }  CATCH_RETURN_VOID (_e);
 
-    gf->is_initialized = 1;
-    gfunc3_set_all (gf, nul);
-  }    
-  Catch (e)
-  {
-    EXC_RETHROW_REPRINT (e);
-  }
-
+  gf->is_initialized = 1;
+  gfunc3_set_all (gf, nul);
   return;
 }
 
@@ -133,7 +137,7 @@ gfunc3_init (gfunc3 *gf, vec3 const x0, vec3 const cs, idx3 const shp, gfunc_typ
 void
 gfunc3_init_from_foreign_grid (gfunc3 *gf, gfunc3 const *gf_template)
 {
-  CEXCEPTION_T e = EXC_NONE;
+  CEXCEPTION_T _e = EXC_NONE;
   float nul[2] = {0.0f, 0.0f};
   
   CAPTURE_NULL_VOID (gf);
@@ -169,9 +173,9 @@ gfunc3_init_from_foreign_grid (gfunc3 *gf, gfunc3 const *gf_template)
     gf->is_initialized = 1;
     gfunc3_set_all (gf, nul);
   }
-  Catch (e)
+  Catch (_e)
   {
-    EXC_RETHROW_REPRINT (e);
+    EXC_RETHROW_REPRINT (_e);
   }
     
 
@@ -238,28 +242,6 @@ gfunc3_compute_xmin_xmax (gfunc3 *gf)
       gf->xmax[2]  = 0.0;
       gf->csize[2] = 1.0;
     }
-
-  return;
-}
-
-/*-------------------------------------------------------------------------------------------------*/
-
-void
-gfunc3_free (gfunc3 **pgf)
-{
-  if (pgf == NULL)
-    return;
-  
-  if ((*pgf) == NULL)
-    return;
-  
-  if ((*pgf)->fvals != NULL)
-    free ((*pgf)->fvals);
-  
-  (*pgf)->is_initialized = 0;
-  (*pgf)->is_halfcomplex = 0;
-
-  free (*pgf);
 
   return;
 }
@@ -599,7 +581,7 @@ gfunc3_grid_is_subgrid (gfunc3 const *gf, gfunc3 const *gf_sub)
 void
 gfunc3_copy (gfunc3 *dest, gfunc3 const *src)
 {
-  CEXCEPTION_T e = EXC_NONE;
+  CEXCEPTION_T _e = EXC_NONE;
   size_t ntotal_flt;
   
   CAPTURE_NULL_VOID (dest);
@@ -626,9 +608,9 @@ gfunc3_copy (gfunc3 *dest, gfunc3 const *src)
   {
     dest->fvals = (float *) ali16_malloc (ntotal_flt * sizeof (float));
   }
-  Catch (e)
+  Catch (_e)
   {
-    EXC_RETHROW_REPRINT (e);
+    EXC_RETHROW_REPRINT (_e);
   }
   
   dest->is_initialized = 1;
@@ -708,7 +690,7 @@ gfunc3_axpy (float a, gfunc3 *gf1, gfunc3 const *gf2)
   else  /* !gfunc3_grids_are_equal (gf1, gf2) */
     {
       size_t *idcs;
-      CEXCEPTION_T e = EXC_NONE;
+      CEXCEPTION_T _e = EXC_NONE;
       
       Try 
       {
@@ -745,9 +727,9 @@ gfunc3_axpy (float a, gfunc3 *gf1, gfunc3 const *gf2)
         
         free (idcs);
       }
-      Catch (e)
+      Catch (_e)
       {
-        EXC_RETHROW_REPRINT (e);
+        EXC_RETHROW_REPRINT (_e);
       }
     }
 
@@ -865,7 +847,7 @@ gfunc3_mul_re (gfunc3 *gf1, gfunc3 const *gf2)
   else  /* !gfunc3_grids_are_equal (gf1, gf2) */
     {
       size_t *idcs;
-      CEXCEPTION_T e = EXC_NONE;
+      CEXCEPTION_T _e = EXC_NONE;
       
       Try 
       {
@@ -901,9 +883,9 @@ gfunc3_mul_re (gfunc3 *gf1, gfunc3 const *gf2)
                 
         free (idcs);
       }
-      Catch (e)
+      Catch (_e)
       {
-        EXC_RETHROW_REPRINT (e);
+        EXC_RETHROW_REPRINT (_e);
       }
     }
 
@@ -968,7 +950,7 @@ gfunc3_mul_hc (gfunc3 *gf1, gfunc3 const *gf2)
   else  /* !gfunc3_grids_are_equal (gf1, gf2) */
     {
       size_t *idcs;
-      CEXCEPTION_T e = EXC_NONE;
+      CEXCEPTION_T _e = EXC_NONE;
       
       Try 
       {
@@ -1028,9 +1010,9 @@ gfunc3_mul_hc (gfunc3 *gf1, gfunc3 const *gf2)
                 
         free (idcs);
       }
-      Catch (e)
+      Catch (_e)
       {
-        EXC_RETHROW_REPRINT (e);
+        EXC_RETHROW_REPRINT (_e);
       }
     }
     
@@ -1081,7 +1063,7 @@ gfunc3_mul_hc_re (gfunc3 *gf1, gfunc3 const *gf2)
   else  /* !gfunc3_grids_are_equal (gf1, gf2) */
     {
       size_t *idcs;
-      CEXCEPTION_T e = EXC_NONE;
+      CEXCEPTION_T _e = EXC_NONE;
       
       Try 
       {
@@ -1133,9 +1115,9 @@ gfunc3_mul_hc_re (gfunc3 *gf1, gfunc3 const *gf2)
                 
         free (idcs);
       }
-      Catch (e)
+      Catch (_e)
       {
-        EXC_RETHROW_REPRINT (e);
+        EXC_RETHROW_REPRINT (_e);
       }
     }
     
@@ -1147,7 +1129,7 @@ gfunc3_mul_hc_re (gfunc3 *gf1, gfunc3 const *gf2)
 void
 gfunc3_mul (gfunc3 *gf1, gfunc3 const *gf2)
 {
-  CEXCEPTION_T e = EXC_NONE;
+  CEXCEPTION_T _e = EXC_NONE;
   
   CAPTURE_NULL_VOID (gf1);
   CAPTURE_NULL_VOID (gf2);
@@ -1165,9 +1147,9 @@ gfunc3_mul (gfunc3 *gf1, gfunc3 const *gf2)
     else
       EXC_THROW_CUSTOMIZED_PRINT (EXC_GFTYPE, "Not implemented for half-complex * real.");
   }
-  Catch (e)
+  Catch (_e)
   {
-    EXC_RETHROW_REPRINT (e);
+    EXC_RETHROW_REPRINT (_e);
   }
   
   return;
@@ -1287,7 +1269,7 @@ gfunc3_div_re (gfunc3 *gf1, gfunc3 const *gf2)
   else  /* !gfunc3_grids_are_equal (gf1, gf2) */
     {
       size_t *idcs;
-      CEXCEPTION_T e = EXC_NONE;
+      CEXCEPTION_T _e = EXC_NONE;
       
       Try 
       {
@@ -1323,9 +1305,9 @@ gfunc3_div_re (gfunc3 *gf1, gfunc3 const *gf2)
         
         free (idcs);
       }
-      Catch (e)
+      Catch (_e)
       {
-        EXC_RETHROW_REPRINT (e);
+        EXC_RETHROW_REPRINT (_e);
       }
     }
     
@@ -1337,7 +1319,7 @@ gfunc3_div_re (gfunc3 *gf1, gfunc3 const *gf2)
 void
 gfunc3_div (gfunc3 *gf1, gfunc3 const *gf2)
 {
-  CEXCEPTION_T e = EXC_NONE;
+  CEXCEPTION_T _e = EXC_NONE;
 
   CAPTURE_NULL_VOID (gf1);
   CAPTURE_NULL_VOID (gf2);
@@ -1355,9 +1337,9 @@ gfunc3_div (gfunc3 *gf1, gfunc3 const *gf2)
     else
       gfunc3_mul_re (gf1, gf2);
   }
-  Catch (e)
+  Catch (_e)
   {
-    EXC_RETHROW_REPRINT (e);
+    EXC_RETHROW_REPRINT (_e);
   }
     
   return;
@@ -2016,7 +1998,7 @@ gfunc3_interp_linear_2d (gfunc3 const *gf, vec3 const pt)
 size_t *
 gfunc3_subgrid_flatidcs (gfunc3 const *gf, gfunc3 const *gf_sub)
 {
-  CEXCEPTION_T e = EXC_NONE;
+  CEXCEPTION_T _e = EXC_NONE;
   int i, iz, iy, ix;
   size_t idx, z_offset, y_offset, *active_idcs;
   idx3 off, sfac;
@@ -2054,9 +2036,9 @@ gfunc3_subgrid_flatidcs (gfunc3 const *gf, gfunc3 const *gf_sub)
 
     return active_idcs;
   }
-  Catch (e)
+  Catch (_e)
   {
-    EXC_RETHROW_REPRINT (e);
+    EXC_RETHROW_REPRINT (_e);
   }
 
   return NULL;
@@ -2067,7 +2049,7 @@ gfunc3_subgrid_flatidcs (gfunc3 const *gf, gfunc3 const *gf_sub)
 void
 gfunc3_zeropad (gfunc3 *gf, idx3 const padding)
 {
-  CEXCEPTION_T e = EXC_NONE;
+  CEXCEPTION_T _e = EXC_NONE;
   int i;
   size_t idx, ntotal_old, *idcs;
 
@@ -2080,7 +2062,10 @@ gfunc3_zeropad (gfunc3 *gf, idx3 const padding)
 
   /* TODO: implement half-complex version */
   if (gf->is_halfcomplex)
-    EXC_THROW_CUSTOMIZED_PRINT (EXC_UNIMPL, "Complex version not yet implemented.");
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_UNIMPL, "Complex version not yet implemented.");
+      return;
+    }
 
   /* gf_tmp is used only to hold the old grid and as input for the subgrid_flatidcs function */
   Try
@@ -2113,9 +2098,9 @@ gfunc3_zeropad (gfunc3 *gf, idx3 const padding)
     free (idcs);
     free (fvals_old);
   }
-  Catch (e)
+  Catch (_e)
   {
-    EXC_RETHROW_REPRINT (e);
+    EXC_RETHROW_REPRINT (_e);
   }
   
   return;
@@ -2126,7 +2111,7 @@ gfunc3_zeropad (gfunc3 *gf, idx3 const padding)
 void
 gfunc3_unpad (gfunc3 *gf, idx3 const padding)
 {
-  CEXCEPTION_T e = EXC_NONE;
+  CEXCEPTION_T _e = EXC_NONE;
   int i;
   size_t idx, *idcs;
 
@@ -2177,9 +2162,9 @@ gfunc3_unpad (gfunc3 *gf, idx3 const padding)
     free (idcs);
     free (fvals_old);
   }
-  Catch (e)
+  Catch (_e)
   {
-    EXC_RETHROW_REPRINT (e);
+    EXC_RETHROW_REPRINT (_e);
   }
   
   return;
