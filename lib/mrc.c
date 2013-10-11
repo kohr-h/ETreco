@@ -318,8 +318,8 @@ gfunc3_init_mrc (gfunc3 *gf, char const *mrc_fname, FILE **pfp_in, int *pn_img, 
   
   FILE *fp;
 
-  CAPTURE_NULL (gf);
-  CAPTURE_NULL (mrc_fname);
+  CAPTURE_NULL_VOID (gf);
+  CAPTURE_NULL_VOID (mrc_fname);
 
   /* Try opening the file */
   fp = fopen (mrc_fname, "r");
@@ -496,9 +496,9 @@ gfunc3_read_from_stack (gfunc3 *gf, FILE *fp, int stackpos)
   size_t i, fpos = MRC_HEADER_BYTES;
   float amin, amax, amean, dmin, dmax, a, b;
   
-  CAPTURE_NULL (gf);
-  CAPTURE_NULL (fp);
-  GFUNC_CHECK_INIT_STATUS (gf);
+  CAPTURE_NULL_VOID (gf);
+  CAPTURE_NULL_VOID (fp);
+  GFUNC_CAPTURE_UNINIT_VOID (gf);
     
   if (stackpos < 0)
     EXC_THROW_CUSTOMIZED_PRINT (EXC_BADARG, "stackpos must be nonnegative.");
@@ -603,9 +603,9 @@ gfunc3_to_mrc (gfunc3 const *gf, char const *mrc_fname)
   float fbuf[3];
   FILE *fp;
 
-  CAPTURE_NULL (gf);
-  CAPTURE_NULL (mrc_fname);
-  GFUNC_CHECK_INIT_STATUS (gf);
+  CAPTURE_NULL_VOID (gf);
+  CAPTURE_NULL_VOID (mrc_fname);
+  GFUNC_CAPTURE_UNINIT_VOID (gf);
   
   if ((fp = fopen (mrc_fname, "w")) == NULL)
     EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Unable to write-only open %s.", mrc_fname);
@@ -729,9 +729,9 @@ gfunc3_to_mrc (gfunc3 const *gf, char const *mrc_fname)
 void
 temp_mrc_out (gfunc3 const *gf, char const *mrc_fbasename, int count)
 {
-  CAPTURE_NULL (gf);
-  CAPTURE_NULL (mrc_fbasename);
-  GFUNC_CHECK_INIT_STATUS (gf);
+  CAPTURE_NULL_VOID (gf);
+  CAPTURE_NULL_VOID (mrc_fbasename);
+  GFUNC_CAPTURE_UNINIT_VOID (gf);
   
   CEXCEPTION_T e = EXC_NONE;
   size_t flen = strlen (mrc_fbasename), templen = strlen (TEMPDIR_STR), extlen = strlen (".mrc");

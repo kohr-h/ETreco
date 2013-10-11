@@ -161,8 +161,8 @@ detector_mtf (float const *grid_xi, float *zp, void const *params)
 void
 vfunc_init_detector_mtf (vfunc *vf, RecParams const *rec_p)
 {
-  CAPTURE_NULL (vf);
-  CAPTURE_NULL (rec_p);
+  CAPTURE_NULL_VOID (vf);
+  CAPTURE_NULL_VOID (rec_p);
   
   vf->f = detector_mtf;
   vf->params = rec_p;
@@ -186,8 +186,8 @@ detector_recip_mtf (float const *grid_xi, float *zp, void const *params)
 void
 vfunc_init_detector_recip_mtf (vfunc *vf, RecParams const *rec_p)
 {
-  CAPTURE_NULL (vf);
-  CAPTURE_NULL (rec_p);
+  CAPTURE_NULL_VOID (vf);
+  CAPTURE_NULL_VOID (rec_p);
   
   vf->f = detector_recip_mtf;
   vf->params = rec_p;
@@ -214,8 +214,8 @@ ctf (float const *xi, float *zp, void const *params)
 void
 vfunc_init_ctf (vfunc *vf, RecParams const *rec_p)
 {
-  CAPTURE_NULL (vf);
-  CAPTURE_NULL (rec_p);
+  CAPTURE_NULL_VOID (vf);
+  CAPTURE_NULL_VOID (rec_p);
     
   vf->f = ctf;
   vf->params = rec_p;
@@ -299,8 +299,8 @@ void ft_rk_single_axis_x_noctf (float const *xi, float *zp, void const *params)
 void
 vfunc_init_ft_rk_single_axis_x (vfunc *vf, RecParams const *rec_p)
 {
-  CAPTURE_NULL (vf);
-  CAPTURE_NULL (rec_p);
+  CAPTURE_NULL_VOID (vf);
+  CAPTURE_NULL_VOID (rec_p);
     
   if (use_ctf_flag)
     vf->f = ft_rk_single_axis_x;
@@ -349,8 +349,8 @@ ft_charfun_ball3 (float const *xi, float *zp, void const *params)
 void
 vfunc_init_ft_charfun_ball3 (vfunc *vf, float const *pradius)
 {
-  CAPTURE_NULL (vf);
-  CAPTURE_NULL (pradius);
+  CAPTURE_NULL_VOID (vf);
+  CAPTURE_NULL_VOID (pradius);
   
   vf->f = ft_charfun_ball3;
   vf->params = pradius;
@@ -390,8 +390,8 @@ ft_charfun_cyl3 (float const *xi, float *zp, void const *params)
 void
 vfunc_init_ft_charfun_cyl3 (vfunc *vf, float const *plength_radius)
 {
-  CAPTURE_NULL (vf);
-  CAPTURE_NULL (plength_radius);
+  CAPTURE_NULL_VOID (vf);
+  CAPTURE_NULL_VOID (plength_radius);
     
   vf->f = ft_charfun_cyl3;
   vf->params = plength_radius;
@@ -418,8 +418,8 @@ ft_lambda (float const *xi, float *zp, void const *params)
 void
 vfunc_init_ft_lambda (vfunc *vf, float const *ppow)
 {
-  CAPTURE_NULL (vf);
-  CAPTURE_NULL (ppow);
+  CAPTURE_NULL_VOID (vf);
+  CAPTURE_NULL_VOID (ppow);
     
   vf->f = ft_lambda;
   vf->params = ppow;
@@ -446,8 +446,8 @@ ft_lambda_v (float const *xi, float *zp, void const *params)
 void
 vfunc_init_ft_lambda_v (vfunc *vf, float const *ppow)
 {
-  CAPTURE_NULL (vf);
-  CAPTURE_NULL (ppow);
+  CAPTURE_NULL_VOID (vf);
+  CAPTURE_NULL_VOID (ppow);
     
   vf->f = ft_lambda_v;
   vf->params = ppow;

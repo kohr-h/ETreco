@@ -106,10 +106,10 @@ compute_rotated_basis (vec3 const angles_deg, vec3 om_x, vec3 om_y, vec3 om_z)
 {
   float alpha, beta, gamma;
   
-  CAPTURE_NULL (angles_deg);
-  CAPTURE_NULL (om_x);
-  CAPTURE_NULL (om_y);
-  CAPTURE_NULL (om_z);
+  CAPTURE_NULL_VOID (angles_deg);
+  CAPTURE_NULL_VOID (om_x);
+  CAPTURE_NULL_VOID (om_y);
+  CAPTURE_NULL_VOID (om_z);
 
   alpha = ONE_DEGREE * angles_deg[2] + SHIFT_PHI;
   beta  = ONE_DEGREE * angles_deg[1] + SHIFT_THETA;

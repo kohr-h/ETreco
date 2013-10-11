@@ -83,9 +83,9 @@ gfunc3_init (gfunc3 *gf, vec3 const x0, vec3 const cs, idx3 const shp, gfunc_typ
   CEXCEPTION_T e = EXC_NONE;
   float nul[2] = {0.0f, 0.0f};
   
-  CAPTURE_NULL (gf);
-  CAPTURE_NULL (cs);
-  CAPTURE_NULL (shp);
+  CAPTURE_NULL_VOID (gf);
+  CAPTURE_NULL_VOID (cs);
+  CAPTURE_NULL_VOID (shp);
 
   /* Initialize grid */
   idx3_copy (gf->shape, shp);
@@ -136,8 +136,8 @@ gfunc3_init_from_foreign_grid (gfunc3 *gf, gfunc3 const *gf_template)
   CEXCEPTION_T e = EXC_NONE;
   float nul[2] = {0.0f, 0.0f};
   
-  CAPTURE_NULL (gf);
-  CAPTURE_NULL (gf_template);
+  CAPTURE_NULL_VOID (gf);
+  CAPTURE_NULL_VOID (gf_template);
 
   if (gf->is_initialized)
     free (gf->fvals);
@@ -183,8 +183,8 @@ gfunc3_init_from_foreign_grid (gfunc3 *gf, gfunc3 const *gf_template)
 void
 gfunc3_set_csize (gfunc3 *gf, vec3 const cs)
 {
-  CAPTURE_NULL (gf);
-  CAPTURE_NULL (cs);
+  CAPTURE_NULL_VOID (gf);
+  CAPTURE_NULL_VOID (cs);
 
   vec3_copy (gf->csize, cs);
   gfunc3_compute_xmin_xmax (gf);
@@ -197,8 +197,8 @@ gfunc3_set_csize (gfunc3 *gf, vec3 const cs)
 void
 gfunc3_set_x0 (gfunc3 *gf, vec3 const x0)
 {
-  CAPTURE_NULL (gf);
-  CAPTURE_NULL (x0);
+  CAPTURE_NULL_VOID (gf);
+  CAPTURE_NULL_VOID (x0);
 
   vec3_copy (gf->x0, x0);
   gfunc3_compute_xmin_xmax (gf);
@@ -211,7 +211,7 @@ gfunc3_set_x0 (gfunc3 *gf, vec3 const x0)
 void
 gfunc3_compute_xmin_xmax (gfunc3 *gf)
 {
-  CAPTURE_NULL (gf);
+  CAPTURE_NULL_VOID (gf);
 
   int i;
   
@@ -276,9 +276,9 @@ gfunc3_assign_fvals_from_vfunc (gfunc3 *gf, const vfunc *vf)
   float nul[2] = {0.0f, 0.0f};
   vec3 p;
 
-  CAPTURE_NULL (gf);
-  CAPTURE_NULL (vf);
-  GFUNC_CHECK_INIT_STATUS (gf);
+  CAPTURE_NULL_VOID (gf);
+  CAPTURE_NULL_VOID (vf);
+  GFUNC_CAPTURE_UNINIT_VOID (gf);
 
   incr = (gf->is_halfcomplex) ? 2 : 1;
 
@@ -313,7 +313,7 @@ gfunc3_assign_fvals_from_vfunc (gfunc3 *gf, const vfunc *vf)
 void
 gfunc3_print_grid (gfunc3 const *gf, char const *intro_text)
 {
-  CAPTURE_NULL (gf);
+  CAPTURE_NULL_VOID (gf);
 
   printf ("\n");
   if (intro_text != NULL)
@@ -361,8 +361,8 @@ gfunc3_min (gfunc3 const *gf)
   size_t i;
   float min;
 
-  CAPTURE_NULL (gf);
-  GFUNC_CHECK_INIT_STATUS (gf);
+  CAPTURE_NULL (gf, FLT_MAX);
+  GFUNC_CAPTURE_UNINIT (gf, FLT_MAX);
   
   if (gf->is_halfcomplex)
     EXC_THROW_CUSTOMIZED_PRINT (EXC_GFTYPE, "Minimum not defined for complex functions.");
@@ -407,8 +407,8 @@ gfunc3_max (gfunc3 const *gf)
   size_t i;
   float max;
   
-  CAPTURE_NULL (gf);
-  GFUNC_CHECK_INIT_STATUS (gf);
+  CAPTURE_NULL (gf, -FLT_MAX);
+  GFUNC_CAPTURE_UNINIT (gf, -FLT_MAX);
 
   if (gf->is_halfcomplex)
     EXC_THROW_CUSTOMIZED_PRINT (EXC_GFTYPE, "Minimum not defined for complex functions.");
@@ -453,8 +453,8 @@ gfunc3_mean (gfunc3 const *gf)
   size_t i;
   float sum = 0.0;
 
-  CAPTURE_NULL (gf);
-  GFUNC_CHECK_INIT_STATUS (gf);
+  CAPTURE_NULL (gf, FLT_MAX);
+  GFUNC_CAPTURE_UNINIT (gf, FLT_MAX);
 
   /* TODO: implement half-complex version */
   if (gf->is_halfcomplex)
@@ -491,8 +491,8 @@ gfunc3_variance (gfunc3 const *gf, float const *pmean)
   float mean = 0.0, tmp;
   float sum_sq = 0.0;
 
-  CAPTURE_NULL (gf);
-  GFUNC_CHECK_INIT_STATUS (gf);
+  CAPTURE_NULL (gf, FLT_MAX);
+  GFUNC_CAPTURE_UNINIT (gf, FLT_MAX);
 
   if (gf->is_halfcomplex)
     EXC_THROW_CUSTOMIZED_PRINT (EXC_GFTYPE, "Variance not defined for complex functions.");
@@ -539,10 +539,10 @@ gfunc3_variance (gfunc3 const *gf, float const *pmean)
 int
 gfunc3_grids_are_equal (gfunc3 const *gf1, gfunc3 const *gf2)
 {
-  CAPTURE_NULL (gf1);
-  CAPTURE_NULL (gf2);
-  GFUNC_CHECK_INIT_STATUS (gf1);
-  GFUNC_CHECK_INIT_STATUS (gf2);
+  CAPTURE_NULL (gf1, 0);
+  CAPTURE_NULL (gf2, 0);
+  GFUNC_CAPTURE_UNINIT (gf1, 0);
+  GFUNC_CAPTURE_UNINIT (gf2, 0);
   
   return (idx3_eq (gf1->shape, gf2->shape)                 &&
           vec3_about_eq (gf1->csize, gf2->csize, EPS_GRID) &&
@@ -557,8 +557,8 @@ gfunc3_grid_is_subgrid (gfunc3 const *gf, gfunc3 const *gf_sub)
   int i;
   float tmp;
 
-  CAPTURE_NULL (gf);
-  CAPTURE_NULL (gf_sub);
+  CAPTURE_NULL (gf, 0);
+  CAPTURE_NULL (gf_sub, 0);
   
   /* Subgrid shape must not exceed grid shape */
   if (!idx3_le (gf_sub->shape, gf->shape))
@@ -602,9 +602,9 @@ gfunc3_copy (gfunc3 *dest, gfunc3 const *src)
   CEXCEPTION_T e = EXC_NONE;
   size_t ntotal_flt;
   
-  CAPTURE_NULL (dest);
-  CAPTURE_NULL (src);
-  GFUNC_CHECK_INIT_STATUS (src);
+  CAPTURE_NULL_VOID (dest);
+  CAPTURE_NULL_VOID (src);
+  GFUNC_CAPTURE_UNINIT_VOID (src);
 
   if (dest->is_initialized)
     free (dest->fvals);
@@ -663,10 +663,10 @@ gfunc3_axpy (float a, gfunc3 *gf1, gfunc3 const *gf2)
 {
   size_t ntotal_flt;
 
-  CAPTURE_NULL (gf1);
-  CAPTURE_NULL (gf2);
-  GFUNC_CHECK_INIT_STATUS (gf1);
-  GFUNC_CHECK_INIT_STATUS (gf2);
+  CAPTURE_NULL_VOID (gf1);
+  CAPTURE_NULL_VOID (gf2);
+  GFUNC_CAPTURE_UNINIT_VOID (gf1);
+  GFUNC_CAPTURE_UNINIT_VOID (gf2);
 
   /* TODO: implement mixed axpy */
   if (gf1->is_halfcomplex != gf2->is_halfcomplex)
@@ -824,9 +824,9 @@ gfunc3_axpy_vfunc_hc (float a, gfunc3 *gf, const vfunc *vf)
 void
 gfunc3_axpy_vfunc (float a, gfunc3 *gf, const vfunc *vf)
 {
-  CAPTURE_NULL (gf);
-  CAPTURE_NULL (vf);
-  GFUNC_CHECK_INIT_STATUS (gf);
+  CAPTURE_NULL_VOID (gf);
+  CAPTURE_NULL_VOID (vf);
+  GFUNC_CAPTURE_UNINIT_VOID (gf);
 
   if (gf->is_halfcomplex)
     gfunc3_axpy_vfunc_hc (a, gf, vf);
@@ -1149,10 +1149,10 @@ gfunc3_mul (gfunc3 *gf1, gfunc3 const *gf2)
 {
   CEXCEPTION_T e = EXC_NONE;
   
-  CAPTURE_NULL (gf1);
-  CAPTURE_NULL (gf2);
-  GFUNC_CHECK_INIT_STATUS (gf1);
-  GFUNC_CHECK_INIT_STATUS (gf2);
+  CAPTURE_NULL_VOID (gf1);
+  CAPTURE_NULL_VOID (gf2);
+  GFUNC_CAPTURE_UNINIT_VOID (gf1);
+  GFUNC_CAPTURE_UNINIT_VOID (gf2);
 
   Try
   {
@@ -1247,9 +1247,9 @@ gfunc3_mul_vfunc_hc (gfunc3 *gf, const vfunc *vf)
 void
 gfunc3_mul_vfunc (gfunc3 *gf, const vfunc *vf)
 {
-  CAPTURE_NULL (gf);
-  CAPTURE_NULL (vf);
-  GFUNC_CHECK_INIT_STATUS (gf);
+  CAPTURE_NULL_VOID (gf);
+  CAPTURE_NULL_VOID (vf);
+  GFUNC_CAPTURE_UNINIT_VOID (gf);
 
   if (gf->is_halfcomplex)
     gfunc3_mul_vfunc_hc (gf, vf);
@@ -1339,10 +1339,10 @@ gfunc3_div (gfunc3 *gf1, gfunc3 const *gf2)
 {
   CEXCEPTION_T e = EXC_NONE;
 
-  CAPTURE_NULL (gf1);
-  CAPTURE_NULL (gf2);
-  GFUNC_CHECK_INIT_STATUS (gf1);
-  GFUNC_CHECK_INIT_STATUS (gf2);
+  CAPTURE_NULL_VOID (gf1);
+  CAPTURE_NULL_VOID (gf2);
+  GFUNC_CAPTURE_UNINIT_VOID (gf1);
+  GFUNC_CAPTURE_UNINIT_VOID (gf2);
   
   /* TODO: implement mixed div */
   if (gf1->is_halfcomplex != gf2->is_halfcomplex)
@@ -1400,9 +1400,9 @@ gfunc3_div_vfunc_re (gfunc3 *gf, const vfunc *vf)
 void
 gfunc3_div_vfunc (gfunc3 *gf, const vfunc *vf)
 {
-  CAPTURE_NULL (gf);
-  CAPTURE_NULL (vf);
-  GFUNC_CHECK_INIT_STATUS (gf);
+  CAPTURE_NULL_VOID (gf);
+  CAPTURE_NULL_VOID (vf);
+  GFUNC_CAPTURE_UNINIT_VOID (gf);
 
   /* TODO: implement half-complex version */
   if (gf->is_halfcomplex)
@@ -1418,8 +1418,8 @@ gfunc3_div_vfunc (gfunc3 *gf, const vfunc *vf)
 void
 gfunc3_scale (gfunc3 *gf, float a)
 {
-  CAPTURE_NULL (gf);
-  GFUNC_CHECK_INIT_STATUS (gf);
+  CAPTURE_NULL_VOID (gf);
+  GFUNC_CAPTURE_UNINIT_VOID (gf);
   
   #if HAVE_CBLAS
   cblas_sscal (gf->ntotal, a, gf->fvals, 1);
@@ -1451,8 +1451,8 @@ gfunc3_add_constant (gfunc3 *gf, float c)
 {
   size_t i;
 
-  CAPTURE_NULL (gf);
-  GFUNC_CHECK_INIT_STATUS (gf);
+  CAPTURE_NULL_VOID (gf);
+  GFUNC_CAPTURE_UNINIT_VOID (gf);
 
   #if HAVE_SSE
   size_t N4 = gf->ntotal / 4, N4rem = gf->ntotal % 4;
@@ -1478,8 +1478,8 @@ gfunc3_add_constant (gfunc3 *gf, float c)
 void
 gfunc3_translate (gfunc3 *gf, vec3 const s)
 {
-  CAPTURE_NULL (gf);
-  CAPTURE_NULL (s);
+  CAPTURE_NULL_VOID (gf);
+  CAPTURE_NULL_VOID (s);
   
   vec3_axpby (1, gf->x0,   1, s);
   vec3_axpby (1, gf->xmin, 1, s);
@@ -1502,7 +1502,7 @@ gfunc3_translate (gfunc3 *gf, vec3 const s)
 void
 gfunc3_scale_grid (gfunc3 *gf, float a)
 {
-  CAPTURE_NULL (gf);
+  CAPTURE_NULL_VOID (gf);
 
   if (a <= 0)
     EXC_THROW_CUSTOMIZED_PRINT (EXC_BADARG, "a must be positive.");
@@ -1524,8 +1524,8 @@ gfunc3_scale_grid (gfunc3 *gf, float a)
 void
 gfunc3_dilate (gfunc3 *gf, float a)
 {
-  CAPTURE_NULL (gf);
-  GFUNC_CHECK_INIT_STATUS (gf);
+  CAPTURE_NULL_VOID (gf);
+  GFUNC_CAPTURE_UNINIT_VOID (gf);
 
   if (a <= 0)
     EXC_THROW_CUSTOMIZED_PRINT (EXC_BADARG, "a must be positive.");
@@ -1547,9 +1547,9 @@ gfunc3_set (gfunc3 *gf, idx3 const idx, float const *pval)
 {
   size_t fi;
 
-  CAPTURE_NULL (gf);
-  CAPTURE_NULL (idx);
-  GFUNC_CHECK_INIT_STATUS (gf);
+  CAPTURE_NULL_VOID (gf);
+  CAPTURE_NULL_VOID (idx);
+  GFUNC_CAPTURE_UNINIT_VOID (gf);
   
   if (!idx3_inside_range (idx, gf->shape))
     EXC_THROW_PRINT (EXC_INDEX);
@@ -1632,9 +1632,9 @@ gfunc3_set_all_hc (gfunc3 *gf, float const *pval)
 void
 gfunc3_set_all (gfunc3 *gf, float const *pval)
 {
-  CAPTURE_NULL (gf);
-  CAPTURE_NULL (pval);
-  GFUNC_CHECK_INIT_STATUS (gf);
+  CAPTURE_NULL_VOID (gf);
+  CAPTURE_NULL_VOID (pval);
+  GFUNC_CAPTURE_UNINIT_VOID (gf);
   
   if (gf->is_halfcomplex)
     gfunc3_set_all_hc (gf, pval);
@@ -1650,8 +1650,8 @@ gfunc3_make_nonneg (gfunc3 *gf)
 {
   size_t i;
 
-  CAPTURE_NULL (gf);
-  GFUNC_CHECK_INIT_STATUS (gf);
+  CAPTURE_NULL_VOID (gf);
+  GFUNC_CAPTURE_UNINIT_VOID (gf);
   
   if (gf->is_halfcomplex)
     EXC_THROW_CUSTOMIZED_PRINT (EXC_GFTYPE, "Cannot compare complex values against zero.");
@@ -1685,9 +1685,9 @@ gfunc3_eval (gfunc3 *gf, idx3 const idx)
 {
   size_t fi;
 
-  CAPTURE_NULL (gf);
-  CAPTURE_NULL (idx);
-  GFUNC_CHECK_INIT_STATUS (gf);
+  CAPTURE_NULL (gf, FLT_MAX);
+  CAPTURE_NULL (idx, FLT_MAX);
+  GFUNC_CAPTURE_UNINIT (gf, FLT_MAX);
 
   if (!idx3_inside_range (idx, gf->shape))
     EXC_THROW_PRINT (EXC_INDEX);
@@ -1705,9 +1705,9 @@ gfunc3_interp_nearest (gfunc3 const *gf, vec3 const pt)
   idx3 idx;
   size_t fi;
 
-  CAPTURE_NULL (gf);
-  CAPTURE_NULL (pt);
-  GFUNC_CHECK_INIT_STATUS (gf);
+  CAPTURE_NULL (gf, FLT_MAX);
+  CAPTURE_NULL (pt, FLT_MAX);
+  GFUNC_CAPTURE_UNINIT (gf, FLT_MAX);
 
   /* TODO: implement half-complex version */
   if (gf->is_halfcomplex)
@@ -1763,9 +1763,9 @@ gfunc3_interp_nearest_2d (gfunc3 const *gf, vec3 const pt)
   idx3 idx;
   size_t fi;
 
-  CAPTURE_NULL (gf);
-  CAPTURE_NULL (pt);
-  GFUNC_CHECK_INIT_STATUS (gf);
+  CAPTURE_NULL (gf, FLT_MAX);
+  CAPTURE_NULL (pt, FLT_MAX);
+  GFUNC_CAPTURE_UNINIT (gf, FLT_MAX);
 
   /* TODO: implement half-complex version */
   if (gf->is_halfcomplex)
@@ -1830,9 +1830,9 @@ gfunc3_interp_linear (gfunc3 const *gf, vec3 const pt)
   float *idxf;
   __m128 midxf, mwl, mwu;
 
-  CAPTURE_NULL (gf);
-  CAPTURE_NULL (pt);
-  GFUNC_CHECK_INIT_STATUS (gf);
+  CAPTURE_NULL (gf, FLT_MAX);
+  CAPTURE_NULL (pt, FLT_MAX);
+  GFUNC_CAPTURE_UNINIT (gf, FLT_MAX);
 
   /* TODO: implement half-complex version */
   if (gf->is_halfcomplex)
@@ -1924,9 +1924,9 @@ gfunc3_interp_linear_2d (gfunc3 const *gf, vec3 const pt)
   __m128 midxf, mwl, mwu;
 
 
-  CAPTURE_NULL (gf);
-  CAPTURE_NULL (pt);
-  GFUNC_CHECK_INIT_STATUS (gf);
+  CAPTURE_NULL (gf, FLT_MAX);
+  CAPTURE_NULL (pt, FLT_MAX);
+  GFUNC_CAPTURE_UNINIT (gf, FLT_MAX);
 
   /* TODO: implement half-complex version */
   if (gf->is_halfcomplex)
@@ -2021,8 +2021,8 @@ gfunc3_subgrid_flatidcs (gfunc3 const *gf, gfunc3 const *gf_sub)
   size_t idx, z_offset, y_offset, *active_idcs;
   idx3 off, sfac;
 
-  CAPTURE_NULL (gf);
-  CAPTURE_NULL (gf_sub);
+  CAPTURE_NULL (gf, NULL);
+  CAPTURE_NULL (gf_sub, NULL);
 
   if (!gfunc3_grid_is_subgrid (gf, gf_sub))
     EXC_THROW_CUSTOMIZED_PRINT (EXC_SUBGRID, "2nd argument grid not contained in 1st argument grid.");
@@ -2074,9 +2074,9 @@ gfunc3_zeropad (gfunc3 *gf, idx3 const padding)
   float *fvals_old, nul[2] = {0.0f, 0.0f};
   gfunc3 *gf_tmp;
   
-  CAPTURE_NULL (gf);
-  CAPTURE_NULL (padding);
-  GFUNC_CHECK_INIT_STATUS (gf);
+  CAPTURE_NULL_VOID (gf);
+  CAPTURE_NULL_VOID (padding);
+  GFUNC_CAPTURE_UNINIT_VOID (gf);
 
   /* TODO: implement half-complex version */
   if (gf->is_halfcomplex)
@@ -2134,9 +2134,9 @@ gfunc3_unpad (gfunc3 *gf, idx3 const padding)
   float *fvals_old;
   gfunc3 *gf_tmp;
   
-  CAPTURE_NULL (gf);
-  CAPTURE_NULL (padding);
-  GFUNC_CHECK_INIT_STATUS (gf);
+  CAPTURE_NULL_VOID (gf);
+  CAPTURE_NULL_VOID (padding);
+  GFUNC_CAPTURE_UNINIT_VOID (gf);
 
   /* TODO: implement half-complex version */
   if (gf->is_halfcomplex)

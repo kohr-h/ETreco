@@ -26,6 +26,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <float.h>
 
 #include "CException.h"
 
@@ -54,11 +55,11 @@ xray_backprojection (gfunc3 const *proj_img, vec3 const angles_deg, vec3 const a
   vec3 xm;
   float Pxmin[2], Pdx[2], Pdy[2], Pdz[2], Pv[3], Pvx0[2], Pvy0[2];
   
-  CAPTURE_NULL (proj_img);
-  CAPTURE_NULL (angles_deg);
-  CAPTURE_NULL (volume);
-  GFUNC_CHECK_INIT_STATUS (proj_img);
-  GFUNC_CHECK_INIT_STATUS (volume);
+  CAPTURE_NULL_VOID (proj_img);
+  CAPTURE_NULL_VOID (angles_deg);
+  CAPTURE_NULL_VOID (volume);
+  GFUNC_CAPTURE_UNINIT_VOID (proj_img);
+  GFUNC_CAPTURE_UNINIT_VOID (volume);
   
   compute_rotated_basis (angles_deg, omega_x, omega_y, omega);
 
@@ -134,10 +135,10 @@ xray_backprojection_sax (gfunc3 const *proj_img, float const theta_deg, float co
   int *idx_x = NULL, idx_y;
   float fv;
   
-  CAPTURE_NULL (proj_img);
-  CAPTURE_NULL (volume);
-  GFUNC_CHECK_INIT_STATUS (proj_img);
-  GFUNC_CHECK_INIT_STATUS (volume);
+  CAPTURE_NULL_VOID (proj_img);
+  CAPTURE_NULL_VOID (volume);
+  GFUNC_CAPTURE_UNINIT_VOID (proj_img);
+  GFUNC_CAPTURE_UNINIT_VOID (volume);
   
   /* The projections of the increments in y and z directions as well as xmin are precomputed */
   cos_theta = cosf (theta_deg * ONE_DEGREE);
@@ -238,10 +239,10 @@ fft_convolution (gfunc3 *gf1, gfunc3 *gf2)
   int gf1_was_hc, gf2_was_hc;
   float factor;
 
-  CAPTURE_NULL (gf1);
-  CAPTURE_NULL (gf2);
-  GFUNC_CHECK_INIT_STATUS (gf1);
-  GFUNC_CHECK_INIT_STATUS (gf2);
+  CAPTURE_NULL_VOID (gf1);
+  CAPTURE_NULL_VOID (gf2);
+  GFUNC_CAPTURE_UNINIT_VOID (gf1);
+  GFUNC_CAPTURE_UNINIT_VOID (gf2);
 
   Try
   {
@@ -293,8 +294,8 @@ image_rotation (gfunc3 *proj_img, float const psi_deg)
   vec3 v = {0.0, 0.0, 0.0}, img_x0;
   float *fvals_rot = NULL;
   
-  CAPTURE_NULL (proj_img);
-  GFUNC_CHECK_INIT_STATUS (proj_img);
+  CAPTURE_NULL_VOID (proj_img);
+  GFUNC_CAPTURE_UNINIT_VOID (proj_img);
   
   if (!GFUNC_IS_2D(proj_img))
     EXC_THROW_CUSTOMIZED_PRINT (EXC_GFDIM, "Only 2d functions supported.");
@@ -396,10 +397,10 @@ histogram_normalization (gfunc3 *proj_img, idx3 bg_ix0, idx3 const bg_shp)
   vec3 bg_x0;
   gfunc3 *bg_patch;
 
-  CAPTURE_NULL (proj_img);
-  CAPTURE_NULL (bg_ix0);
-  CAPTURE_NULL (bg_shp);
-  GFUNC_CHECK_INIT_STATUS (proj_img);
+  CAPTURE_NULL_VOID (proj_img);
+  CAPTURE_NULL_VOID (bg_ix0);
+  CAPTURE_NULL_VOID (bg_shp);
+  GFUNC_CAPTURE_UNINIT_VOID (proj_img);
   
   count++;
   Try
@@ -456,8 +457,8 @@ probability_normalization (gfunc3 *gf)
 {
   float integral;
   
-  CAPTURE_NULL (gf);
-  GFUNC_CHECK_INIT_STATUS (gf);
+  CAPTURE_NULL_VOID (gf);
+  GFUNC_CAPTURE_UNINIT_VOID (gf);
  
   integral = lp_integral (gf, TRAPEZOIDAL);
  
@@ -477,8 +478,8 @@ lp_integral (gfunc3 const *gf, integration_rule rule)
   size_t i;
   float integral = 0.0;
   
-  CAPTURE_NULL (gf);
-  GFUNC_CHECK_INIT_STATUS (gf);
+  CAPTURE_NULL (gf, FLT_MAX);
+  GFUNC_CAPTURE_UNINIT (gf, FLT_MAX);
  
   switch (rule)
     {

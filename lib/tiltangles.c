@@ -71,7 +71,7 @@ tiltangles_init (tiltangles *ta, int ntilts, int nangles)
   CEXCEPTION_T e = EXC_NONE;
   int i, j;
 
-  CAPTURE_NULL (ta);
+  CAPTURE_NULL_VOID (ta);
 
   Try
   {
@@ -191,8 +191,8 @@ tiltangles_assign_from_file (tiltangles *ta, char const *ta_fname)
   int i, nangles, ntilts;
   FILE *fp;
 
-  CAPTURE_NULL (ta);
-  CAPTURE_NULL (ta_fname);
+  CAPTURE_NULL_VOID (ta);
+  CAPTURE_NULL_VOID (ta_fname);
 
   Try
   {
@@ -237,8 +237,8 @@ tiltangles_to_file (tiltangles const *ta, char const *ta_fname)
   int i;
   FILE *fp;
 
-  CAPTURE_NULL (ta);
-  CAPTURE_NULL (ta_fname);
+  CAPTURE_NULL_VOID (ta);
+  CAPTURE_NULL_VOID (ta_fname);
 
   Try
   {
@@ -281,8 +281,8 @@ tiltangles_get_angles (tiltangles *ta, float *angles, int index)
 {
   int i;
   
-  CAPTURE_NULL (ta);
-  CAPTURE_NULL (angles);
+  CAPTURE_NULL_VOID (ta);
+  CAPTURE_NULL_VOID (angles);
     
   if ((index < 0) || (index >= ta->ntilts))
     EXC_THROW_CUSTOMIZED_PRINT (EXC_BADARG, "index must be between 0 and ntilts-1 (%d)",

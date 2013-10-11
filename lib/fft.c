@@ -57,7 +57,7 @@ gfunc3_grid_fwd_reciprocal (gfunc3 *gf)
 {
   int i;
 
-  CAPTURE_NULL (gf);
+  CAPTURE_NULL_VOID (gf);
 
   /* Store old x0 internally and set new one to zero */
   vec3_copy (gf->_fbuf, gf->x0);
@@ -85,7 +85,7 @@ gfunc3_grid_bwd_reciprocal (gfunc3 *gf_hc)
 {
   int i;
   
-  CAPTURE_NULL (gf_hc);
+  CAPTURE_NULL_VOID (gf_hc);
 
   /* Restore old x0 and shape[0] */
   vec3_copy (gf_hc->x0, gf_hc->_fbuf);
@@ -222,8 +222,8 @@ fft_forward (gfunc3 *gf)
   fftwf_complex *d_ft;
   fftwf_plan p;
 
-  CAPTURE_NULL (gf);
-  GFUNC_CHECK_INIT_STATUS (gf);
+  CAPTURE_NULL_VOID (gf);
+  GFUNC_CAPTURE_UNINIT_VOID (gf);
   if (gf->is_halfcomplex)
     EXC_THROW_CUSTOMIZED_PRINT (EXC_GFTYPE, "Expected REAL type function.");
 
@@ -384,8 +384,8 @@ fft_backward (gfunc3 *gf)
   idx3 padding = {0, 0, 0};
   fftwf_plan p;
 
-  CAPTURE_NULL (gf);
-  GFUNC_CHECK_INIT_STATUS (gf);
+  CAPTURE_NULL_VOID (gf);
+  GFUNC_CAPTURE_UNINIT_VOID (gf);
   if (!gf->is_halfcomplex)
     EXC_THROW_CUSTOMIZED_PRINT (EXC_GFTYPE, "Expected HALFCOMPLEX type function.");
 
