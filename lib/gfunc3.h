@@ -49,22 +49,22 @@ typedef struct
   vec3 csize;      /**< Sizes of a grid cell */
   idx3 shape;      /**< Per-dimension number of grid cells */
 
-  // derived data
+  /* derived data */
   vec3 xmin;       /**< Minimal coordinates */
   vec3 xmax;       /**< Maximal coordinates */
   size_t ntotal;   /**< Total number of grid cells */
 
-  // internal buffers
+  /* internal buffers */
   vec3 _fbuf;      /**< Temporary storage for a vector */
   int _ntmp;       /**< Temporary storage for an integer */
 
 
-  // status flags
+  /* status flags */
   int is_initialized;  /**< 1 if grid is initialized and memory for fvals is allocated, 0 otherwise */
   int is_halfcomplex;  /**< If this flag is 1, the x dimension is halved and the values are 
                             interpreted as complex numbers. 0 means standard real-valued. */
 
-  // function values
+  /* function values */
   float *fvals;    /**< float[ntotal] array holding the function values */
   
 } gfunc3;
@@ -86,167 +86,382 @@ do { \
   if ((_pgf)->is_initialized == 0) { EXC_THROW_PRINT (EXC_GFINIT); return; }\
 } while (0)
 
-/*-------------------------------------------------------------------------------------------------*/
-// Allocation
-/*-------------------------------------------------------------------------------------------------*/
+
+
+/*-------------------------------------------------------------------------------------------------*
+ * Allocation
+ *-------------------------------------------------------------------------------------------------*/
 
 /* Create a new gfunc3 structure and return a pointer to it.
- * May throw other exceptions
+ * 
+ * Thrown exceptions:  
+ * - Rethrows
  */
 gfunc3 *
 new_gfunc3 (void);
 
+
 /* Free memory of gfunc3 structure.
- * Does not throw
+ * 
+ * Thrown exceptions: 
  */
 void
 gfunc3_free (gfunc3 **pgf);
 
-/*-------------------------------------------------------------------------------------------------*/
-// Structure initialization
-/*-------------------------------------------------------------------------------------------------*/
 
-/* Initialize the grid of GF with the provided parameters X0, CS and SHP. The function type 
+
+/*-------------------------------------------------------------------------------------------------*
+ * Structure initialization
+ *-------------------------------------------------------------------------------------------------*/
+
+/* Initialize the grid of GF with the provided parameters X0, CS and SHP.  The function type 
  * GF_TYPE (REAL or HALFCOMPLEX) determines the layout of the data array, which is allocated 
  * according to the grid shape SHP.
- * May throw EXC_NULL
- * Max throw other exceptions.
+ * 
+ * Thrown exceptions: 
+ * - EXC_NULL
+ * - Rethrows
  */
 void
 gfunc3_init (gfunc3 *gf, vec3 const x0, vec3 const cs, idx3 const shp, gfunc_type gf_type);
 
+
+/* Initialize grid and data array of GF from GF_TEMPLATE.  The data array of GF is free'd if 
+ * necessary.
+ * 
+ * Thrown exceptions: 
+ * - EXC_NULL
+ */
 void
 gfunc3_init_from_foreign_grid (gfunc3 *gf, gfunc3 const *gf_template);
 
+
+/* Set cell size of GF to CS and recompute the grid.
+ * 
+ * Thrown exceptions: 
+ * - EXC_NULL
+ */
 void
 gfunc3_set_csize (gfunc3 *gf, vec3 const cs);
 
+
+/* Set the origin of GF to X0 and recompute the grid.
+ * 
+ * Thrown exceptions: 
+ * - EXC_NULL
+ */
 void
 gfunc3_set_x0 (gfunc3 *gf, vec3 const x0);
 
-// Initialize xmin and xmax from x0, csize and shape
+
+/* Compute minimal and maximal coordinates of GF using origin, shape and cell size.
+ * 
+ * 
+ * Thrown exceptions: 
+ * - EXC_NULL
+ */
 void
 gfunc3_compute_xmin_xmax (gfunc3 *gf);
 
-/*-------------------------------------------------------------------------------------------------*/
-// Function value initialization
-/*-------------------------------------------------------------------------------------------------*/
 
+
+/*-------------------------------------------------------------------------------------------------*
+ * Function value initialization
+ *-------------------------------------------------------------------------------------------------*/
+
+/* Assign the values in the data array of GF according to the abstract vector function VF.
+ * 
+ * Thrown exceptions: 
+ * - EXC_NULL
+ * - EXC_GFINIT
+ */
 void
 gfunc3_assign_fvals_from_vfunc (gfunc3 *gf, const vfunc *vf);
 
-/*-------------------------------------------------------------------------------------------------*/
-// Screen output
-/*-------------------------------------------------------------------------------------------------*/
+/*-------------------------------------------------------------------------------------------------*
+ * Screen output
+ *-------------------------------------------------------------------------------------------------*/
 
-// Print a grid summary on stdout, preceded by INTRO_TEXT.
+/* Print a grid summary of GF to standard output, preceded by INTRO_TEXT.
+ * 
+ * Thrown exceptions: 
+ * - EXC_NULL
+ */
 void
 gfunc3_print_grid (gfunc3 const *gf, char const *intro_text);
 
-/*-------------------------------------------------------------------------------------------------*/
-// Attributes
-/*-------------------------------------------------------------------------------------------------*/
 
+
+/*-------------------------------------------------------------------------------------------------*
+ * Attributes
+ *-------------------------------------------------------------------------------------------------*/
+
+/* Return the minimum value in the data array of GF.  Works for REAL functions only.
+ * 
+ * Thrown exceptions: 
+ * - EXC_NULL
+ * - EXC_GFINIT
+ * - EXC_GFTYPE
+ */ 
 float
 gfunc3_min (gfunc3 const *gf);
 
+
+/* Return the maximum value in the data array of GF.  Works for REAL functions only.
+ * 
+ * Thrown exceptions: 
+ * - EXC_NULL
+ * - EXC_GFINIT
+ * - EXC_GFTYPE
+ */ 
 float
 gfunc3_max (gfunc3 const *gf);
 
-/* If called with PMEAN = NULL, the mean value is computed */
-float
-gfunc3_variance (gfunc3 const *gf, float const *pmean);
 
+/* Return the mean value in the data array of GF.  Currently works for REAL functions only.
+ * 
+ * Thrown exceptions: 
+ * - EXC_NULL
+ * - EXC_GFINIT
+ * - EXC_UNIMPL
+ */ 
 float
 gfunc3_mean (gfunc3 const *gf);
 
-// Check if the grids of GF1 and GF2 are equal up to a relative accuracy of EPS_GRID.  If yes,
-// return 1, else 0.
+/* Return the variance of the data array of GF.  If PMEAN is NULL, the mean value is computed.
+ * Currently works for REAL functions only.
+ * 
+ * Thrown exceptions: 
+ * - EXC_NULL
+ * - EXC_GFINIT
+ * - EXC_UNIMPL
+ */ 
+float
+gfunc3_variance (gfunc3 const *gf, float const *pmean);
+
+
+
+/*-------------------------------------------------------------------------------------------------*
+ * Comparisons
+ *-------------------------------------------------------------------------------------------------*/
+
+
+/* Return TRUE if the grids of GF1 and GF2 are equal up to a relative accuracy of EPS_GRID, 
+ * FALSE otherwise.
+ * 
+ * Thrown exceptions: 
+ * - EXC_NULL
+ */
 int
 gfunc3_grids_are_equal (gfunc3 const *gf1, gfunc3 const *gf2);
 
-// Check if the grid of GF_SUB is a subgrid of GF's grid with relative accuracy EPS_GRID. If yes,
-// return 1, else 0.
+
+/* Return TRUE if the grid of GF_SUB is a subgrid of GF's grid with relative accuracy EPS_GRID, 
+ * FALSE otherwise.
+ * 
+ * Thrown exceptions: 
+ * - EXC_NULL
+ */
 int
 gfunc3_grid_is_subgrid (gfunc3 const *gf, gfunc3 const *gf_sub);
 
-/*-------------------------------------------------------------------------------------------------*/
-// Operations
-/*-------------------------------------------------------------------------------------------------*/
 
-// Copy SRC to DEST. Memory for DEST->DATA is (re)allocated
+
+/*-------------------------------------------------------------------------------------------------*
+ * Operations
+ *-------------------------------------------------------------------------------------------------*/
+
+
+/* Copy grid and data of SRC to DEST.  Memory for DEST->DATA is (re)allocated.
+ * 
+ * Thrown exceptions: 
+ * - EXC_NULL
+ * - EXC_GFINIT
+ * - Rethrows
+ */
 void
 gfunc3_copy (gfunc3 *dest, gfunc3 const *src);
 
-// Set GF1 <- A * GF1 + GF2. GF2 may be defined on a subgrid of GF1->GRID
+
+/* Set GF1 <- A * GF1 + GF2.  GF2 may be defined on a subgrid of GF1's grid.
+ * 
+ * Thrown exceptions: 
+ * - EXC_NULL
+ * - EXC_GFINIT
+ * - EXC_UNIMPL
+ * - Rethrows
+ */ 
 void
 gfunc3_axpy (float a, gfunc3 *gf1, gfunc3 const *gf2);
 
-// Set GF <- A * GF + VF
+
+/* Set GF <- A * GF + VF 
+ * 
+ * Thrown exceptions: 
+ * - EXC_NULL
+ * - EXC_GFINIT
+ */
 void
 gfunc3_axpy_vfunc (float a, gfunc3 *gf, const vfunc *vf);
 
-// Multiply GF1 with GF2. GF2 may be defined on a subgrid of GF1->GRID
+
+/* Set GF1 <- GF1 * GF2.  GF2 may be defined on a subgrid of GF1's GRID.  Mixed multiplication of REAL
+ * and HALFCOMPLEX is currently only possible for GF1 being HALFCOMPLEX.
+ * 
+ * Thrown exceptions: 
+ * - EXC_NULL
+ * - EXC_GFINIT
+ * - EXC_UNIMPL
+ * - Rethrows
+ */ 
 void
 gfunc3_mul (gfunc3 *gf1, gfunc3 const *gf2);
 
-// Multiply GF with VF
+
+/* Set GF <- GF * VF. 
+ * 
+ * Thrown exceptions: 
+ * - EXC_NULL
+ * - EXC_GFINIT
+ */
 void
 gfunc3_mul_vfunc (gfunc3 *gf, const vfunc *vf);
 
-// Divide GF1 by GF2. GF2 may be defined on a subgrid of GF1->GRID
+
+/* Set GF1 <- GF1 / GF2.  GF2 may be defined on a subgrid of GF1's GRID.  Currently, only REAL 
+ * multiplication is implemented.
+ * 
+ * Thrown exceptions: 
+ * - EXC_NULL
+ * - EXC_GFINIT
+ * - EXC_UNIMPL
+ * - Rethrows
+ */
 void
 gfunc3_div (gfunc3 *gf1, gfunc3 const *gf2);
 
-// Divide GF by VF
+
+/* Set GF <- GF / VF. 
+ * 
+ * Thrown exceptions: 
+ * - EXC_NULL
+ * - EXC_GFINIT
+ * - EXC_UNIMPL
+ */
 void
 gfunc3_div_vfunc (gfunc3 *gf, const vfunc *vf);
 
-// Multiply GF by the constant A
+
+/* Set GF <- A * GF.  Currently implemented only for REAL function.
+ * 
+ * Thrown exceptions: 
+ * - EXC_NULL
+ * - EXC_GFINIT
+ * - EXC_UNIMPL
+ */
 void
 gfunc3_scale (gfunc3 *gf, float a);
 
-// Add the constant C to GF
+
+/* Set GF <- GF + C.  Currently implemented only for REAL function.
+ * 
+ * Thrown exceptions: 
+ * - EXC_NULL
+ * - EXC_GFINIT
+ * - EXC_UNIMPL
+ */
 void
 gfunc3_add_constant (gfunc3 *gf, float c);
 
-// Translate (=shift the grid of) GF by the vector S
+
+/* Translate (= shift the grid of) GF by the vector S.
+ * 
+ * Thrown exceptions: 
+ * - EXC_NULL
+ */
 void
 gfunc3_translate (gfunc3 *gf, vec3 const s);
 
-// Only scale the grid of GF by the factor A
+
+/* Scale the grid of GF by the factor A.
+ * 
+ * Thrown exceptions: 
+ * - EXC_NULL
+ * - EXC_BADARG
+ */
 void
 gfunc3_scale_grid (gfunc3 *gf, float a);
 
-// Dilate GF by the constant A, i.e. scale the grid by A and multiply the
-// values by |A|^(-d/2), where d is the actual dimension of GF
+
+/* Dilate GF by the constant A, i.e. scale the grid by A and multiply the values by |A|^(-d/2), 
+ * where d=2,3 is the dimension of GF.
+ * 
+ * Thrown exceptions:
+ * - EXC_NULL
+ * - EXC_GFINIT
+ * - EXC_BADARG
+ * - Rethrows
+ */
 void
 gfunc3_dilate (gfunc3 *gf, float a);
 
-//  Set the value of GF at the given grid index IDX to the value PVAL points to (real or complex)
+
+/*  Set the value of GF at the given grid index IDX to the value PVAL points to (real or complex).
+ * 
+ * Thrown exceptions:
+ * - EXC_NULL
+ * - EXC_GFINIT
+ * - EXC_INDEX
+ */
 void
 gfunc3_set (gfunc3 *gf, idx3 const idx, float const *pval);
 
-// Set all values of GF to VAL
+
+/* Set all values of GF to VAL. *
+ * 
+ * Thrown exceptions:
+ * - EXC_NULL
+ * - EXC_GFINIT
+ */
 void
 gfunc3_set_all (gfunc3 *gf, float const *pval);
 
-/* Make GF non-negative by setting negative values to 0.0 */
+
+/* Make GF non-negative by setting negative values to 0.0f *
+ * 
+ * Thrown exceptions:
+ * - EXC_NULL
+ * - EXC_GFINIT
+ * - EXC_GFTYPE
+ */
 void
 gfunc3_make_nonneg (gfunc3 *gf);
 
-// Set gf to zero at the boundary grid points
-// void gfunc3_set_boundary_zero (gfunc3 gf);
+
 
 /*-------------------------------------------------------------------------------------------------*/
 // Evaluation
 /*-------------------------------------------------------------------------------------------------*/
 
-// Evaluate GF at the given grid index IDX
+
+/* Evaluate GF at the given grid index IDX.
+ * 
+ * Thrown exceptions:
+ * - EXC_NULL
+ * - EXC_GFINIT
+ * - EXC_INDEX
+ */
 float
 gfunc3_eval (gfunc3 *gf, idx3 const idx);
 
-// Approximate the value of GF at PT by nearest neighbor interpolation
+
+/* Approximate the value of GF at PT by nearest neighbor interpolation on the grid.
+ * 
+ * Thrown exceptions: 
+ * - EXC_NULL
+ * - EXC_GFINIT
+ * - EXC_UNIMPL
+ */
 float
 gfunc3_interp_nearest (gfunc3 const *gf, vec3 const pt);
 
@@ -266,10 +481,18 @@ gfunc3_interp_linear_2d (gfunc3 const *gf, vec3 const pt);
 // Domain change
 /*-------------------------------------------------------------------------------------------------*/
 
+/* TODO: make this function private? */
+/* Return the flattened indices of the subgrid (GF_SUB's grid) inside the large grid (GF's grid).
+ * 
+ * Thrown exceptions:
+ * - EXC_NULL
+ * - EXC_SUBGRID
+ * - Rethrows
+ */
 size_t *
 gfunc3_subgrid_flatidcs (gfunc3 const *gf, gfunc3 const *gf_sub);
 
-/* Pad gf with zeros; the padding vector gives the number of points that are added on both sides 
+/* Pad GF with zeros; the PADDING vector gives the number of points that are added on both sides 
  * (per dimension) of the original grid
  */
 void
