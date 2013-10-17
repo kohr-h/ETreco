@@ -52,7 +52,7 @@
 gfunc3 *
 new_gfunc3 (void)
 {
-  gfunc3 *gf;
+  gfunc3 *gf = NULL;
   CEXCEPTION_T _e = EXC_NONE;
   
   Try { gf = (gfunc3 *) ali16_malloc (sizeof (gfunc3)); }  CATCH_RETURN (_e, NULL);
@@ -94,7 +94,6 @@ void
 gfunc3_init (gfunc3 *gf, vec3 const x0, vec3 const cs, idx3 const shp, gfunc_type gf_type)
 {
   CEXCEPTION_T _e = EXC_NONE;
-  float nul[2] = {0.0f, 0.0f};
   
   CAPTURE_NULL_VOID (gf);
   CAPTURE_NULL_VOID (cs);
@@ -128,7 +127,7 @@ gfunc3_init (gfunc3 *gf, vec3 const x0, vec3 const cs, idx3 const shp, gfunc_typ
   Try { gf->fvals = (float *) ali16_malloc (gf->ntotal * sizeof (float)); }  CATCH_RETURN_VOID (_e);
 
   gf->is_initialized = 1;
-  gfunc3_set_all (gf, nul);
+  gfunc3_set_all (gf, c_zero);
   return;
 }
 
@@ -138,7 +137,6 @@ void
 gfunc3_init_from_foreign_grid (gfunc3 *gf, gfunc3 const *gf_template)
 {
   CEXCEPTION_T _e = EXC_NONE;
-  float nul[2] = {0.0f, 0.0f};
   
   CAPTURE_NULL_VOID (gf);
   CAPTURE_NULL_VOID (gf_template);
@@ -157,8 +155,7 @@ gfunc3_init_from_foreign_grid (gfunc3 *gf, gfunc3 const *gf_template)
   vec3_copy (gf->_fbuf, gf_template->_fbuf);
   gf->_ntmp = gf_template->_ntmp;
   
-  Try
-  {
+  Try {
     if (gf_template->is_halfcomplex)
       {
         gf->fvals = (float *) ali16_malloc (2 * gf->ntotal * sizeof (float));
@@ -169,16 +166,10 @@ gfunc3_init_from_foreign_grid (gfunc3 *gf, gfunc3 const *gf_template)
         gf->fvals = (float *) ali16_malloc (gf->ntotal * sizeof (float));
         gf->is_halfcomplex = 0;
       }
+  } CATCH_RETURN_VOID (_e);
 
-    gf->is_initialized = 1;
-    gfunc3_set_all (gf, nul);
-  }
-  Catch (_e)
-  {
-    EXC_RETHROW_REPRINT (_e);
-  }
-    
-
+  gf->is_initialized = 1;
+  gfunc3_set_all (gf, c_zero);
   return;
 }
 
@@ -255,7 +246,6 @@ gfunc3_assign_fvals_from_vfunc (gfunc3 *gf, const vfunc *vf)
 {
   int ix, iy, iz;
   size_t idx, incr;
-  float nul[2] = {0.0f, 0.0f};
   vec3 p;
 
   CAPTURE_NULL_VOID (gf);
@@ -264,7 +254,7 @@ gfunc3_assign_fvals_from_vfunc (gfunc3 *gf, const vfunc *vf)
 
   incr = (gf->is_halfcomplex) ? 2 : 1;
 
-  gfunc3_set_all (gf, nul);
+  gfunc3_set_all (gf, c_zero);
 
   vec3_copy (p, gf->xmin);
 
@@ -347,7 +337,10 @@ gfunc3_min (gfunc3 const *gf)
   GFUNC_CAPTURE_UNINIT (gf, FLT_MAX);
   
   if (gf->is_halfcomplex)
-    EXC_THROW_CUSTOMIZED_PRINT (EXC_GFTYPE, "Minimum not defined for complex functions.");
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_GFTYPE, "Minimum not defined for complex functions.");
+      return FLT_MAX;
+    }
   
   min = gf->fvals[0];
 
@@ -393,7 +386,10 @@ gfunc3_max (gfunc3 const *gf)
   GFUNC_CAPTURE_UNINIT (gf, -FLT_MAX);
 
   if (gf->is_halfcomplex)
-    EXC_THROW_CUSTOMIZED_PRINT (EXC_GFTYPE, "Minimum not defined for complex functions.");
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_GFTYPE, "Maximum not defined for complex functions.");
+      return -FLT_MAX;
+    }
   
   max = gf->fvals[0];
 
@@ -438,9 +434,13 @@ gfunc3_mean (gfunc3 const *gf)
   CAPTURE_NULL (gf, FLT_MAX);
   GFUNC_CAPTURE_UNINIT (gf, FLT_MAX);
 
-  /* TODO: implement half-complex version */
+  /* TODO: implement half-complex version; this changes the return value to float * */
   if (gf->is_halfcomplex)
-    EXC_THROW_CUSTOMIZED_PRINT (EXC_UNIMPL, "Minimum not defined for complex functions.");
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_UNIMPL, 
+        "Mean value not yet implemented for complex functions.");
+      return FLT_MAX;
+    }
   
   #if HAVE_SSE
   size_t N4 = gf->ntotal / 4, N4rem = gf->ntotal % 4;
@@ -476,8 +476,12 @@ gfunc3_variance (gfunc3 const *gf, float const *pmean)
   CAPTURE_NULL (gf, FLT_MAX);
   GFUNC_CAPTURE_UNINIT (gf, FLT_MAX);
 
+  /* TODO: implement half-complex version */
   if (gf->is_halfcomplex)
-    EXC_THROW_CUSTOMIZED_PRINT (EXC_GFTYPE, "Variance not defined for complex functions.");
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_UNIMPL, "Variance not yet implemented for complex functions.");
+      return FLT_MAX;
+    }
   
   if (pmean == NULL)
     mean = gfunc3_mean (gf);
@@ -523,8 +527,6 @@ gfunc3_grids_are_equal (gfunc3 const *gf1, gfunc3 const *gf2)
 {
   CAPTURE_NULL (gf1, 0);
   CAPTURE_NULL (gf2, 0);
-  GFUNC_CAPTURE_UNINIT (gf1, 0);
-  GFUNC_CAPTURE_UNINIT (gf2, 0);
   
   return (idx3_eq (gf1->shape, gf2->shape)                 &&
           vec3_about_eq (gf1->csize, gf2->csize, EPS_GRID) &&
@@ -604,14 +606,8 @@ gfunc3_copy (gfunc3 *dest, gfunc3 const *src)
   else
     ntotal_flt = src->ntotal;
   
-  Try 
-  {
-    dest->fvals = (float *) ali16_malloc (ntotal_flt * sizeof (float));
-  }
-  Catch (_e)
-  {
-    EXC_RETHROW_REPRINT (_e);
-  }
+  Try { dest->fvals = (float *) ali16_malloc (ntotal_flt * sizeof (float)); }
+  CATCH_RETURN_VOID (_e);
   
   dest->is_initialized = 1;
 
@@ -689,48 +685,41 @@ gfunc3_axpy (float a, gfunc3 *gf1, gfunc3 const *gf2)
     }
   else  /* !gfunc3_grids_are_equal (gf1, gf2) */
     {
-      size_t *idcs;
+      size_t *idcs = NULL;
       CEXCEPTION_T _e = EXC_NONE;
       
-      Try 
-      {
-        idcs = gfunc3_subgrid_flatidcs (gf1, gf2);
+      Try { idcs = gfunc3_subgrid_flatidcs (gf1, gf2); }  CATCH_RETURN_VOID (_e);
 
-        #if HAVE_SSE
-        size_t i, l = 0, N4 = ntotal_flt / 4, N4rem = ntotal_flt % 4;
-        __m128 const *p2 = (__m128 const *) gf2->fvals;
-        __m128 ma = _mm_set1_ps (a), v1;
-        float *pv1 = (float *) &v1;
-  
-        for (i = 0; i < N4; i++, l += 4, p2++)
-          {
-            v1 = _mm_set_ps (gf1->fvals[idcs[l + 3]], gf1->fvals[idcs[l + 2]], 
-                  gf1->fvals[idcs[l + 1]], gf1->fvals[idcs[l]]);
-            v1 = _mm_mul_ps (v1, ma);
-            v1 = _mm_add_ps (v1, *p2);
-  
-            gf1->fvals[idcs[l]]     = pv1[0];
-            gf1->fvals[idcs[l + 1]] = pv1[1];
-            gf1->fvals[idcs[l + 2]] = pv1[2];
-            gf1->fvals[idcs[l + 3]] = pv1[3];
-          }
-        
-        for (i = ntotal_flt - N4rem; i < ntotal_flt; i++)
-          gf1->fvals[idcs[i]] += a * gf2->fvals[i];
-  
-        #else  /* !HAVE_SSE */
-        size_t i;
-        for (i = 0; i < ntotal_flt; i++)
-          gf1->fvals[idcs[i]] = a * gf1->fvals[idcs[i]] + gf2->fvals[i];
-                    
-        #endif
-        
-        free (idcs);
-      }
-      Catch (_e)
-      {
-        EXC_RETHROW_REPRINT (_e);
-      }
+      #if HAVE_SSE
+      size_t i, l = 0, N4 = ntotal_flt / 4, N4rem = ntotal_flt % 4;
+      __m128 const *p2 = (__m128 const *) gf2->fvals;
+      __m128 ma = _mm_set1_ps (a), v1;
+      float *pv1 = (float *) &v1;
+
+      for (i = 0; i < N4; i++, l += 4, p2++)
+        {
+          v1 = _mm_set_ps (gf1->fvals[idcs[l + 3]], gf1->fvals[idcs[l + 2]], 
+                gf1->fvals[idcs[l + 1]], gf1->fvals[idcs[l]]);
+          v1 = _mm_mul_ps (v1, ma);
+          v1 = _mm_add_ps (v1, *p2);
+
+          gf1->fvals[idcs[l]]     = pv1[0];
+          gf1->fvals[idcs[l + 1]] = pv1[1];
+          gf1->fvals[idcs[l + 2]] = pv1[2];
+          gf1->fvals[idcs[l + 3]] = pv1[3];
+        }
+      
+      for (i = ntotal_flt - N4rem; i < ntotal_flt; i++)
+        gf1->fvals[idcs[i]] += a * gf2->fvals[i];
+
+      #else  /* !HAVE_SSE */
+      size_t i;
+      for (i = 0; i < ntotal_flt; i++)
+        gf1->fvals[idcs[i]] = a * gf1->fvals[idcs[i]] + gf2->fvals[i];
+                  
+      #endif
+      
+      free (idcs);
     }
 
   return;
@@ -846,47 +835,40 @@ gfunc3_mul_re (gfunc3 *gf1, gfunc3 const *gf2)
     }
   else  /* !gfunc3_grids_are_equal (gf1, gf2) */
     {
-      size_t *idcs;
+      size_t *idcs = NULL;
       CEXCEPTION_T _e = EXC_NONE;
       
-      Try 
-      {
-        idcs = gfunc3_subgrid_flatidcs (gf1, gf2);
+      Try { idcs = gfunc3_subgrid_flatidcs (gf1, gf2); }  CATCH_RETURN_VOID (_e);
 
-        #if HAVE_SSE
-        size_t i, l = 0, N4 = gf2->ntotal / 4, N4rem = gf2->ntotal % 4;
-        __m128 const *p2 = (__m128 const *) gf2->fvals;
-        __m128 v1;
-        float *pv1 = (float *) &v1;
-  
-        for (i = 0; i < N4; i++, l += 4, p2++)
-          {
-            v1 = _mm_set_ps (gf1->fvals[idcs[l + 3]], gf1->fvals[idcs[l + 2]], 
-                  gf1->fvals[idcs[l + 1]], gf1->fvals[idcs[l]]);
-            v1 = _mm_mul_ps (v1, *p2);
-  
-            gf1->fvals[idcs[l]]     = pv1[0];
-            gf1->fvals[idcs[l + 1]] = pv1[1];
-            gf1->fvals[idcs[l + 2]] = pv1[2];
-            gf1->fvals[idcs[l + 3]] = pv1[3];
-          }
-        
-        for (i = gf2->ntotal - N4rem; i < gf2->ntotal; i++)
-          gf1->fvals[idcs[i]] *= gf2->fvals[i];
-  
-        #else  /* !HAVE_SSE */
-        size_t i;
-        for (i = 0; i < gf2->ntotal; i++)
-          gf1->fvals[idcs[i]] *= gf2->fvals[i];
-  
-        #endif
-                
-        free (idcs);
-      }
-      Catch (_e)
-      {
-        EXC_RETHROW_REPRINT (_e);
-      }
+      #if HAVE_SSE
+      size_t i, l = 0, N4 = gf2->ntotal / 4, N4rem = gf2->ntotal % 4;
+      __m128 const *p2 = (__m128 const *) gf2->fvals;
+      __m128 v1;
+      float *pv1 = (float *) &v1;
+
+      for (i = 0; i < N4; i++, l += 4, p2++)
+        {
+          v1 = _mm_set_ps (gf1->fvals[idcs[l + 3]], gf1->fvals[idcs[l + 2]], 
+                gf1->fvals[idcs[l + 1]], gf1->fvals[idcs[l]]);
+          v1 = _mm_mul_ps (v1, *p2);
+
+          gf1->fvals[idcs[l]]     = pv1[0];
+          gf1->fvals[idcs[l + 1]] = pv1[1];
+          gf1->fvals[idcs[l + 2]] = pv1[2];
+          gf1->fvals[idcs[l + 3]] = pv1[3];
+        }
+      
+      for (i = gf2->ntotal - N4rem; i < gf2->ntotal; i++)
+        gf1->fvals[idcs[i]] *= gf2->fvals[i];
+
+      #else  /* !HAVE_SSE */
+      size_t i;
+      for (i = 0; i < gf2->ntotal; i++)
+        gf1->fvals[idcs[i]] *= gf2->fvals[i];
+
+      #endif
+              
+      free (idcs);
     }
 
   return;
@@ -949,71 +931,64 @@ gfunc3_mul_hc (gfunc3 *gf1, gfunc3 const *gf2)
     }
   else  /* !gfunc3_grids_are_equal (gf1, gf2) */
     {
-      size_t *idcs;
+      size_t *idcs = NULL;
       CEXCEPTION_T _e = EXC_NONE;
       
-      Try 
-      {
-        idcs = gfunc3_subgrid_flatidcs (gf1, gf2);
+      Try { idcs = gfunc3_subgrid_flatidcs (gf1, gf2); }  CATCH_RETURN_VOID (_e);
 
-        #if HAVE_SSE
-        size_t i, i2, i2arr, i1, i1next, ntotal_flt = 2 * gf2->ntotal;
-        size_t N4 = ntotal_flt / 4, N4rem = ntotal_flt % 4;
-        __m128 const *p2 = (__m128 const *) gf2->fvals;
-        __m128 v1, prod_eq, prod_across;
-        float *p2f, *pprod_eq = (float *) &prod_eq, *pprod_across = (float *) &prod_across;
-        float re, im;
-        
-        for (i = 0, i2 = 0; i < N4; i2 += 2, p2++)
-          {
-            i1     = 2 * idcs[i2];
-            i1next = 2 * idcs[i2 + 1];
-            v1 = _mm_set_ps (gf1->fvals[i1next + 1], gf1->fvals[i1next], 
-              gf1->fvals[i1 + 1], gf1->fvals[i1]);
-            prod_eq = _mm_mul_ps (v1, *p2);
-            p2f = (float *) p2;
-            /* Switch re and im; index order would be 3,2,1,0 normally */
-            prod_across = _mm_set_ps (p2f[2], p2f[3], p2f[0], p2f[1]);
-            prod_across = _mm_mul_ps (prod_across, v1);
-  
-            gf1->fvals[i1]         = pprod_eq[0] - pprod_eq[1];
-            gf1->fvals[i1 + 1]     = pprod_across[0] + pprod_across[1];
-            gf1->fvals[i1next]     = pprod_eq[2] - pprod_eq[3];
-            gf1->fvals[i1next + 1] = pprod_across[2] + pprod_across[3];
-          }
-        if (N4rem != 0)
-          {
-            i2    = gf2->ntotal - 1;
-            i1    = 2 * idcs[i2];
-            i2arr = 2 * i2;
-            
-            re = gf1->fvals[i1] * gf2->fvals[i2arr]     - gf1->fvals[i1 + 1] * gf2->fvals[i2arr + 1];
-            im = gf1->fvals[i1] * gf2->fvals[i2arr + 1] + gf1->fvals[i1 + 1] * gf2->fvals[i2arr];
-            gf1->fvals[i1]     = re;
-            gf1->fvals[i1 + 1] = im;
-          }
-  
-        #else  /* !HAVE_SSE */
-        size_t i1, i2, i2arr;
-        
-        for (i2 = 0; i2 < gf2->ntotal; i2++, i2arr += 2)
-          {
-            i1 = 2 * idcs[i2];
-            
-            re = gf1->fvals[i1] * gf2->fvals[i2arr]     - gf1->fvals[i1 + 1] * gf2->fvals[i2arr + 1];
-            im = gf1->fvals[i1] * gf2->fvals[i2arr + 1] + gf1->fvals[i1 + 1] * gf2->fvals[i2arr];
-            gf1->fvals[i1]     = re;
-            gf1->fvals[i1 + 1] = im;
-          }
+      #if HAVE_SSE
+      size_t i, i2, i2arr, i1, i1next, ntotal_flt = 2 * gf2->ntotal;
+      size_t N4 = ntotal_flt / 4, N4rem = ntotal_flt % 4;
+      __m128 const *p2 = (__m128 const *) gf2->fvals;
+      __m128 v1, prod_eq, prod_across;
+      float *p2f, *pprod_eq = (float *) &prod_eq, *pprod_across = (float *) &prod_across;
+      float re, im;
+      
+      for (i = 0, i2 = 0; i < N4; i2 += 2, p2++)
+        {
+          i1     = 2 * idcs[i2];
+          i1next = 2 * idcs[i2 + 1];
+          v1 = _mm_set_ps (gf1->fvals[i1next + 1], gf1->fvals[i1next], 
+            gf1->fvals[i1 + 1], gf1->fvals[i1]);
+          prod_eq = _mm_mul_ps (v1, *p2);
+          p2f = (float *) p2;
+          /* Switch re and im; index order would be 3,2,1,0 normally */
+          prod_across = _mm_set_ps (p2f[2], p2f[3], p2f[0], p2f[1]);
+          prod_across = _mm_mul_ps (prod_across, v1);
+
+          gf1->fvals[i1]         = pprod_eq[0] - pprod_eq[1];
+          gf1->fvals[i1 + 1]     = pprod_across[0] + pprod_across[1];
+          gf1->fvals[i1next]     = pprod_eq[2] - pprod_eq[3];
+          gf1->fvals[i1next + 1] = pprod_across[2] + pprod_across[3];
+        }
+      if (N4rem != 0)
+        {
+          i2    = gf2->ntotal - 1;
+          i1    = 2 * idcs[i2];
+          i2arr = 2 * i2;
           
-        #endif
-                
-        free (idcs);
-      }
-      Catch (_e)
-      {
-        EXC_RETHROW_REPRINT (_e);
-      }
+          re = gf1->fvals[i1] * gf2->fvals[i2arr]     - gf1->fvals[i1 + 1] * gf2->fvals[i2arr + 1];
+          im = gf1->fvals[i1] * gf2->fvals[i2arr + 1] + gf1->fvals[i1 + 1] * gf2->fvals[i2arr];
+          gf1->fvals[i1]     = re;
+          gf1->fvals[i1 + 1] = im;
+        }
+
+      #else  /* !HAVE_SSE */
+      size_t i1, i2, i2arr;
+      
+      for (i2 = 0; i2 < gf2->ntotal; i2++, i2arr += 2)
+        {
+          i1 = 2 * idcs[i2];
+          
+          re = gf1->fvals[i1] * gf2->fvals[i2arr]     - gf1->fvals[i1 + 1] * gf2->fvals[i2arr + 1];
+          im = gf1->fvals[i1] * gf2->fvals[i2arr + 1] + gf1->fvals[i1 + 1] * gf2->fvals[i2arr];
+          gf1->fvals[i1]     = re;
+          gf1->fvals[i1 + 1] = im;
+        }
+        
+      #endif
+              
+      free (idcs);
     }
     
   return;
@@ -1062,63 +1037,56 @@ gfunc3_mul_hc_re (gfunc3 *gf1, gfunc3 const *gf2)
     }
   else  /* !gfunc3_grids_are_equal (gf1, gf2) */
     {
-      size_t *idcs;
+      size_t *idcs = NULL;
       CEXCEPTION_T _e = EXC_NONE;
       
-      Try 
-      {
-        idcs = gfunc3_subgrid_flatidcs (gf1, gf2);
+      Try { idcs = gfunc3_subgrid_flatidcs (gf1, gf2); }  CATCH_RETURN_VOID (_e);
 
-        #if HAVE_SSE
-        size_t i, i2, i1, i1next;
-        size_t N2 = gf2->ntotal / 2, N2rem = gf2->ntotal % 2;
-        float const *p2 = gf2->fvals;
-        __m128 v1, v2, prod;
-        float *pprod = (float *) &prod;
-        
-        for (i = 0, i2 = 0; i < N2; i2 += 2, p2 += 2)
-          {
-            i1     = 2 * idcs[i2];
-            i1next = 2 * idcs[i2 + 1];
-            v1 = _mm_set_ps (gf1->fvals[i1next + 1], gf1->fvals[i1next], 
-              gf1->fvals[i1 + 1], gf1->fvals[i1]);
-            v2 = _mm_set_ps (p2[1], p2[1], p2[0], p2[0]);
-            prod = _mm_mul_ps (v1, v2);
+      #if HAVE_SSE
+      size_t i, i2, i1, i1next;
+      size_t N2 = gf2->ntotal / 2, N2rem = gf2->ntotal % 2;
+      float const *p2 = gf2->fvals;
+      __m128 v1, v2, prod;
+      float *pprod = (float *) &prod;
+      
+      for (i = 0, i2 = 0; i < N2; i2 += 2, p2 += 2)
+        {
+          i1     = 2 * idcs[i2];
+          i1next = 2 * idcs[i2 + 1];
+          v1 = _mm_set_ps (gf1->fvals[i1next + 1], gf1->fvals[i1next], 
+            gf1->fvals[i1 + 1], gf1->fvals[i1]);
+          v2 = _mm_set_ps (p2[1], p2[1], p2[0], p2[0]);
+          prod = _mm_mul_ps (v1, v2);
 
-            gf1->fvals[i1]         = pprod[0];
-            gf1->fvals[i1 + 1]     = pprod[1];
-            gf1->fvals[i1next]     = pprod[2];
-            gf1->fvals[i1next + 1] = pprod[3];
-          }
-        if (N2rem != 0)
-          {
-            i2    = gf2->ntotal - 1;
-            i1    = 2 * idcs[i2];
-            p2--;
-            
-            gf1->fvals[i1]     *= p2[0];
-            gf1->fvals[i1 + 1] *= p2[0];
-          }
-  
-        #else  /* !HAVE_SSE */
-        size_t i1, i2, i2arr;
-        
-        for (i2 = 0; i2 < gf2->ntotal; i2++)
-          {
-            i1 = 2 * idcs[i2];
-            
-            gf1->fvals[i1]     *= gf2->fvals[i2];
-            gf1->fvals[i1 + 1] *= gf2->fvals[i2];
-          }
+          gf1->fvals[i1]         = pprod[0];
+          gf1->fvals[i1 + 1]     = pprod[1];
+          gf1->fvals[i1next]     = pprod[2];
+          gf1->fvals[i1next + 1] = pprod[3];
+        }
+      if (N2rem != 0)
+        {
+          i2    = gf2->ntotal - 1;
+          i1    = 2 * idcs[i2];
+          p2--;
           
-        #endif
-                
-        free (idcs);
-      }
-      Catch (_e)
-      {
-        EXC_RETHROW_REPRINT (_e);
-      }
+          gf1->fvals[i1]     *= p2[0];
+          gf1->fvals[i1 + 1] *= p2[0];
+        }
+
+      #else  /* !HAVE_SSE */
+      size_t i1, i2, i2arr;
+      
+      for (i2 = 0; i2 < gf2->ntotal; i2++)
+        {
+          i1 = 2 * idcs[i2];
+          
+          gf1->fvals[i1]     *= gf2->fvals[i2];
+          gf1->fvals[i1 + 1] *= gf2->fvals[i2];
+        }
+        
+      #endif
+              
+      free (idcs);
     }
     
   return;
@@ -1136,8 +1104,7 @@ gfunc3_mul (gfunc3 *gf1, gfunc3 const *gf2)
   GFUNC_CAPTURE_UNINIT_VOID (gf1);
   GFUNC_CAPTURE_UNINIT_VOID (gf2);
 
-  Try
-  {
+  Try {
     if ((gf1->is_halfcomplex) && (gf2->is_halfcomplex))
       gfunc3_mul_hc (gf1, gf2);
     else if ((!gf1->is_halfcomplex) && (!gf2->is_halfcomplex))
@@ -1145,12 +1112,8 @@ gfunc3_mul (gfunc3 *gf1, gfunc3 const *gf2)
     else if ((gf1->is_halfcomplex) && (!gf2->is_halfcomplex))
       gfunc3_mul_hc_re (gf1, gf2);
     else
-      EXC_THROW_CUSTOMIZED_PRINT (EXC_GFTYPE, "Not implemented for half-complex * real.");
-  }
-  Catch (_e)
-  {
-    EXC_RETHROW_REPRINT (_e);
-  }
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_UNIMPL, "Not implemented for half-complex * real.");
+  }  CATCH_RETURN_VOID (_e);
   
   return;
 }
@@ -1268,47 +1231,40 @@ gfunc3_div_re (gfunc3 *gf1, gfunc3 const *gf2)
     }
   else  /* !gfunc3_grids_are_equal (gf1, gf2) */
     {
-      size_t *idcs;
+      size_t *idcs = NULL;
       CEXCEPTION_T _e = EXC_NONE;
       
-      Try 
-      {
-        idcs = gfunc3_subgrid_flatidcs (gf1, gf2);
+      Try { idcs = gfunc3_subgrid_flatidcs (gf1, gf2); }  CATCH_RETURN_VOID (_e);
 
-        #if HAVE_SSE
-        size_t i, l = 0, N4 = gf2->ntotal / 4, N4rem = gf2->ntotal % 4;
-        __m128 const *p2 = (__m128 const *) gf2->fvals;
-        __m128 v1;
-        float *pv1 = (float *) &v1;
-  
-        for (i = 0; i < N4; i++, l += 4, p2++)
-          {
-            v1 = _mm_set_ps (gf1->fvals[idcs[l + 3]], gf1->fvals[idcs[l + 2]], 
-                  gf1->fvals[idcs[l + 1]], gf1->fvals[idcs[l]]);
-            v1 = _mm_div_ps (v1, *p2);
-  
-            gf1->fvals[idcs[l]]     = pv1[0];
-            gf1->fvals[idcs[l + 1]] = pv1[1];
-            gf1->fvals[idcs[l + 2]] = pv1[2];
-            gf1->fvals[idcs[l + 3]] = pv1[3];
-          }
-        
-        for (i = gf2->ntotal - N4rem; i < gf2->ntotal; i++)
-          gf1->fvals[idcs[i]] /= gf2->fvals[i];
-  
-        #else  /* !HAVE_SSE */
-        size_t i;
-        for (i = 0; i < gf2->ntotal; i++)
-          gf1->fvals[idcs[i]] /= gf2->fvals[i];
-  
-        #endif
-        
-        free (idcs);
-      }
-      Catch (_e)
-      {
-        EXC_RETHROW_REPRINT (_e);
-      }
+      #if HAVE_SSE
+      size_t i, l = 0, N4 = gf2->ntotal / 4, N4rem = gf2->ntotal % 4;
+      __m128 const *p2 = (__m128 const *) gf2->fvals;
+      __m128 v1;
+      float *pv1 = (float *) &v1;
+
+      for (i = 0; i < N4; i++, l += 4, p2++)
+        {
+          v1 = _mm_set_ps (gf1->fvals[idcs[l + 3]], gf1->fvals[idcs[l + 2]], 
+                gf1->fvals[idcs[l + 1]], gf1->fvals[idcs[l]]);
+          v1 = _mm_div_ps (v1, *p2);
+
+          gf1->fvals[idcs[l]]     = pv1[0];
+          gf1->fvals[idcs[l + 1]] = pv1[1];
+          gf1->fvals[idcs[l + 2]] = pv1[2];
+          gf1->fvals[idcs[l + 3]] = pv1[3];
+        }
+      
+      for (i = gf2->ntotal - N4rem; i < gf2->ntotal; i++)
+        gf1->fvals[idcs[i]] /= gf2->fvals[i];
+
+      #else  /* !HAVE_SSE */
+      size_t i;
+      for (i = 0; i < gf2->ntotal; i++)
+        gf1->fvals[idcs[i]] /= gf2->fvals[i];
+
+      #endif
+      
+      free (idcs);
     }
     
   return;
@@ -1319,28 +1275,25 @@ gfunc3_div_re (gfunc3 *gf1, gfunc3 const *gf2)
 void
 gfunc3_div (gfunc3 *gf1, gfunc3 const *gf2)
 {
-  CEXCEPTION_T _e = EXC_NONE;
-
   CAPTURE_NULL_VOID (gf1);
   CAPTURE_NULL_VOID (gf2);
   GFUNC_CAPTURE_UNINIT_VOID (gf1);
   GFUNC_CAPTURE_UNINIT_VOID (gf2);
   
-  /* TODO: implement mixed div */
+  /* TODO: implement mixed and complex divisions */
   if (gf1->is_halfcomplex != gf2->is_halfcomplex)
-    EXC_THROW_CUSTOMIZED_PRINT (EXC_UNIMPL, "Not implemented for mixed function types.");
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_UNIMPL, "Not implemented for mixed function types.");
+      return;
+    }
 
-  Try
-  {
-    if (gf1->is_halfcomplex)
+  if (gf1->is_halfcomplex)
+    {
       EXC_THROW_CUSTOMIZED_PRINT (EXC_UNIMPL, "Complex version not yet implemented.");
-    else
-      gfunc3_mul_re (gf1, gf2);
-  }
-  Catch (_e)
-  {
-    EXC_RETHROW_REPRINT (_e);
-  }
+      return;
+    }
+  else
+    gfunc3_mul_re (gf1, gf2);
     
   return;
 }
@@ -1388,7 +1341,10 @@ gfunc3_div_vfunc (gfunc3 *gf, const vfunc *vf)
 
   /* TODO: implement half-complex version */
   if (gf->is_halfcomplex)
-    EXC_THROW_CUSTOMIZED_PRINT (EXC_UNIMPL, "Complex version not yet implemented.");
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_UNIMPL, "Complex version not yet implemented.");
+      return;
+    }
   else
     gfunc3_div_vfunc_re (gf, vf);
 
@@ -1402,6 +1358,13 @@ gfunc3_scale (gfunc3 *gf, float a)
 {
   CAPTURE_NULL_VOID (gf);
   GFUNC_CAPTURE_UNINIT_VOID (gf);
+  
+  /* TODO: implement complex version; this changes the data type of A to float*. */
+  if (gf->is_halfcomplex)
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_UNIMPL, "Complex version not yet implemented.");
+      return;
+    }
   
   #if HAVE_CBLAS
   cblas_sscal (gf->ntotal, a, gf->fvals, 1);
@@ -1436,6 +1399,13 @@ gfunc3_add_constant (gfunc3 *gf, float c)
   CAPTURE_NULL_VOID (gf);
   GFUNC_CAPTURE_UNINIT_VOID (gf);
 
+  /* TODO: implement complex version; this changes the data type of A to float*. */
+  if (gf->is_halfcomplex)
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_UNIMPL, "Complex version not yet implemented.");
+      return;
+    }
+  
   #if HAVE_SSE
   size_t N4 = gf->ntotal / 4, N4rem = gf->ntotal % 4;
   __m128 *p = (__m128 *) gf->fvals;
@@ -1506,6 +1476,8 @@ gfunc3_scale_grid (gfunc3 *gf, float a)
 void
 gfunc3_dilate (gfunc3 *gf, float a)
 {
+  CEXCEPTION_T _e = EXC_NONE;
+  
   CAPTURE_NULL_VOID (gf);
   GFUNC_CAPTURE_UNINIT_VOID (gf);
 
@@ -1514,10 +1486,12 @@ gfunc3_dilate (gfunc3 *gf, float a)
 
   gfunc3_scale_grid (gf, a);
 
-  if (GFUNC_IS_2D (gf))
-    gfunc3_scale (gf, 1.0 / a);
-  else
-    gfunc3_scale (gf, 1.0 / (a * sqrtf (a)));
+  Try {
+    if (GFUNC_IS_2D (gf))
+      gfunc3_scale (gf, 1.0 / a);
+    else
+      gfunc3_scale (gf, 1.0 / (a * sqrtf (a)));
+  }  CATCH_RETURN_VOID (_e);
 
   return;
 }
@@ -1534,7 +1508,10 @@ gfunc3_set (gfunc3 *gf, idx3 const idx, float const *pval)
   GFUNC_CAPTURE_UNINIT_VOID (gf);
   
   if (!idx3_inside_range (idx, gf->shape))
-    EXC_THROW_PRINT (EXC_INDEX);
+    {
+      EXC_THROW_PRINT (EXC_INDEX);
+      return;
+    }
   
   fi = idx3_flat (idx, gf->shape);
 
@@ -1636,7 +1613,10 @@ gfunc3_make_nonneg (gfunc3 *gf)
   GFUNC_CAPTURE_UNINIT_VOID (gf);
   
   if (gf->is_halfcomplex)
-    EXC_THROW_CUSTOMIZED_PRINT (EXC_GFTYPE, "Cannot compare complex values against zero.");
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_GFTYPE, "Cannot compare complex values against zero.");
+      return;
+    }
 
   #if HAVE_SSE
   size_t N4 = gf->ntotal / 4, N4rem = gf->ntotal % 4;
@@ -1672,7 +1652,10 @@ gfunc3_eval (gfunc3 *gf, idx3 const idx)
   GFUNC_CAPTURE_UNINIT (gf, FLT_MAX);
 
   if (!idx3_inside_range (idx, gf->shape))
-    EXC_THROW_PRINT (EXC_INDEX);
+    {
+      EXC_THROW_PRINT (EXC_INDEX);
+      return;
+    }
   
   fi = idx3_flat (idx, gf->shape);
 
@@ -2000,14 +1983,19 @@ gfunc3_subgrid_flatidcs (gfunc3 const *gf, gfunc3 const *gf_sub)
 {
   CEXCEPTION_T _e = EXC_NONE;
   int i, iz, iy, ix;
-  size_t idx, z_offset, y_offset, *active_idcs;
+  size_t idx, z_offset, y_offset;
+  size_t *active_idcs = NULL;
   idx3 off, sfac;
 
   CAPTURE_NULL (gf, NULL);
   CAPTURE_NULL (gf_sub, NULL);
 
   if (!gfunc3_grid_is_subgrid (gf, gf_sub))
-    EXC_THROW_CUSTOMIZED_PRINT (EXC_SUBGRID, "2nd argument grid not contained in 1st argument grid.");
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_SUBGRID, 
+        "2nd argument grid not contained in 1st argument grid.");
+      return NULL;
+    }
 
   /* Calculation of offset and cell size factors of the subgrid */
   for (i = 0; i < 3; i++)
@@ -2016,32 +2004,24 @@ gfunc3_subgrid_flatidcs (gfunc3 const *gf, gfunc3 const *gf_sub)
       sfac[i] = (int) (roundf (gf_sub->csize[i] / gf->csize[i]));
     }
 
-  Try
-  {
-    active_idcs = (size_t *) ali16_malloc (gf_sub->ntotal * sizeof (size_t));
+  Try { active_idcs = (size_t *) ali16_malloc (gf_sub->ntotal * sizeof (size_t)); }
+  CATCH_RETURN (_e, NULL);
   
-    z_offset = off[2] * gf->shape[1] * gf->shape[0];
-    for (iz = 0, idx = 0; iz < gf_sub->shape[2]; iz++)
-      {
-        y_offset = off[1] * gf->shape[0];
-        for (iy = 0; iy < gf_sub->shape[1]; iy++)
-          {
-            for (ix = 0; ix < gf_sub->shape[0]; ix++)
-              active_idcs[idx++] = z_offset + y_offset + off[0] + ix * sfac[0];
-  
-            y_offset += sfac[1] * gf->shape[0];
-          }
-        z_offset += sfac[2] * gf->shape[1] * gf->shape[0];
-      }
+  z_offset = off[2] * gf->shape[1] * gf->shape[0];
+  for (iz = 0, idx = 0; iz < gf_sub->shape[2]; iz++)
+    {
+      y_offset = off[1] * gf->shape[0];
+      for (iy = 0; iy < gf_sub->shape[1]; iy++)
+        {
+          for (ix = 0; ix < gf_sub->shape[0]; ix++)
+            active_idcs[idx++] = z_offset + y_offset + off[0] + ix * sfac[0];
 
-    return active_idcs;
-  }
-  Catch (_e)
-  {
-    EXC_RETHROW_REPRINT (_e);
-  }
+          y_offset += sfac[1] * gf->shape[0];
+        }
+      z_offset += sfac[2] * gf->shape[1] * gf->shape[0];
+    }
 
-  return NULL;
+  return active_idcs;
 }
 
 /*-------------------------------------------------------------------------------------------------*/
@@ -2053,7 +2033,7 @@ gfunc3_zeropad (gfunc3 *gf, idx3 const padding)
   int i;
   size_t idx, ntotal_old, *idcs;
 
-  float *fvals_old, nul[2] = {0.0f, 0.0f};
+  float *fvals_old;
   gfunc3 *gf_tmp;
   
   CAPTURE_NULL_VOID (gf);
@@ -2091,7 +2071,7 @@ gfunc3_zeropad (gfunc3 *gf, idx3 const padding)
     fvals_old = gf->fvals;
     
     gf->fvals = (float *) ali16_malloc (gf->ntotal * sizeof (float));
-    gfunc3_set_all (gf, nul);
+    gfunc3_set_all (gf, c_zero);
     for (idx = 0; idx < ntotal_old; idx++)
       gf->fvals[idcs[idx]] = fvals_old[idx];
     
