@@ -51,6 +51,9 @@
 #define TRUE  1
 #define FALSE 0
 
+static float const c_zero[2] = {0.0f, 0.0f};
+static float const c_one[2]  = {1.0f, 0.0f};
+
 
 /*-------------------------------------------------------------------------------------------------*
  * Debugging 
