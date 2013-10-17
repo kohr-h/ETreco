@@ -444,18 +444,20 @@ gfunc3_make_nonneg (gfunc3 *gf);
 /*-------------------------------------------------------------------------------------------------*/
 
 
-/* Evaluate GF at the given grid index IDX.
+/* Evaluate GF at the given grid index IDX.  Currently not implemented for HALFCOMPLEX functions.
  * 
  * Thrown exceptions:
  * - EXC_NULL
  * - EXC_GFINIT
+ * - EXC_UNIMPL
  * - EXC_INDEX
  */
 float
 gfunc3_eval (gfunc3 *gf, idx3 const idx);
 
 
-/* Approximate the value of GF at PT by nearest neighbor interpolation on the grid.
+/* Approximate the value of GF at PT by nearest neighbor interpolation on the grid.  Currently not 
+ * implemented for HALFCOMPLEX functions.
  * 
  * Thrown exceptions: 
  * - EXC_NULL
@@ -465,21 +467,50 @@ gfunc3_eval (gfunc3 *gf, idx3 const idx);
 float
 gfunc3_interp_nearest (gfunc3 const *gf, vec3 const pt);
 
-// Approximate the value of GF at PT by nearest neighbor interpolation
+
+/* Approximate the value of GF at PT by nearest neighbor interpolation on the grid. This is an 
+ * optimized 2D version of the generic function.  Currently not implemented for HALFCOMPLEX functions.
+ * 
+ * Thrown exceptions: 
+ * - EXC_NULL
+ * - EXC_GFINIT
+ * - EXC_UNIMPL
+ * - EXC_GFDIM
+ */
 float
 gfunc3_interp_nearest_2d (gfunc3 const *gf, vec3 const pt);
 
-// Approximate the value of GF at V by linear interpolation
+
+/* Approximate the value of GF at PT by linear interpolation on the grid.  Currently not implemented 
+ * for HALFCOMPLEX functions.
+ * 
+ * Thrown exceptions: 
+ * - EXC_NULL
+ * - EXC_GFINIT
+ * - EXC_UNIMPL
+ */
 float
 gfunc3_interp_linear (gfunc3 const *gf, vec3 const pt);
 
-// Approximate the value of GF at V by linear interpolation
+
+/* Approximate the value of GF at PT by linear interpolation on the grid. This is an optimized 2D 
+ * version of the generic function.  Currently not implemented for HALFCOMPLEX functions.
+ * 
+ * Thrown exceptions: 
+ * - EXC_NULL
+ * - EXC_GFINIT
+ * - EXC_UNIMPL
+ * - EXC_GFDIM
+ */
 float
 gfunc3_interp_linear_2d (gfunc3 const *gf, vec3 const pt);
+
+
 
 /*-------------------------------------------------------------------------------------------------*/
 // Domain change
 /*-------------------------------------------------------------------------------------------------*/
+
 
 /* TODO: make this function private? */
 /* Return the flattened indices of the subgrid (GF_SUB's grid) inside the large grid (GF's grid).
@@ -492,15 +523,31 @@ gfunc3_interp_linear_2d (gfunc3 const *gf, vec3 const pt);
 size_t *
 gfunc3_subgrid_flatidcs (gfunc3 const *gf, gfunc3 const *gf_sub);
 
+
 /* Pad GF with zeros; the PADDING vector gives the number of points that are added on both sides 
- * (per dimension) of the original grid
+ * (per dimension) of the original grid of GF.  Memory for the new array is allocated.  Currently 
+ * not implemented for HALFCOMPLEX functions.
+ * 
+ * Thrown exceptions: 
+ * - EXC_NULL
+ * - EXC_GFINIT
+ * - EXC_UNIMPL
  */
 void
 gfunc3_zeropad (gfunc3 *gf, idx3 const padding);
 
-/* Revert the effect of gfunc3_zeropad */
+
+/* Revert the effect of gfunc3_zeropad.  Currently not implemented for HALFCOMPLEX functions. 
+ * 
+ * Thrown exceptions: 
+ * - EXC_NULL
+ * - EXC_GFINIT
+ * - EXC_UNIMPL
+ * - EXC_BADARG
+ */
 void
 gfunc3_unpad (gfunc3 *gf, idx3 const padding);
+
 
 /*
 // Restrict gf to the subgrid sub_g. Superfluent values are discarded
