@@ -648,7 +648,10 @@ gfunc3_axpy (float a, gfunc3 *gf1, gfunc3 const *gf2)
 
   /* TODO: implement mixed axpy */
   if (gf1->is_halfcomplex != gf2->is_halfcomplex)
-    EXC_THROW_CUSTOMIZED_PRINT (EXC_UNIMPL, "Not implemented for mixed function types.");
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_UNIMPL, "Not implemented for mixed function types.");
+      return;
+    }
 
   if (gf2->is_halfcomplex)
     ntotal_flt = 2 * gf2->ntotal;
@@ -1457,7 +1460,10 @@ gfunc3_scale_grid (gfunc3 *gf, float a)
   CAPTURE_NULL_VOID (gf);
 
   if (a <= 0)
-    EXC_THROW_CUSTOMIZED_PRINT (EXC_BADARG, "a must be positive.");
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_BADARG, "a must be positive.");
+      return;
+    }
     
   vec3_scale (gf->x0, a);
   vec3_scale (gf->csize, a);
@@ -1482,7 +1488,10 @@ gfunc3_dilate (gfunc3 *gf, float a)
   GFUNC_CAPTURE_UNINIT_VOID (gf);
 
   if (a <= 0)
-    EXC_THROW_CUSTOMIZED_PRINT (EXC_BADARG, "a must be positive.");
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_BADARG, "a must be positive.");
+      return;
+    }
 
   gfunc3_scale_grid (gf, a);
 
@@ -1651,6 +1660,13 @@ gfunc3_eval (gfunc3 *gf, idx3 const idx)
   CAPTURE_NULL (idx, FLT_MAX);
   GFUNC_CAPTURE_UNINIT (gf, FLT_MAX);
 
+  /* TODO: implement half-complex version */
+  if (gf->is_halfcomplex)
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_UNIMPL, "Complex version not yet implemented.");
+      return;
+    }
+
   if (!idx3_inside_range (idx, gf->shape))
     {
       EXC_THROW_PRINT (EXC_INDEX);
@@ -1676,7 +1692,10 @@ gfunc3_interp_nearest (gfunc3 const *gf, vec3 const pt)
 
   /* TODO: implement half-complex version */
   if (gf->is_halfcomplex)
-    EXC_THROW_CUSTOMIZED_PRINT (EXC_UNIMPL, "Complex version not yet implemented.");
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_UNIMPL, "Complex version not yet implemented.");
+      return;
+    }
 
   if (!vec3_between (pt, gf->xmin, gf->xmax))
     return 0.0;
@@ -1734,14 +1753,20 @@ gfunc3_interp_nearest_2d (gfunc3 const *gf, vec3 const pt)
 
   /* TODO: implement half-complex version */
   if (gf->is_halfcomplex)
-    EXC_THROW_CUSTOMIZED_PRINT (EXC_UNIMPL, "Complex version not yet implemented.");
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_UNIMPL, "Complex version not yet implemented.");
+      return;
+    }
 
   if ((pt[0] <= gf->xmin[0]) || (pt[0] >= gf->xmax[0]) || 
       (pt[1] <= gf->xmin[1]) || (pt[1] >= gf->xmax[1]))
     return 0.0;
 
   if (!GFUNC_IS_2D(gf))
-    EXC_THROW_CUSTOMIZED_PRINT (EXC_GFDIM, "Function must be 2-dimensional.");
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_GFDIM, "Function must be 2-dimensional.");
+      return;
+    }
 
   #if HAVE_SSE
   __m128 const *mpt = (__m128 const *) pt, *mxmin = (__m128 const *) gf->xmin;
@@ -1959,15 +1984,7 @@ gfunc3_interp_linear_2d (gfunc3 const *gf, vec3 const pt)
 
   inc1 = gf->shape[0];
   fi = idx[1] * inc1 + idx[0];
-  
-  if (fi + inc1 + 1 >= gf->ntotal)
-    {
-      vec3_print (pt);
-      printf ("idx: %d, %d\n", idx[0], idx[1]);
-      printf ("xmax-reldiff: %e %e\n", (gf->xmax[0] - pt[0]) / gf->csize[0], 
-      (gf->xmax[1] - pt[1]) / gf->csize[1]);
-    }
-  
+    
   fv  = (pwl[0] * gf->fvals[fi]        + pwu[0] * gf->fvals[fi + 1])        * pwl[1];
   fv += (pwl[0] * gf->fvals[fi + inc1] + pwu[0] * gf->fvals[fi + inc1 + 1]) * pwu[1];
   
@@ -2048,41 +2065,35 @@ gfunc3_zeropad (gfunc3 *gf, idx3 const padding)
     }
 
   /* gf_tmp is used only to hold the old grid and as input for the subgrid_flatidcs function */
-  Try
-  {
-    gf_tmp = new_gfunc3 ();
-    idx3_copy (gf_tmp->shape, gf->shape);
-    vec3_copy (gf_tmp->csize, gf->csize);
-    vec3_copy (gf_tmp->x0, gf->x0);
-    gfunc3_compute_xmin_xmax (gf_tmp);
-    gf_tmp->ntotal = gf->ntotal;
-
-    for (i = 0; i < 3; i++)
-      gf->shape[i] += 2 * padding[i];
-
-    ntotal_old = gf->ntotal;
-    gf->ntotal = idx3_product (gf->shape);
-    gfunc3_compute_xmin_xmax (gf);
-
-    idcs = gfunc3_subgrid_flatidcs (gf, gf_tmp);
-    
-    gfunc3_free (&gf_tmp);
-
-    fvals_old = gf->fvals;
-    
-    gf->fvals = (float *) ali16_malloc (gf->ntotal * sizeof (float));
-    gfunc3_set_all (gf, c_zero);
-    for (idx = 0; idx < ntotal_old; idx++)
-      gf->fvals[idcs[idx]] = fvals_old[idx];
-    
-    free (idcs);
-    free (fvals_old);
-  }
-  Catch (_e)
-  {
-    EXC_RETHROW_REPRINT (_e);
-  }
+  Try { gf_tmp = new_gfunc3 (); }  CATCH_RETURN_VOID (_e);
   
+  idx3_copy (gf_tmp->shape, gf->shape);
+  vec3_copy (gf_tmp->csize, gf->csize);
+  vec3_copy (gf_tmp->x0, gf->x0);
+  gfunc3_compute_xmin_xmax (gf_tmp);
+  gf_tmp->ntotal = gf->ntotal;
+
+  for (i = 0; i < 3; i++)
+    gf->shape[i] += 2 * padding[i];
+
+  ntotal_old = gf->ntotal;
+  gf->ntotal = idx3_product (gf->shape);
+  gfunc3_compute_xmin_xmax (gf);
+
+  Try { idcs = gfunc3_subgrid_flatidcs (gf, gf_tmp); }  CATCH_RETURN_VOID (_e);
+    
+  gfunc3_free (&gf_tmp);
+
+  fvals_old = gf->fvals;
+    
+  Try { gf->fvals = (float *) ali16_malloc (gf->ntotal * sizeof (float)); }  CATCH_RETURN_VOID (_e);
+  
+  gfunc3_set_all (gf, c_zero);
+  for (idx = 0; idx < ntotal_old; idx++)
+    gf->fvals[idcs[idx]] = fvals_old[idx];
+    
+  free (idcs);
+  free (fvals_old);
   return;
 }
 
@@ -2105,48 +2116,47 @@ gfunc3_unpad (gfunc3 *gf, idx3 const padding)
 
   /* TODO: implement half-complex version */
   if (gf->is_halfcomplex)
-    EXC_THROW_CUSTOMIZED_PRINT (EXC_UNIMPL, "Complex version not yet implemented.");
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_UNIMPL, "Complex version not yet implemented.");
+      return;
+    }
 
   /* Check if it is possible to remove 2*padding values from the function */
   idx3_copy (ptmp, padding);
   idx3_scale (ptmp, 2);
   if (!idx3_lt (ptmp, gf->shape))
-    EXC_THROW_CUSTOMIZED_PRINT (EXC_BADARG, "padding too large.");
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_BADARG, "padding too large.");
+      return;
+    }
 
-  Try
-  {
     /* gf_tmp is used only to hold the old grid and as input for the subgrid_flatidcs function */
-    gf_tmp = new_gfunc3 ();
-    idx3_copy (gf_tmp->shape, gf->shape);
-    vec3_copy (gf_tmp->csize, gf->csize);
-    vec3_copy (gf_tmp->x0, gf->x0);
-    gfunc3_compute_xmin_xmax (gf_tmp);
-    gf_tmp->ntotal = gf->ntotal;
-
-    for (i = 0; i < 3; i++)
-      gf->shape[i] -= 2 * padding[i];
-
-    gf->ntotal = idx3_product (gf->shape);
-    gfunc3_compute_xmin_xmax (gf);
-
-    idcs = gfunc3_subgrid_flatidcs (gf_tmp, gf);
-
-    gfunc3_free (&gf_tmp);
-
-    fvals_old = gf->fvals;
-    gf->fvals = (float *) ali16_malloc (gf->ntotal * sizeof (float));
-
-    for (idx = 0; idx < gf->ntotal; idx++)
-      gf->fvals[idx] = fvals_old[idcs[idx]];
-    
-    free (idcs);
-    free (fvals_old);
-  }
-  Catch (_e)
-  {
-    EXC_RETHROW_REPRINT (_e);
-  }
+  Try { gf_tmp = new_gfunc3 (); } CATCH_RETURN_VOID (_e);
   
+  idx3_copy (gf_tmp->shape, gf->shape);
+  vec3_copy (gf_tmp->csize, gf->csize);
+  vec3_copy (gf_tmp->x0, gf->x0);
+  gfunc3_compute_xmin_xmax (gf_tmp);
+  gf_tmp->ntotal = gf->ntotal;
+
+  for (i = 0; i < 3; i++)
+    gf->shape[i] -= 2 * padding[i];
+
+  gf->ntotal = idx3_product (gf->shape);
+  gfunc3_compute_xmin_xmax (gf);
+
+  Try { idcs = gfunc3_subgrid_flatidcs (gf_tmp, gf); }  CATCH_RETURN_VOID (_e);
+
+  gfunc3_free (&gf_tmp);
+
+  fvals_old = gf->fvals;
+  Try { gf->fvals = (float *) ali16_malloc (gf->ntotal * sizeof (float)); }  CATCH_RETURN_VOID (_e);
+
+  for (idx = 0; idx < gf->ntotal; idx++)
+    gf->fvals[idx] = fvals_old[idcs[idx]];
+  
+  free (idcs);
+  free (fvals_old);
   return;
 }
 
