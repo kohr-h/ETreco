@@ -219,7 +219,7 @@ fft_forward (gfunc3 *gf)
   int nx;
   size_t n_ft;
   idx3 padding = {0, 0, 0};
-  fftwf_complex *d_ft;
+  fftwf_complex *d_ft = NULL;
   fftwf_plan p;
 
   CAPTURE_NULL_VOID (gf);
@@ -239,7 +239,7 @@ fft_forward (gfunc3 *gf)
       if (GFUNC_IS_2D (gf))
         padding[2] = 0;
       
-      Try { gfunc3_zeropad (gf, padding) } CATCH_RETURN_VOID (_e);
+      Try { gfunc3_zeropad (gf, padding); } CATCH_RETURN_VOID (_e);
     }
 
   nx = gf->shape[0] / 2 + 1;
@@ -377,7 +377,7 @@ fft_backward (gfunc3 *gf)
 {
   CEXCEPTION_T _e = EXC_NONE;
   size_t n_ift;
-  float *d_ift;
+  float *d_ift = NULL;
   idx3 padding = {0, 0, 0};
   fftwf_plan p;
 
@@ -390,7 +390,7 @@ fft_backward (gfunc3 *gf)
     }
 
   n_ift = gf->_ntmp * gf->shape[1] * gf->shape[2];
-  d_ift = Try { (float *) ali16_malloc (n_ift * sizeof (float)); } CATCH_RETURN_VOID (_e);
+  Try { d_ift = (float *) ali16_malloc (n_ift * sizeof (float)); } CATCH_RETURN_VOID (_e);
 
   fft_bwd_premod (gf);
 
