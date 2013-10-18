@@ -122,13 +122,14 @@ do { \
  * Helper functions
  *-------------------------------------------------------------------------------------------------*/
 
-/* Allocate a 16-byte aligned array of size NBYTES. Returns NULL and throws a
- * NotEnoughMemoryException on failure. 
+/* Allocate a 16-byte aligned array of size NBYTES. Returns NULL on failure. 
+ * 
+ * Thrown exceptions:
+ * - EXC_NOMEMORY
  */
 void *
 ali16_malloc (size_t nbytes) __attribute__((alloc_size(1)));
 
-/*-------------------------------------------------------------------------------------------------*/
 
 /* A simple replacement for the base_name function in Gnulib.  Returns a pointer to the position in
  * FILENAME where the base name (without path) starts.
@@ -143,7 +144,6 @@ base_name (char const *filename);
 void 
 print_version_etc (char const *progname);
 
-/*-------------------------------------------------------------------------------------------------*/
 
 /* Compute the rotated basis vectors OM_X, OM_Y, OM_Z in the standard basis.  They correspond to the
  * columns in the rotation matrix defined by the Euler angles in ANGLES_DEG (in degrees).  The 

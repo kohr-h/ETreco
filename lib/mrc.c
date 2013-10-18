@@ -58,10 +58,16 @@ void
 read_uchar (unsigned char *pval, FILE *fp, size_t pos)
 {
   if (fseek (fp, pos, SEEK_SET) != 0) 
-    EXC_THROW_PRINT (EXC_IO);
+    {
+      EXC_THROW_PRINT (EXC_IO);
+      return;
+    }
   
   if (fread (pval, sizeof (unsigned char), 1, fp) == 0)
-    EXC_THROW_PRINT (EXC_IO);
+    {
+      EXC_THROW_PRINT (EXC_IO);
+      return;
+    }
   
   return;
 }
@@ -71,11 +77,17 @@ read_uchar (unsigned char *pval, FILE *fp, size_t pos)
 void
 read_int16 (int16_t *pval, FILE *fp, size_t pos)
 {
-  if (fseek (fp, pos, SEEK_SET) != 0) 
-    EXC_THROW_PRINT (EXC_IO);
+  if (fseek (fp, pos, SEEK_SET) != 0)
+    {
+      EXC_THROW_PRINT (EXC_IO);
+      return;
+    }
   
   if (fread (pval, sizeof (int16_t), 1, fp) == 0)
-    EXC_THROW_PRINT (EXC_IO);
+    {
+      EXC_THROW_PRINT (EXC_IO);
+      return;
+    }
   
   if (bswap_flag)
     *pval = bswap_16 (*pval);
@@ -91,10 +103,16 @@ read_int16_arr (int16_t *vals, size_t nmemb, FILE *fp, size_t pos)
   size_t i;
   
   if (fseek (fp, pos, SEEK_SET) != 0) 
-    EXC_THROW_PRINT (EXC_IO);
+    {
+      EXC_THROW_PRINT (EXC_IO);
+      return;
+    }
   
   if (fread (vals, nmemb * sizeof (int16_t), 1, fp) == 0)
-    EXC_THROW_PRINT (EXC_IO);
+    {
+      EXC_THROW_PRINT (EXC_IO);
+      return;
+    }
   
   if (bswap_flag)
     {
@@ -111,10 +129,16 @@ void
 read_int32 (int32_t *pval, FILE *fp, size_t pos)
 {
   if (fseek (fp, pos, SEEK_SET) != 0) 
-    EXC_THROW_PRINT (EXC_IO);
+    {
+      EXC_THROW_PRINT (EXC_IO);
+      return;
+    }
   
   if (fread (pval, sizeof (int32_t), 1, fp) == 0)
-    EXC_THROW_PRINT (EXC_IO);
+    {
+      EXC_THROW_PRINT (EXC_IO);
+      return;
+    }
   
   if (bswap_flag)
     *pval = bswap_32 (*pval);
@@ -130,10 +154,16 @@ read_int32_arr (int32_t *vals, size_t nmemb, FILE *fp, size_t pos)
   size_t i;
   
   if (fseek (fp, pos, SEEK_SET) != 0) 
-    EXC_THROW_PRINT (EXC_IO);
+    {
+      EXC_THROW_PRINT (EXC_IO);
+      return;
+    }
   
   if (fread (vals, nmemb * sizeof (int32_t), 1, fp) == 0)
-    EXC_THROW_PRINT (EXC_IO);
+    {
+      EXC_THROW_PRINT (EXC_IO);
+      return;
+    }
   
   if (bswap_flag)
     {
@@ -152,10 +182,16 @@ read_float (float *pval, FILE *fp, size_t pos)
   d32 swapval;
   
   if (fseek (fp, pos, SEEK_SET) != 0) 
-    EXC_THROW_PRINT (EXC_IO);
+    {
+      EXC_THROW_PRINT (EXC_IO);
+      return;
+    }
   
   if (fread (&swapval._float, sizeof (float), 1, fp) == 0)
-    EXC_THROW_PRINT (EXC_IO);
+    {
+      EXC_THROW_PRINT (EXC_IO);
+      return;
+    }
   
   if (bswap_flag)
     swapval._int = bswap_32 (swapval._int);
@@ -174,10 +210,16 @@ read_float_arr (float *vals, size_t nmemb, FILE *fp, size_t pos)
   d32 swapval;
   
   if (fseek (fp, pos, SEEK_SET) != 0) 
-    EXC_THROW_PRINT (EXC_IO);
+    {
+      EXC_THROW_PRINT (EXC_IO);
+      return;
+    }
   
   if (fread (vals, nmemb * sizeof (float), 1, fp) == 0)
-    EXC_THROW_PRINT (EXC_IO);
+    {
+      EXC_THROW_PRINT (EXC_IO);
+      return;
+    }
   
   if (bswap_flag)
     {
@@ -198,10 +240,16 @@ void
 write_int16 (const int16_t *pval, FILE *fp, size_t pos)
 {
   if (fseek (fp, pos, SEEK_SET) != 0) 
-    EXC_THROW_PRINT (EXC_IO);
+    {
+      EXC_THROW_PRINT (EXC_IO);
+      return;
+    }
   
   if (fwrite (pval, sizeof (int16_t), 1, fp) == 0)
-    EXC_THROW_PRINT (EXC_IO);
+    {
+      EXC_THROW_PRINT (EXC_IO);
+      return;
+    }
     
   return;
 }
@@ -212,10 +260,16 @@ void
 write_int32 (const int32_t *pval, FILE *fp, size_t pos)
 {
   if (fseek (fp, pos, SEEK_SET) != 0) 
-    EXC_THROW_PRINT (EXC_IO);
+    {
+      EXC_THROW_PRINT (EXC_IO);
+      return;
+    }
   
   if (fwrite (pval, sizeof (int32_t), 1, fp) == 0)
-    EXC_THROW_PRINT (EXC_IO);
+    {
+      EXC_THROW_PRINT (EXC_IO);
+      return;
+    }
     
   return;
 }
@@ -226,10 +280,16 @@ void
 write_int32_arr (const int32_t *vals, size_t nmemb, FILE *fp, size_t pos)
 {
   if (fseek (fp, pos, SEEK_SET) != 0) 
-    EXC_THROW_PRINT (EXC_IO);
+    {
+      EXC_THROW_PRINT (EXC_IO);
+      return;
+    }
   
   if (fwrite (vals, nmemb * sizeof (int32_t), 1, fp) == 0)
-    EXC_THROW_PRINT (EXC_IO);
+    {
+      EXC_THROW_PRINT (EXC_IO);
+      return;
+    }
   
   return;
 }
@@ -240,10 +300,16 @@ void
 write_float (float const *pval, FILE *fp, size_t pos)
 {
   if (fseek (fp, pos, SEEK_SET) != 0) 
-    EXC_THROW_PRINT (EXC_IO);
+    {
+      EXC_THROW_PRINT (EXC_IO);
+      return;
+    }
   
   if (fwrite (pval, sizeof (float), 1, fp) == 0)
-    EXC_THROW_PRINT (EXC_IO);
+    {
+      EXC_THROW_PRINT (EXC_IO);
+      return;
+    }
     
   return;
 }
@@ -254,10 +320,16 @@ void
 write_float_arr (float const *vals, size_t nmemb, FILE *fp, size_t pos)
 {
   if (fseek (fp, pos, SEEK_SET) != 0) 
-    EXC_THROW_PRINT (EXC_IO);
+    {
+      EXC_THROW_PRINT (EXC_IO);
+      return;
+    }
   
   if (fwrite (vals, nmemb * sizeof (float), 1, fp) == 0)
-    EXC_THROW_PRINT (EXC_IO);
+    {
+      EXC_THROW_PRINT (EXC_IO);
+      return;
+    }
       
   return;
 }
@@ -268,10 +340,16 @@ void
 write_char_arr (char const *str, size_t nmemb, FILE *fp, size_t pos)
 {
   if (fseek (fp, pos, SEEK_SET) != 0) 
-    EXC_THROW_PRINT (EXC_IO);
+    {
+      EXC_THROW_PRINT (EXC_IO);
+      return;
+    }
   
   if (fwrite (str, nmemb * sizeof (char), 1, fp) == 0)
-    EXC_THROW_PRINT (EXC_IO);
+    {
+      EXC_THROW_PRINT (EXC_IO);
+      return;
+    }
       
   return;
 }
@@ -301,7 +379,7 @@ write_zero_bytes (size_t num, FILE *fp, size_t pos)
 void
 gfunc3_init_mrc (gfunc3 *gf, char const *mrc_fname, FILE **pfp_in, int *pn_img, mrc_ftype type)
 {
-  CEXCEPTION_T e = EXC_NONE;
+  CEXCEPTION_T _e = EXC_NONE;
   
   /* Parameters defined by the MRC specification */
   unsigned char endian;
@@ -313,7 +391,7 @@ gfunc3_init_mrc (gfunc3 *gf, char const *mrc_fname, FILE **pfp_in, int *pn_img, 
   size_t i, dtype_size, total_bytes, filesize;
 
   /* Variables for temporary storage */
-  int16_t *i16_arr;
+  int16_t *i16_arr = NULL;
   int32_t ibuf_arr[3];
   
   FILE *fp;
@@ -324,12 +402,19 @@ gfunc3_init_mrc (gfunc3 *gf, char const *mrc_fname, FILE **pfp_in, int *pn_img, 
   /* Try opening the file */
   fp = fopen (mrc_fname, "r");
   if (fp == NULL)
-    EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Unable to read-only open %s.", mrc_fname);
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Unable to read-only open %s.", mrc_fname);
+      return;
+    }
 
   /* Test if file contains at least enough Bytes for a standard MRC header */
-  if (fseek (fp, MRC_HEADER_BYTES, SEEK_SET) != 0) 
-    EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Unable to read standard %d Byte MRC header from %s", 
-      MRC_HEADER_BYTES, mrc_fname);
+  if (fseek (fp, MRC_HEADER_BYTES, SEEK_SET) != 0)
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Unable to read standard %d Byte MRC header from %s", 
+        MRC_HEADER_BYTES, mrc_fname);
+      fclose (fp);
+      return;
+    }
 
   /* Test endianness and set bswap_flag accordingly. 
    * FIXME: condition for big endianness is probably wrong. Test this with true data!
@@ -359,128 +444,137 @@ gfunc3_init_mrc (gfunc3 *gf, char const *mrc_fname, FILE **pfp_in, int *pn_img, 
       case 4: dtype_size = 8; break;  /* 2 * 32 bit floats (complex) */
       default: 
       EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Data mode %d found in %s not supported.", mode, mrc_fname);
+      fclose (fp);
       return;
     }
 
   total_bytes = MRC_HEADER_BYTES + next + idx3_product (ibuf_arr) * dtype_size;
 
   if (fseek (fp, total_bytes, SEEK_SET) != 0) 
-    EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Unable to read data from %s", mrc_fname);
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Unable to read data from %s", mrc_fname);
+      fclose (fp);
+      return;
+    }
   
   fseek (fp, 0, SEEK_END);
   filesize = ftell (fp);  
   
   if (total_bytes != filesize)
-    EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Size of file %s (%lu Byte) does not match header + "
-      "data size according to MRC header (%lu Byte).", mrc_fname, filesize, total_bytes);
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Size of file %s (%lu Byte) does not match header + "
+        "data size according to MRC header (%lu Byte).", mrc_fname, filesize, total_bytes);
+      fclose (fp);
+      return;
+    }
 
 
-  /* Now the real work can start. */
+  /* Now the real work can start.  Get the grid info from the header. */
   
   if (gf->is_initialized)
     free (gf->fvals);
 
-  Try
-  {
-    read_int32_arr (gf->shape, 3, fp,  0);  // Bytes    0 -- 12: shape
+  read_int32_arr (gf->shape, 3, fp,  0);  // Bytes    0 -- 12: shape
   
-    if (type == STACK)
-      {
-        if (pn_img != NULL)
-          *pn_img = gf->shape[2];
-          
-        gf->shape[2] = 1;
-      }
-    
-    read_float_arr (gf->csize, 3, fp, 40);  // Bytes   40 -- 52: total grid size
-    vec3_div_int (gf->csize, gf->shape);
-    
-    read_float     (&amin,        fp, 76);  // Bytes   76 -- 80: amin
-    read_float     (&amax,        fp, 80);  // Bytes   80 -- 84: amax
-    read_float     (&amean,       fp, 84);  // Bytes   84 -- 88: amean
-    
+  if (type == STACK)
+    {
+      if (pn_img != NULL)
+        *pn_img = gf->shape[2];
+        
+      gf->shape[2] = 1;
+    }
+  gf->ntotal = idx3_product (gf->shape);
 
-    /* TODO: find out how origin is really handled (if meaningful at all) */
-    /* In the meantime, we take zero 
-     */
-    read_float_arr (gf->x0, 3,    fp, 196); // Bytes 196 -- 208: image origin (pixels)
-    vec3_mul (gf->x0, gf->csize);
-    vec3_set_all (gf->x0, 0.0);
-  
-    gf->ntotal = idx3_product (gf->shape);
-  
-    /* Initialize values from data section in the MRC file */
-    switch (mode)
-      {
-        case 1: /* Read 16-bit integers and copy to float */
-        i16_arr = (int16_t *) ali16_malloc (gf->ntotal * sizeof (int16_t));
-        read_int16_arr (i16_arr, gf->ntotal, fp, MRC_HEADER_BYTES + next);
-        
-        gf->fvals = (float *) ali16_malloc (gf->ntotal * sizeof (float));
-        for (i = 0; i < gf->ntotal; i++)
-          gf->fvals[i] = i16_arr[i];
-  
-        free (i16_arr);
-        gf->is_initialized = 1;
-        gf->is_halfcomplex = 0;
-  
-        break;
-  
-        
-        case 2: /* Read float values directly */
-        gf->fvals = (float *) ali16_malloc (gf->ntotal * sizeof (float));
-        read_float_arr (gf->fvals, gf->ntotal, fp, MRC_HEADER_BYTES + next);
-        
-        gf->is_initialized = 1;
-        gf->is_halfcomplex = 0;
-        
-        break;
-  
-  
-        case 4: /* Read complex float values directly */
-        gf->fvals = (float *) ali16_malloc (2 * gf->ntotal * sizeof (float));
-        read_float_arr (gf->fvals, 2 * gf->ntotal, fp, MRC_HEADER_BYTES + next);
-        
-        gf->is_initialized = 1;
-        gf->is_halfcomplex = 1;
-        
-        break;
-      
-        
-        default: /* Never reached since the same check already happened, but anyway.. */
-        EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Data mode %d found in %s not supported.", 
-          mode, mrc_fname);
-      }
+  read_float_arr (gf->csize, 3, fp, 40);  // Bytes   40 -- 52: total grid size
+  vec3_div_int (gf->csize, gf->shape);
     
-    if (pfp_in != NULL)
-      *pfp_in = fp;
-    else
+  read_float     (&amin,        fp, 76);  // Bytes   76 -- 80: amin
+  read_float     (&amax,        fp, 80);  // Bytes   80 -- 84: amax
+  read_float     (&amean,       fp, 84);  // Bytes   84 -- 88: amean
+    
+  /* Origin shift can be set in config file.  MRC header info is ignored here. */
+  // read_float_arr (gf->x0, 3,    fp, 196); // Bytes 196 -- 208: image origin (pixels)
+  // vec3_mul (gf->x0, gf->csize);
+  vec3_set_all (gf->x0, 0.0);
+  
+  
+  /* Initialize values from data section in the MRC file */
+  switch (mode)
+    {
+      case 1: /* Read 16-bit integers and copy to float */
+      Try { i16_arr = (int16_t *) ali16_malloc (gf->ntotal * sizeof (int16_t)); }
+      Catch (_e) { EXC_RETHROW_REPRINT (_e);  fclose (fp);  return; }
+      
+      read_int16_arr (i16_arr, gf->ntotal, fp, MRC_HEADER_BYTES + next);
+      
+      Try { gf->fvals = (float *) ali16_malloc (gf->ntotal * sizeof (float)); }
+      Catch (_e) { EXC_RETHROW_REPRINT (_e);  fclose (fp);  return; }
+
+      for (i = 0; i < gf->ntotal; i++)
+        gf->fvals[i] = i16_arr[i];
+
+      free (i16_arr);
+      gf->is_initialized = 1;
+      gf->is_halfcomplex = 0;
+
+      break;
+
+      
+      case 2: /* Read float values directly */
+      Try { gf->fvals = (float *) ali16_malloc (gf->ntotal * sizeof (float)); }
+      Catch (_e) { EXC_RETHROW_REPRINT (_e);  fclose (fp);  return; }
+      
+      read_float_arr (gf->fvals, gf->ntotal, fp, MRC_HEADER_BYTES + next);
+      
+      gf->is_initialized = 1;
+      gf->is_halfcomplex = 0;
+      
+      break;
+
+
+      case 4: /* Read complex float values directly */
+      Try { gf->fvals = (float *) ali16_malloc (2 * gf->ntotal * sizeof (float)); }
+      Catch (_e) { EXC_RETHROW_REPRINT (_e);  fclose (fp);  return; }
+      
+      read_float_arr (gf->fvals, 2 * gf->ntotal, fp, MRC_HEADER_BYTES + next);
+      
+      gf->is_initialized = 1;
+      gf->is_halfcomplex = 1;
+      
+      break;
+    
+      
+      default: /* Never reached since the same check already happened, but anyway.. */
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Data mode %d found in %s not supported.", 
+        mode, mrc_fname);
       fclose (fp);
+      return;
+    }
   
-  
-    gfunc3_compute_xmin_xmax (gf);
-  
-    if (mode != 4)
-      {
-        dmin = gfunc3_min (gf);
-        dmax = gfunc3_max (gf);
-        PRINT_VERBOSE ("Data minimum: %f\n", dmin);
-        PRINT_VERBOSE ("Data maximum: %f\n", dmax);
-        
-        if ((dmin == FLT_MAX) || (dmax == -FLT_MAX))
-          fputs ("Warning: Data may be corrupted!\n", stderr);
-  
-        a = ((dmax - dmin) > EPS_DENOM) ? (amax - amin) / (dmax - dmin) : 1.0;
-        b = amax - a * dmax;
-  
-        gfunc3_scale (gf, a);
-        gfunc3_add_constant (gf, b);
-      }
-  }
-  Catch (e)
-  {
-    EXC_RETHROW_REPRINT (e);
-  }
+  if (pfp_in != NULL)
+    *pfp_in = fp;
+  else
+    fclose (fp);
+
+
+  gfunc3_compute_xmin_xmax (gf);
+
+  if (mode != 4)
+    {
+      dmin = gfunc3_min (gf);
+      dmax = gfunc3_max (gf);
+      PRINT_VERBOSE ("Data minimum: %f\n", dmin);
+      PRINT_VERBOSE ("Data maximum: %f\n", dmax);
+      
+      if ((dmin == FLT_MAX) || (dmax == -FLT_MAX))
+        fputs ("Warning: Data may be corrupted!\n", stderr);
+
+      a = ((dmax - dmin) > EPS_DENOM) ? (amax - amin) / (dmax - dmin) : 1.0;
+      b = amax - a * dmax;
+
+      gfunc3_scale (gf, a);
+      gfunc3_add_constant (gf, b);
+    }
       
   return;
 }
@@ -490,8 +584,9 @@ gfunc3_init_mrc (gfunc3 *gf, char const *mrc_fname, FILE **pfp_in, int *pn_img, 
 void
 gfunc3_read_from_stack (gfunc3 *gf, FILE *fp, int stackpos)
 {
-  CEXCEPTION_T e = EXC_NONE;
-  int16_t *i16_arr;
+  CEXCEPTION_T _e = EXC_NONE;
+
+  int16_t *i16_arr = NULL;
   int32_t nz, mode, next;
   size_t i, fpos = MRC_HEADER_BYTES;
   float amin, amax, amean, dmin, dmax, a, b;
@@ -501,66 +596,82 @@ gfunc3_read_from_stack (gfunc3 *gf, FILE *fp, int stackpos)
   GFUNC_CAPTURE_UNINIT_VOID (gf);
     
   if (stackpos < 0)
-    EXC_THROW_CUSTOMIZED_PRINT (EXC_BADARG, "stackpos must be nonnegative.");
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_BADARG, "stackpos must be nonnegative.");
+      return;
+    }
 
   if (!GFUNC_IS_2D(gf))
-    EXC_THROW_CUSTOMIZED_PRINT (EXC_GFDIM, "Only stacks of 2d functions supported.");
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_GFDIM, "Only stacks of 2d functions supported.");
+      return;
+    }
   
-  Try
-  {
-    /* Re-read shape and origin and re-compute min and max */
-    read_int32_arr (gf->shape, 3, fp,  0);  // Bytes    0 -- 12: shape
+  /* Re-read some necessary MRC header parameters and re-compute min and max */
+  Try {
+    read_int32_arr (gf->shape, 3, fp,  0);
     gf->shape[2] = 1;
     gf->ntotal = idx3_product (gf->shape);
-    // read_float_arr (gf->x0, 3,    fp, 196); // Bytes 196 -- 208: image origin (pixels)
-    // vec3_mul (gf->x0, gf->csize);
     gfunc3_compute_xmin_xmax (gf);
     
     read_int32 (&nz  , fp,  8);
     read_int32 (&mode, fp, 12);
     read_int32 (&next, fp, 92);
-
-    if (stackpos >= nz)
-      EXC_THROW_CUSTOMIZED_PRINT (EXC_BADARG, "stackpos (%d) must be smaller than number of images"
-        " in stack (%d).", stackpos, nz);
-
     read_float (&amin,  fp, 76);
     read_float (&amax,  fp, 80);
     read_float (&amean, fp, 84);
-    
-    switch (mode)
-      {
-        case 1:  /* Read 16-bit integers and copy to float */
-        fpos += next + stackpos * gf->ntotal * sizeof (int16_t);
-        i16_arr = (int16_t *) ali16_malloc (gf->ntotal * sizeof (int16_t));
-        read_int16_arr (i16_arr, gf->ntotal, fp, fpos);
+  }
+  Catch (_e) {
+    EXC_THROW_CUSTOMIZED_PRINT (_e, "Unable to read parameters from MRC header in stack.");
+    return;
+  }
+  
+  if (stackpos >= nz)
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_BADARG, "stackpos (%d) must be smaller than number of images"
+        " in stack (%d).", stackpos, nz);
+      return;
+    }
+
+  switch (mode)
+    {
+      case 1:  /* Read 16-bit integers and copy to float */
+      fpos += next + stackpos * gf->ntotal * sizeof (int16_t);
+      
+      Try { i16_arr = (int16_t *) ali16_malloc (gf->ntotal * sizeof (int16_t)); }
+      CATCH_RETURN_VOID (_e);
+      
+      Try { read_int16_arr (i16_arr, gf->ntotal, fp, fpos); }  CATCH_RETURN_VOID (_e);
+      
+      for (i = 0; i < gf->ntotal; i++)
+        gf->fvals[i] = i16_arr[i];
+
+      free (i16_arr);
+
+      break;
         
-        for (i = 0; i < gf->ntotal; i++)
-          gf->fvals[i] = i16_arr[i];
 
-        free (i16_arr);
-
-        break;
-          
-
-        case 2:  /* Read float values directly */
-        fpos += next + stackpos * gf->ntotal * sizeof (float);
-        read_float_arr (gf->fvals, gf->ntotal, fp, fpos);
-        
-        break;
+      case 2:  /* Read float values directly */
+      fpos += next + stackpos * gf->ntotal * sizeof (float);
+      
+      Try { read_float_arr (gf->fvals, gf->ntotal, fp, fpos); }  CATCH_RETURN_VOID (_e);
+      
+      break;
 
 
-        case 4:  /* Read complex float values directly */
-        fpos += next + stackpos * 2 * gf->ntotal * sizeof (float);
-        read_float_arr (gf->fvals, 2 * gf->ntotal, fp, fpos);
-        
-        break;
+      case 4:  /* Read complex float values directly */
+      fpos += next + stackpos * 2 * gf->ntotal * sizeof (float);
+      
+      Try { read_float_arr (gf->fvals, 2 * gf->ntotal, fp, fpos); }  CATCH_RETURN_VOID (_e);
+      
+      break;
 
 
-        default:
-        EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Data mode %d not supported.", mode);
+      default:
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Data mode %d not supported.", mode);
+      return;
 
-      }
+    }
 
     if (mode != 4)
       {
@@ -578,11 +689,6 @@ gfunc3_read_from_stack (gfunc3 *gf, FILE *fp, int stackpos)
         gfunc3_scale (gf, a);
         gfunc3_add_constant (gf, b);
       }
-  }
-  Catch (e)
-  {
-    EXC_RETHROW_REPRINT (e);
-  }
     
   return;
 }
@@ -592,7 +698,8 @@ gfunc3_read_from_stack (gfunc3 *gf, FILE *fp, int stackpos)
 void
 gfunc3_to_mrc (gfunc3 const *gf, char const *mrc_fname)
 {
-  CEXCEPTION_T e = EXC_NONE;
+  CEXCEPTION_T _e = EXC_NONE;
+  
   const int16_t nreal = 32, endian_stp = 0x4144;
   const int32_t next = 0, nlabl = 1;
   int32_t mode, nx_ny_nz[3];
@@ -608,7 +715,10 @@ gfunc3_to_mrc (gfunc3 const *gf, char const *mrc_fname)
   GFUNC_CAPTURE_UNINIT_VOID (gf);
   
   if ((fp = fopen (mrc_fname, "w")) == NULL)
-    EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Unable to write-only open %s.", mrc_fname);
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Unable to write-only open %s.", mrc_fname);
+      return;
+    }
   
   if (gf->is_halfcomplex)
     {
@@ -621,93 +731,109 @@ gfunc3_to_mrc (gfunc3 const *gf, char const *mrc_fname)
       ntotal_flt = gf->ntotal;
     }
 
-  Try
-  {
-    /* Write the MRC header */
-    
-    /*     0 -- 12: nx, ny, nz */
-    /* Copy shape from int to int_32_t first */
-    nx_ny_nz[0] = gf->shape[0];  nx_ny_nz[1] = gf->shape[1];  nx_ny_nz[2] = gf->shape[2];
-    write_int32_arr (nx_ny_nz, 3, fp,  0);
+  /* Write the MRC header */
+  
+  /*     0 -- 12: nx, ny, nz */
+  /* Copy shape from int to int_32_t first */
+  nx_ny_nz[0] = gf->shape[0];  nx_ny_nz[1] = gf->shape[1];  nx_ny_nz[2] = gf->shape[2];
+  Try { write_int32_arr (nx_ny_nz, 3, fp,  0); }  
+  Catch (_e) { EXC_RETHROW_REPRINT (_e);  fclose (fp);  return; }
 
-    /*    12 -- 16: mode */
-    write_int32     (&mode,   fp, 12);
-    
-    /*    16 -- 28: (zeros) */
-    write_zero_bytes (12, fp, 16);
+  /*    12 -- 16: mode */
+  Try { write_int32     (&mode,   fp, 12); }  
+  Catch (_e) { EXC_RETHROW_REPRINT (_e);  fclose (fp);  return; }
+  
+  /*    16 -- 28: (zeros) */
+  Try { write_zero_bytes (12, fp, 16); }  
+  Catch (_e) { EXC_RETHROW_REPRINT (_e);  fclose (fp);  return; }
 
-    /*    28 -- 40: mx, my, mz (set to nx, ny, nz) */
-    write_int32_arr (nx_ny_nz, 3, fp,  28);
-    
-    /*    40 -- 52: total cell size */
-    vec3_copy (fbuf, gf->csize);
-    vec3_mul_int (fbuf, gf->shape);
-    write_float_arr (fbuf, 3,     fp,  40);
-    
-    /*    52 -- 76: (zeros) */
-    write_zero_bytes (24, fp, 52);
-    
-    /*    76 -- 80: minimum */
-    if (mode != 4)
-      amin = gfunc3_min (gf);
-    write_float     (&amin,       fp,  76);
-    
-    /*    80 -- 84: maximum */
-    if (mode != 4)
-      amax = gfunc3_max (gf);
-    write_float     (&amax,       fp,  80);
-    
-    /*    84 -- 88: average */
-    if (mode != 4)
-      amean = gfunc3_mean (gf);
-    write_float     (&amean,      fp,  84);
+  /*    28 -- 40: mx, my, mz (set to nx, ny, nz) */
+  Try { write_int32_arr (nx_ny_nz, 3, fp,  28); }  
+  Catch (_e) { EXC_RETHROW_REPRINT (_e);  fclose (fp);  return; }
+  
+  /*    40 -- 52: total cell size */
+  vec3_copy (fbuf, gf->csize);
+  vec3_mul_int (fbuf, gf->shape);
+  Try { write_float_arr (fbuf, 3,     fp,  40); }  
+  Catch (_e) { EXC_RETHROW_REPRINT (_e);  fclose (fp);  return; }
+  
+  /*    52 -- 76: (zeros) */
+  Try { write_zero_bytes (24, fp, 52); }  
+  Catch (_e) { EXC_RETHROW_REPRINT (_e);  fclose (fp);  return; }
+  
+  /*    76 -- 80: minimum */
+  if (mode != 4)
+    amin = gfunc3_min (gf);
+  Try { write_float     (&amin,       fp,  76); }  
+  Catch (_e) { EXC_RETHROW_REPRINT (_e);  fclose (fp);  return; }
+  
+  /*    80 -- 84: maximum */
+  if (mode != 4)
+    amax = gfunc3_max (gf);
+  Try { write_float     (&amax,       fp,  80); }  
+  Catch (_e) { EXC_RETHROW_REPRINT (_e);  fclose (fp);  return; }
+  
+  /*    84 -- 88: average */
+  if (mode != 4)
+    amean = gfunc3_mean (gf);
+  Try { write_float     (&amean,      fp,  84); }  
+  Catch (_e) { EXC_RETHROW_REPRINT (_e);  fclose (fp);  return; }
 
-    /*    88 -- 92: (zeros) */
-    write_zero_bytes (4, fp, 88);
+  /*    88 -- 92: (zeros) */
+  Try { write_zero_bytes (4, fp, 88); }  
+  Catch (_e) { EXC_RETHROW_REPRINT (_e);  fclose (fp);  return; }
 
-    /*    92 -- 96: next */
-    write_int32     (&next,       fp,  92);
+  /*    92 -- 96: next */
+  Try { write_int32     (&next,       fp,  92); }  
+  Catch (_e) { EXC_RETHROW_REPRINT (_e);  fclose (fp);  return; }
 
-    /*   96 -- 130: (zeros) */
-    write_zero_bytes (34, fp, 96);
+  /*   96 -- 130: (zeros) */
+  Try { write_zero_bytes (34, fp, 96); }  
+  Catch (_e) { EXC_RETHROW_REPRINT (_e);  fclose (fp);  return; }
 
-    /*  130 -- 132: nreal */
-    write_int16     (&nreal,      fp, 130);
-    
-    /*  132 -- 196: (zeros) */
-    write_zero_bytes (64, fp, 132);
+  /*  130 -- 132: nreal */
+  Try { write_int16     (&nreal,      fp, 130); }  
+  Catch (_e) { EXC_RETHROW_REPRINT (_e);  fclose (fp);  return; }
+  
+  /*  132 -- 196: (zeros) */
+  Try { write_zero_bytes (64, fp, 132); }  
+  Catch (_e) { EXC_RETHROW_REPRINT (_e);  fclose (fp);  return; }
 
-    /*  196 -- 208: origin (in grid units) */
-    vec3_copy (fbuf, gf->x0);
-    vec3_div  (fbuf, gf->csize);
-    write_float_arr (fbuf, 3,     fp, 196);
-    
-    /*  208 -- 212: (zeros) */
-    write_zero_bytes (4, fp, 208);
-    
-    /*  212 -- 216: endianness stamp */
-    write_int16     (&endian_stp, fp, 212);
-    
-    /*  216 -- 220: (zeros) */
-    write_zero_bytes (4, fp, 216);
+  /*  196 -- 208: origin (in grid units) */
+  vec3_copy (fbuf, gf->x0);
+  vec3_div  (fbuf, gf->csize);
+  Try { write_float_arr (fbuf, 3,     fp, 196); }  
+  Catch (_e) { EXC_RETHROW_REPRINT (_e);  fclose (fp);  return; }
+  
+  /*  208 -- 212: (zeros) */
+  Try { write_zero_bytes (4, fp, 208); }
+  Catch (_e) { EXC_RETHROW_REPRINT (_e);  fclose (fp);  return; }
+  
+  /*  212 -- 216: endianness stamp */
+  Try { write_int16     (&endian_stp, fp, 212); }  
+  Catch (_e) { EXC_RETHROW_REPRINT (_e);  fclose (fp);  return; }
+  
+  /*  216 -- 220: (zeros) */
+  Try { write_zero_bytes (4, fp, 216); }  
+  Catch (_e) { EXC_RETHROW_REPRINT (_e);  fclose (fp);  return; }
 
-    /*  220 -- 224: nlabl */
-    write_int32     (&nlabl,      fp, 220);
-    
-    /* 224 -- 1024: 10 char[80] labels (unused ones filled with zeros) */
-    snprintf (labl, 80, "Created by %s on %s at %s", PACKAGE_STRING, __DATE__, __TIME__);
-    write_char_arr  (labl, 80,    fp, 224);
-    write_zero_bytes (720, fp, 304);
-    
+  /*  220 -- 224: nlabl */
+  Try { write_int32     (&nlabl,      fp, 220); }  
+  Catch (_e) { EXC_RETHROW_REPRINT (_e);  fclose (fp);  return; }
+  
+  /* 224 -- 1024: 10 char[80] labels (unused ones filled with zeros) */
+  snprintf (labl, 80, "Created by %s on %s at %s", PACKAGE_STRING, __DATE__, __TIME__);
+  Try { write_char_arr  (labl, 80,    fp, 224); }  
+  Catch (_e) { EXC_RETHROW_REPRINT (_e);  fclose (fp);  return; }
+  
+  Try { write_zero_bytes (720, fp, 304); }  
+  Catch (_e) { EXC_RETHROW_REPRINT (_e);  fclose (fp);  return; }
+  
 
-    /* Write the data */
-    
-    write_float_arr (gf->fvals, ntotal_flt, fp, MRC_HEADER_BYTES);
-  }
-  Catch (e)
-  {
-    EXC_RETHROW_REPRINT (e);
-  }
+  /* Write the data */
+  
+  Try { write_float_arr (gf->fvals, ntotal_flt, fp, MRC_HEADER_BYTES); }  
+  Catch (_e) { EXC_RETHROW_REPRINT (_e);  fclose (fp);  return; }
   
   fclose (fp);
 
@@ -729,40 +855,38 @@ gfunc3_to_mrc (gfunc3 const *gf, char const *mrc_fname)
 void
 temp_mrc_out (gfunc3 const *gf, char const *mrc_fbasename, int count)
 {
+  CEXCEPTION_T _e = EXC_NONE;
+
   CAPTURE_NULL_VOID (gf);
   CAPTURE_NULL_VOID (mrc_fbasename);
   GFUNC_CAPTURE_UNINIT_VOID (gf);
   
-  CEXCEPTION_T e = EXC_NONE;
   size_t flen = strlen (mrc_fbasename), templen = strlen (TEMPDIR_STR), extlen = strlen (".mrc");
   char *mrc_fname;
 
 
-  Try
-  {
-    /* Try to create the tempdir. If it exists, continue. */
-    if (mkdir (TEMPDIR_STR, 0764) && (errno != EEXIST))
+  /* Try to create the tempdir. If it exists, continue. */
+  if (mkdir (TEMPDIR_STR, 0764) && (errno != EEXIST))
+    {
       EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Unable to create directory '%s'.", TEMPDIR_STR);
+      return;
+    }
 
-    mrc_fname = (char *) ali16_malloc (templen + flen + COUNT_DIGITS + extlen + 1);
+  Try { mrc_fname = (char *) ali16_malloc (templen + flen + COUNT_DIGITS + extlen + 1); }
+  CATCH_RETURN_VOID (_e);
 
-    strncpy (mrc_fname, TEMPDIR_STR, templen);
-    strncat (mrc_fname, mrc_fbasename, flen);
+  strncpy (mrc_fname, TEMPDIR_STR, templen);
+  strncat (mrc_fname, mrc_fbasename, flen);
+  
+  if (count != 0)
+    snprintf (mrc_fname + templen + flen, COUNT_DIGITS + 1, DIGIT_FMT, count);
     
-    if (count != 0)
-      snprintf (mrc_fname + templen + flen, COUNT_DIGITS + 1, DIGIT_FMT, count);
-      
-    strncat (mrc_fname, ".mrc", extlen);
+  strncat (mrc_fname, ".mrc", extlen);
 
-    printf ("Writing %s\n", mrc_fname);
-    gfunc3_to_mrc (gf, mrc_fname);
-    
-    free (mrc_fname);
-  }
-  Catch (e)
-  {
-    EXC_RETHROW_REPRINT (e);
-  }
+  printf ("Writing %s\n", mrc_fname);
+  Try { gfunc3_to_mrc (gf, mrc_fname); }  CATCH_RETURN_VOID (_e);
+  
+  free (mrc_fname);
   
   return;
 }

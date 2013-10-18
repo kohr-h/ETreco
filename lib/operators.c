@@ -44,11 +44,11 @@
 
 /*-------------------------------------------------------------------------------------------------*/
 
+/* TODO: Implement tilt axis shift for this generic backprojection */
 void
 xray_backprojection (gfunc3 const *proj_img, vec3 const angles_deg, vec3 const axis_shift_px, 
                      gfunc3 *volume)
 {
-  CEXCEPTION_T e = EXC_NONE;
   int ix, iy, iz;
   size_t idx = 0;
   vec3 omega_x, omega_y, omega;
@@ -61,6 +61,19 @@ xray_backprojection (gfunc3 const *proj_img, vec3 const angles_deg, vec3 const a
   GFUNC_CAPTURE_UNINIT_VOID (proj_img);
   GFUNC_CAPTURE_UNINIT_VOID (volume);
   
+  /* TODO: implement half-complex version */
+  if (proj_img->is_halfcomplex)
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_UNIMPL, "Complex version not yet implemented.");
+      return;
+    }
+
+  if (!GFUNC_IS_2D(proj_img))
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_GFDIM, "Projection image must be 2-dimensional.");
+      return;
+    }
+
   compute_rotated_basis (angles_deg, omega_x, omega_y, omega);
 
   /* The projections of the increments in x, y and z directions as well as xmin are precomputed for 
@@ -86,36 +99,29 @@ xray_backprojection (gfunc3 const *proj_img, vec3 const angles_deg, vec3 const a
   Pv[1] = Pxmin[1];
   Pv[2] = 0.0;
 
-  Try
-  {
-    for (iz = 0; iz < volume->shape[2]; iz++)
-      {
-        Pvy0[0] = Pv[0];
-        Pvy0[1] = Pv[1];
+  for (iz = 0; iz < volume->shape[2]; iz++)
+    {
+      Pvy0[0] = Pv[0];
+      Pvy0[1] = Pv[1];
 
-        for (iy = 0; iy < volume->shape[1]; iy++)
-          {
-            Pvx0[0] = Pv[0];
-            Pvx0[1] = Pv[1];
+      for (iy = 0; iy < volume->shape[1]; iy++)
+        {
+          Pvx0[0] = Pv[0];
+          Pvx0[1] = Pv[1];
 
-            for (ix = 0; ix < volume->shape[0]; ix++, idx++)
-              {
-                volume->fvals[idx] += gfunc3_interp_linear_2d (proj_img, Pv);
+          for (ix = 0; ix < volume->shape[0]; ix++, idx++)
+            {
+              volume->fvals[idx] += gfunc3_interp_linear_2d (proj_img, Pv);
 
-                Pv[0] += Pdx[0];
-                Pv[1] += Pdx[1];
-              }
-            Pv[0] = Pvx0[0] + Pdy[0];
-            Pv[1] = Pvx0[1] + Pdy[1];
-          }
-        Pv[0] = Pvy0[0] + Pdz[0];
-        Pv[1] = Pvy0[1] + Pdz[1];
-      }
-  }
-  Catch (e)
-  {
-    EXC_RETHROW_REPRINT (e);
-  }
+              Pv[0] += Pdx[0];
+              Pv[1] += Pdx[1];
+            }
+          Pv[0] = Pvx0[0] + Pdy[0];
+          Pv[1] = Pvx0[1] + Pdy[1];
+        }
+      Pv[0] = Pvy0[0] + Pdz[0];
+      Pv[1] = Pvy0[1] + Pdz[1];
+    }
   
   return;
 }
@@ -126,7 +132,8 @@ void
 xray_backprojection_sax (gfunc3 const *proj_img, float const theta_deg, float const axis_shift_y_px, 
                          gfunc3 *volume)
 {
-  CEXCEPTION_T e = EXC_NONE;
+  CEXCEPTION_T _e = EXC_NONE;
+  
   int ix, iy, iz;
   size_t idx = 0l, fiy, fi;
   float Pxmin_y, Pdy, Pdz, Pvy, Pvy0;
@@ -140,6 +147,20 @@ xray_backprojection_sax (gfunc3 const *proj_img, float const theta_deg, float co
   GFUNC_CAPTURE_UNINIT_VOID (proj_img);
   GFUNC_CAPTURE_UNINIT_VOID (volume);
   
+  /* TODO: implement half-complex version */
+  if (proj_img->is_halfcomplex)
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_UNIMPL, "Complex version not yet implemented.");
+      return;
+    }
+
+  if (!GFUNC_IS_2D(proj_img))
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_GFDIM, "Projection image must be 2-dimensional.");
+      return;
+    }
+
+
   /* The projections of the increments in y and z directions as well as xmin are precomputed */
   cos_theta = cosf (theta_deg * ONE_DEGREE);
   sin_theta = sinf (theta_deg * ONE_DEGREE);
@@ -157,13 +178,12 @@ xray_backprojection_sax (gfunc3 const *proj_img, float const theta_deg, float co
   Pdy = cos_theta * volume->csize[1];
   Pdz = sin_theta * volume->csize[2];
 
-  Try
-  {
+  Try {
     /* Precompute weights and indices for the 'x' component since they don't change across the loop */
     wlx = (float *) ali16_malloc (volume->shape[0] * sizeof (float));
     wux = (float *) ali16_malloc (volume->shape[0] * sizeof (float));
     idx_x = (int *) ali16_malloc (volume->shape[0] * sizeof (int));
-  }  CATCH_RETURN_VOID (e);
+  }  CATCH_RETURN_VOID (_e);
 
   x = volume->xmin[0];
   for (ix = 0; ix < volume->shape[0]; ix++)
@@ -235,7 +255,7 @@ xray_backprojection_sax (gfunc3 const *proj_img, float const theta_deg, float co
 void
 fft_convolution (gfunc3 *gf1, gfunc3 *gf2)
 {
-  CEXCEPTION_T e = EXC_NONE;
+  CEXCEPTION_T _e = EXC_NONE;
   int gf1_was_hc, gf2_was_hc;
   float factor;
 
@@ -244,36 +264,37 @@ fft_convolution (gfunc3 *gf1, gfunc3 *gf2)
   GFUNC_CAPTURE_UNINIT_VOID (gf1);
   GFUNC_CAPTURE_UNINIT_VOID (gf2);
 
-  Try
-  {
-    if (GFUNC_IS_2D (gf1))
-      factor = 1.0 / (2 * M_PI);
-    else
-      factor = 1.0 / (2 * M_PI * M_SQRT2PI);
+  if (GFUNC_IS_2D (gf1))
+    factor = 1.0 / (2 * M_PI);
+  else
+    factor = 1.0 / (2 * M_PI * M_SQRT2PI);
 
-    gf1_was_hc = gf1->is_halfcomplex;
-    gf2_was_hc = gf2->is_halfcomplex;
+  gf1_was_hc = gf1->is_halfcomplex;
+  gf2_was_hc = gf2->is_halfcomplex;
 
-    if (!gf1->is_halfcomplex)
-      fft_forward (gf1);
-      
-    if (!gf2->is_halfcomplex)
-      fft_forward (gf2);
+  if (!gf1->is_halfcomplex)
+    {
+      Try { fft_forward (gf1); }  CATCH_RETURN_VOID (_e);
+    }
+    
+  if (!gf2->is_halfcomplex)
+    {
+      Try { fft_forward (gf2);  }  CATCH_RETURN_VOID (_e);
+    }
 
-    gfunc3_mul (gf1, gf2);
+  Try { gfunc3_mul (gf1, gf2);  }  CATCH_RETURN_VOID (_e);
 
-    if (!gf1_was_hc)
-      fft_backward (gf1);
+  if (!gf1_was_hc)
+    {
+      Try { fft_backward (gf1); }  CATCH_RETURN_VOID (_e);
+    }
 
-    if (!gf2_was_hc)
-      fft_backward (gf2);
+  if (!gf2_was_hc)
+    {
+      Try { fft_backward (gf2); }  CATCH_RETURN_VOID (_e);
+    }
 
-    gfunc3_scale (gf1, factor);
-  }
-  Catch (e)
-  {
-    EXC_RETHROW_REPRINT (e);
-  }
+  gfunc3_scale (gf1, factor);
   
   return;
 }
@@ -283,7 +304,7 @@ fft_convolution (gfunc3 *gf1, gfunc3 *gf2)
 void
 image_rotation (gfunc3 *proj_img, float const psi_deg)
 {
-  CEXCEPTION_T e = EXC_NONE;
+  CEXCEPTION_T _e = EXC_NONE;
   int ix, iy;
   int Nx_new, Ny_new;
   size_t idx = 0, ntotal_new;
@@ -298,10 +319,16 @@ image_rotation (gfunc3 *proj_img, float const psi_deg)
   GFUNC_CAPTURE_UNINIT_VOID (proj_img);
   
   if (!GFUNC_IS_2D(proj_img))
-    EXC_THROW_CUSTOMIZED_PRINT (EXC_GFDIM, "Only 2d functions supported.");
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_GFDIM, "Only 2d functions supported.");
+      return;
+    }
 
   if (fabsf (psi_deg) > 180.0)
-    EXC_THROW_CUSTOMIZED_PRINT (EXC_BADARG, "Rotation angle must be between -180 and +180 degrees");
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_BADARG, "Rotation angle must be between -180 and +180 degrees");
+      return;
+    }
 
   if (psi_deg == 0.0)
     return;
@@ -351,7 +378,7 @@ image_rotation (gfunc3 *proj_img, float const psi_deg)
   dy_rot[1] =  cos_psi * proj_img->csize[1];
 
   /* Initialize new array */
-  Try { fvals_rot = (float *) ali16_malloc (ntotal_new * sizeof (float)); }  CATCH_RETURN_VOID (e);
+  Try { fvals_rot = (float *) ali16_malloc (ntotal_new * sizeof (float)); }  CATCH_RETURN_VOID (_e);
   for (idx = 0; idx < ntotal_new; idx++) fvals_rot[idx] = 0.0;
 
 
@@ -380,7 +407,6 @@ image_rotation (gfunc3 *proj_img, float const psi_deg)
   vec3_copy (proj_img->x0, img_x0);
   gfunc3_compute_xmin_xmax (proj_img);
   
-  
   return;
 }
 
@@ -389,10 +415,10 @@ image_rotation (gfunc3 *proj_img, float const psi_deg)
 void
 histogram_normalization (gfunc3 *proj_img, idx3 bg_ix0, idx3 const bg_shp)
 {
-  CEXCEPTION_T e = EXC_NONE;
+  CEXCEPTION_T _e = EXC_NONE;
   int i;
   int static count = 0;
-  size_t j, *idcs;
+  size_t j, *idcs = NULL;
   float bg_avg = 0.0, bg_var = 0.0;
   vec3 bg_x0;
   gfunc3 *bg_patch;
@@ -403,50 +429,44 @@ histogram_normalization (gfunc3 *proj_img, idx3 bg_ix0, idx3 const bg_shp)
   GFUNC_CAPTURE_UNINIT_VOID (proj_img);
   
   count++;
-  Try
-  {
-    bg_patch = new_gfunc3 ();
+  
+  Try { bg_patch = new_gfunc3 (); }  CATCH_RETURN_VOID (_e);
     
-    /* TODO: Use 4 corner patches if bg_ix0[2] == -1 (see options) */
-    if (bg_ix0[2] == -1)
-      bg_ix0[2] = 0;
-    
-    /* Init bg_patch grid */
-    for (i = 0; i < 3; i++)
-      bg_x0[i] = proj_img->xmin[i] + (bg_ix0[i] + bg_shp[i] / 2 ) * proj_img->csize[i];
+  /* TODO: Use 4 corner patches if bg_ix0[2] == -1 (see options) */
+  if (bg_ix0[2] == -1)
+    bg_ix0[2] = 0;
+  
+  /* Init bg_patch grid */
+  for (i = 0; i < 3; i++)
+    bg_x0[i] = proj_img->xmin[i] + (bg_ix0[i] + bg_shp[i] / 2 ) * proj_img->csize[i];
 
-    gfunc3_init (bg_patch, bg_x0, proj_img->csize, bg_shp, REAL);
+  gfunc3_init (bg_patch, bg_x0, proj_img->csize, bg_shp, REAL);
 
-    /* Extract values from proj_img */
-    idcs = gfunc3_subgrid_flatidcs (proj_img, bg_patch);
-    
-    for (j = 0; j < bg_patch->ntotal; j++)
-      bg_patch->fvals[j] = proj_img->fvals[idcs[j]];
-     
-    free (idcs);
-    
-    if (DEBUGGING)
-      temp_mrc_out (bg_patch, "bg_patch_", count); 
-    
-    /* Compute statistics */
-    bg_avg = gfunc3_mean (bg_patch);
-    bg_var = gfunc3_variance (bg_patch, &bg_avg);
-    
-    PRINT_VERBOSE ("Background mean    : %f\n", bg_avg);
-    PRINT_VERBOSE ("Background variance: %f\n", bg_var);
-        
-    /* Normalize proj_img -> (proj_img - bg_avg) / sqrt(bg_var) */
-    gfunc3_add_constant (proj_img, -bg_avg);
-    
-    gfunc3_scale (proj_img, 1.0 / sqrtf (bg_var));
-    
-    gfunc3_free (&bg_patch);
-  }
-  Catch (e)
-  {
-    EXC_RETHROW_REPRINT (e);
-  }
-    
+  /* Extract values from proj_img */
+  Try { idcs = gfunc3_subgrid_flatidcs (proj_img, bg_patch); }  CATCH_RETURN_VOID (_e);
+  
+  for (j = 0; j < bg_patch->ntotal; j++)
+    bg_patch->fvals[j] = proj_img->fvals[idcs[j]];
+   
+  free (idcs);
+  
+  if (DEBUGGING)
+    {
+      Try { temp_mrc_out (bg_patch, "bg_patch_", count); }  CATCH_RETURN_VOID (_e);
+    }
+  
+  /* Compute statistics */
+  bg_avg = gfunc3_mean (bg_patch);
+  bg_var = gfunc3_variance (bg_patch, &bg_avg);
+  
+  PRINT_VERBOSE ("Background mean    : %f\n", bg_avg);
+  PRINT_VERBOSE ("Background variance: %f\n", bg_var);
+      
+  /* Normalize proj_img -> (proj_img - bg_avg) / sqrt(bg_var) */
+  gfunc3_add_constant (proj_img, -bg_avg);
+  gfunc3_scale (proj_img, 1.0 / sqrtf (bg_var));
+  
+  gfunc3_free (&bg_patch);
   return;
 }
 
@@ -455,12 +475,14 @@ histogram_normalization (gfunc3 *proj_img, idx3 bg_ix0, idx3 const bg_shp)
 void
 probability_normalization (gfunc3 *gf)
 {
-  float integral;
+  CEXCEPTION_T _e = EXC_NONE;
+
+  float integral = 0.0;
   
   CAPTURE_NULL_VOID (gf);
   GFUNC_CAPTURE_UNINIT_VOID (gf);
  
-  integral = lp_integral (gf, TRAPEZOIDAL);
+  Try { integral = lp_integral (gf, TRAPEZOIDAL);  }  CATCH_RETURN_VOID (_e);
  
   PRINT_VERBOSE ("Function integral: %f\n", integral);
  
@@ -488,6 +510,10 @@ lp_integral (gfunc3 const *gf, integration_rule rule)
           integral += gf->fvals[i];
         
         integral *= vec3_product (gf->csize);
+        
+      default:
+        EXC_THROW_CUSTOMIZED_PRINT (EXC_BADARG, "Unknown integration rule.");
+        return FLT_MAX;
     }
     
   return integral;

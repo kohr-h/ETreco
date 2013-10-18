@@ -42,7 +42,7 @@ int kernel_varies_with_tilt = 0;
 int
 main (int argc, char *argv[])
 {
-  CEXCEPTION_T e = EXC_NONE;
+  CEXCEPTION_T _e = EXC_NONE;
   OptionData *opt_data;
 
   int i, nz, last_index;
@@ -65,40 +65,38 @@ main (int argc, char *argv[])
     volume = new_gfunc3 ();
     rk  = new_gfunc3 ();
     recip_mtf = new_gfunc3 ();
-  }  CATCH_EXIT_FAIL (e);
+  } CATCH_EXIT_FAIL (_e);
 
   /* Initialize command-line options, reconstruction parameters, first projection image, 
    * tilt angles and volume
    */
-  Try 
-  { 
-    OptionData_assign_from_args (opt_data, argc, argv); 
+  Try { OptionData_assign_from_args (opt_data, argc, argv); }  CATCH_EXIT_FAIL (_e);
+  Try { 
     RecParams_assign_from_OptionData (rec_p, opt_data);
     gfunc3_init_mrc (proj_image, opt_data->fname_in, &fp, &nz, STACK);
     tiltangles_assign_from_file (tilts, opt_data->fname_tiltangles);
-    gfunc3_init (volume, NULL, rec_p->vol_csize, rec_p->vol_shape, REAL);
-  } CATCH_EXIT_FAIL (e);
+  } CATCH_EXIT_FAIL (_e);
+  
+  Try { gfunc3_init (volume, NULL, rec_p->vol_csize, rec_p->vol_shape, REAL); }  CATCH_EXIT_FAIL (_e);
 
   /* Scale and shift volume according to the reco parameters */
-  Try 
-  { 
+  Try { 
     gfunc3_scale_grid (volume, rec_p->magnification); 
     RecParams_apply_to_volume (rec_p, volume); 
-  }  CATCH_EXIT_FAIL (e);
-
+  } CATCH_EXIT_FAIL (_e);
 
 
   /* Set some parameters and resolve conflicts */
-  if (opt_data->num_images == 0)  /* Not specified by option, so taken from data */
+  if (opt_data->num_images == 0)  /* Not specified by option, thus taken from data */
     opt_data->num_images = nz - opt_data->start_index;
 
   last_index = opt_data->start_index + opt_data->num_images - 1;
 
   Try {
-  if (last_index >= tilts->ntilts)
-    EXC_THROW_CUSTOMIZED_PRINT (EXC_BADARG, "Image indices (max: %d) from input stack must be "
-    "smaller\n than the number of tiltangles (%d).\n", last_index, tilts->ntilts);
-  }  CATCH_EXIT_FAIL (e);
+    if (last_index >= tilts->ntilts)
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_BADARG, "Image indices (max: %d) from input stack must be "
+      "smaller\n than the number of tiltangles (%d).\n", last_index, tilts->ntilts);
+  } CATCH_EXIT_FAIL (_e);
 
   /* If zero, skip computation of kernel from the second image on.
    * Add conditions here that cause the reco kernel to be dependent on tilt. 
@@ -114,18 +112,17 @@ main (int argc, char *argv[])
 
 
   /* Initialize current theta for the loop */
-  Try { tiltangles_get_angles (tilts, angles, 0); }  CATCH_EXIT_FAIL (e);
+  Try { tiltangles_get_angles (tilts, angles, 0); }  CATCH_EXIT_FAIL (_e);
   theta_cur = angles[1];
 
   
   for (i = opt_data->start_index; i <= last_index; i++)
     {
       /* Initialize image and normalize if desired */
-      Try 
-      { 
+      Try { 
         gfunc3_read_from_stack (proj_image, fp, i);
         RecParams_apply_to_proj_image (rec_p, proj_image); 
-      }  CATCH_EXIT_FAIL (e);
+      } CATCH_EXIT_FAIL (_e);
 
       if ((verbosity_level >= VERB_LEVEL_VERBOSE) && (i == opt_data->start_index))
         gfunc3_print_grid (proj_image, "Data grid:");
@@ -136,18 +133,20 @@ main (int argc, char *argv[])
       if (normalize_flag)
         {
           Try {
-          histogram_normalization (proj_image, opt_data->bg_patch_ix0, opt_data->bg_patch_shape);
-          }  CATCH_EXIT_FAIL (e);
+            histogram_normalization (proj_image, opt_data->bg_patch_ix0, opt_data->bg_patch_shape);
+          } CATCH_EXIT_FAIL (_e);
           if (DEBUGGING)
-            temp_mrc_out (proj_image, "normalized_", i + 1);
+            {
+              Try { temp_mrc_out (proj_image, "normalized_", i + 1); }  CATCH_EXIT_FAIL (_e);
           // probability_normalization (proj_image);
           // gfunc3_to_mrc (proj_image, "normalized2_.mrc");
+            }
         }
 
       /* Get next tilt angles, compute integration weight and scale image accordingly */
       if (i != last_index)
         {
-          Try { tiltangles_get_angles (tilts, angles, i + 1); }  CATCH_EXIT_FAIL (e);
+          Try { tiltangles_get_angles (tilts, angles, i + 1); }  CATCH_EXIT_FAIL (_e);
           theta_next = angles[1];
         }
 
@@ -167,90 +166,100 @@ main (int argc, char *argv[])
       if (invert_contrast_flag)
         weight = -weight;
         
-      Try { gfunc3_scale (proj_image, weight); }  CATCH_EXIT_FAIL (e);
+      Try { gfunc3_scale (proj_image, weight); }  CATCH_EXIT_FAIL (_e);
 
       
       /* Rotate image to align tilt axis with x axis */
-      Try { image_rotation (proj_image, -rec_p->tilt_axis_rotation); }  CATCH_EXIT_FAIL (e);
+      Try { image_rotation (proj_image, -rec_p->tilt_axis_rotation); }  CATCH_EXIT_FAIL (_e);
 
       if (DEBUGGING)
-        temp_mrc_out (proj_image, "rotated_", i + 1);
+        {
+          Try { temp_mrc_out (proj_image, "rotated_", i + 1); }  CATCH_EXIT_FAIL (_e);
+        }
 
       /* Fourier transform the image */
-      Try { fft_forward (proj_image); }   CATCH_EXIT_FAIL (e);
+      Try { fft_forward (proj_image); }   CATCH_EXIT_FAIL (_e);
       if ((verbosity_level >= VERB_LEVEL_VERBOSE) && (i == opt_data->start_index))
         gfunc3_print_grid (proj_image, "Image FT grid");
       if (DEBUGGING)
-        temp_mrc_out (proj_image, "ft_image_", i + 1);
+        {
+          Try { temp_mrc_out (proj_image, "ft_image_", i + 1); }  CATCH_EXIT_FAIL (_e);
+        }
 
       /* Compute reco kernel (only if necessary) */
       if ((i == opt_data->start_index) || kernel_varies_with_tilt )
         {
-          float nul[2] = {0.0f, 0.0f};
-          Try { gfunc3_init_from_foreign_grid (rk, proj_image); }  CATCH_EXIT_FAIL (e);
-          gfunc3_set_all (rk, nul);
+          Try { gfunc3_init_from_foreign_grid (rk, proj_image); }  CATCH_EXIT_FAIL (_e);
+          gfunc3_set_all (rk, c_zero);
 
-          Try { vfunc_init_ft_rk_single_axis_x (&vf_rk, rec_p); }  CATCH_EXIT_FAIL (e);
-          Try { gfunc3_assign_fvals_from_vfunc (rk, &vf_rk); }  CATCH_EXIT_FAIL (e);
+          Try { vfunc_init_ft_rk_single_axis_x (&vf_rk, rec_p); }  CATCH_EXIT_FAIL (_e);
+          Try { gfunc3_assign_fvals_from_vfunc (rk, &vf_rk); }  CATCH_EXIT_FAIL (_e);
 
           if (DEBUGGING)
-            temp_mrc_out (rk, "ft_rk_", i + 1);
+            {
+              Try { temp_mrc_out (rk, "ft_rk_", i + 1); }  CATCH_EXIT_FAIL (_e);
+            }
         }
 
       /* Apply kernel */
-      Try { gfunc3_mul (proj_image, rk); }  CATCH_EXIT_FAIL (e);
+      Try { gfunc3_mul (proj_image, rk); }  CATCH_EXIT_FAIL (_e);
       if (DEBUGGING)
-        temp_mrc_out (proj_image, "multiplied_ft_rk_", i + 1);
+        {
+          Try { temp_mrc_out (proj_image, "multiplied_ft_rk_", i + 1); }  CATCH_EXIT_FAIL (_e);
+        }
 
       /* Initialize reciprocal detector MTF (only once) */
       if ((i == opt_data->start_index) && use_mtf_flag)
         {
-          float nul[2] = {0.0f, 0.0f};
-          Try { gfunc3_init_from_foreign_grid (recip_mtf, proj_image); }  CATCH_EXIT_FAIL (e);
+          Try { gfunc3_init_from_foreign_grid (recip_mtf, proj_image); }  CATCH_EXIT_FAIL (_e);
           gfunc3_set_csize (recip_mtf, ones);
           gfunc3_compute_xmin_xmax (recip_mtf);
-          gfunc3_set_all (recip_mtf, nul);
+          gfunc3_set_all (recip_mtf, c_zero);
 
-          Try { vfunc_init_detector_recip_mtf (&vf_recip_mtf, rec_p); }  CATCH_EXIT_FAIL (e);
-          Try { gfunc3_assign_fvals_from_vfunc (recip_mtf, &vf_recip_mtf); }  CATCH_EXIT_FAIL (e);
+          Try { vfunc_init_detector_recip_mtf (&vf_recip_mtf, rec_p); }  CATCH_EXIT_FAIL (_e);
+          Try { gfunc3_assign_fvals_from_vfunc (recip_mtf, &vf_recip_mtf); }  CATCH_EXIT_FAIL (_e);
           gfunc3_set_csize (recip_mtf, proj_image->csize);
 
           if (DEBUGGING)
-            temp_mrc_out (recip_mtf, "recip_mtf_", i + 1);
+            {
+              Try { temp_mrc_out (recip_mtf, "recip_mtf_", i + 1); }  CATCH_EXIT_FAIL (_e);
+            }
         }
 
       /* Apply reciprocal MTF */
       if (use_mtf_flag)
         {
-          Try { gfunc3_mul (proj_image, recip_mtf); }  CATCH_EXIT_FAIL (e);
+          Try { gfunc3_mul (proj_image, recip_mtf); }  CATCH_EXIT_FAIL (_e);
           if (DEBUGGING)
-            temp_mrc_out (proj_image, "multiplied_mtf_", i + 1);
+            {
+              Try { temp_mrc_out (proj_image, "multiplied_mtf_", i + 1); }  CATCH_EXIT_FAIL (_e);
+            }
         }  
 
       /* Apply lambda if desired */
       if (use_lambda_flag)
         {
-          Try { vfunc_init_ft_lambda (&vf_lambda, &opt_data->lambda_pow); }  CATCH_EXIT_FAIL (e);
-          Try { gfunc3_mul_vfunc (proj_image, &vf_lambda); }  CATCH_EXIT_FAIL (e);
+          Try { vfunc_init_ft_lambda (&vf_lambda, &opt_data->lambda_pow); }  CATCH_EXIT_FAIL (_e);
+          Try { gfunc3_mul_vfunc (proj_image, &vf_lambda); }  CATCH_EXIT_FAIL (_e);
         }
 
       /* Fourier transform back */
-      Try { fft_backward (proj_image); }  CATCH_EXIT_FAIL (e);
+      Try { fft_backward (proj_image); }  CATCH_EXIT_FAIL (_e);
       
       if (DEBUGGING)
-        temp_mrc_out (proj_image, "filtered_", i + 1);
+        {
+          Try { temp_mrc_out (proj_image, "filtered_", i + 1); }  CATCH_EXIT_FAIL (_e);
+        }
       
       /* Compute backprojection */
-      Try 
-      { 
+      Try { 
         xray_backprojection_sax (proj_image, theta_cur, rec_p->tilt_axis_par_shift_px, volume); 
-      } CATCH_EXIT_FAIL (e);
-      // Try { tiltangles_get_angles (tilts, angles, i); }  CATCH_EXIT_FAIL (e);
+      } CATCH_EXIT_FAIL (_e);
+      // Try { tiltangles_get_angles (tilts, angles, i); }  CATCH_EXIT_FAIL (_e);
       // Try 
       // { 
-        // vec3 nul = {0.0f, 0.0f};
         // xray_backprojection (proj_image, angles, nul, volume); 
-      // } CATCH_EXIT_FAIL (e);
+      // } CATCH_EXIT_FAIL (_e);
     
       
       /* Update thetas */
@@ -258,7 +267,7 @@ main (int argc, char *argv[])
       theta_cur  = theta_next;
     }
 
-  Try { gfunc3_to_mrc (volume, opt_data->fname_out); }  CATCH_EXIT_FAIL (e);
+  Try { gfunc3_to_mrc (volume, opt_data->fname_out); }  CATCH_EXIT_FAIL (_e);
   printf ("Reconstructed volume written to %s\n", opt_data->fname_out);
 
   if (fp)
