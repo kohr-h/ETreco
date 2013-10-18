@@ -7,9 +7,7 @@ Urgent goals are (from most to least urgent, but still urgent):
 
 - Implement conical tilt
 
-- Fix exception handling: move code depending on success out of Try blocks
-
-- Document if a function can thrown an exception
+- Document if a function can throw an exception
 
 - Introduce tests to check if parameter values make sense
 
@@ -19,6 +17,8 @@ Urgent goals are (from most to least urgent, but still urgent):
   Think about per-module options!
 
 - Implement varying defocus with strip-wise deconvolution (maybe sum of sinc*kernel's??)
+
+- Exception handling: collect garbage before returning
 
 - Use OpenMP to speed up further (first test if CException is thread-safe!)
 
