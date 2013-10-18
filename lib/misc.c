@@ -115,7 +115,6 @@ compute_rotated_basis (vec3 const angles_deg, vec3 om_x, vec3 om_y, vec3 om_z)
   beta  = ONE_DEGREE * angles_deg[1] + SHIFT_THETA;
   gamma = ONE_DEGREE * angles_deg[0] + SHIFT_PSI;
 
-  // We follow the "x" convention for the Euler angles; https://de.wikipedia.org/wiki/Eulersche_Winkel
 
   om_x[0] = cosf (alpha) * cosf (gamma) - sinf (alpha) * cosf (beta) * sinf (gamma);
   om_x[1] = sinf (alpha) * cosf (gamma) + cosf (alpha) * cosf (beta) * sinf (gamma);

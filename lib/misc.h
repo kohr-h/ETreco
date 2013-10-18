@@ -130,19 +130,31 @@ ali16_malloc (size_t nbytes) __attribute__((alloc_size(1)));
 
 /*-------------------------------------------------------------------------------------------------*/
 
+/* A simple replacement for the base_name function in Gnulib.  Returns a pointer to the position in
+ * FILENAME where the base name (without path) starts.
+ */
 #if !GNULIB_DIRNAME
 char const *
 base_name (char const *filename);
 #endif
 
+
+/* Print program name, version, authors, year, license and some other interesting stuff. */
 void 
 print_version_etc (char const *progname);
 
 /*-------------------------------------------------------------------------------------------------*/
 
+/* Compute the rotated basis vectors OM_X, OM_Y, OM_Z in the standard basis.  They correspond to the
+ * columns in the rotation matrix defined by the Euler angles in ANGLES_DEG (in degrees).  The 
+ * "X" convention as defined in https://de.wikipedia.org/wiki/Eulersche_Winkel is used.
+ * 
+ * Thrown exceptions:
+ * - EXC_NULL
+ */
 void
 compute_rotated_basis (vec3 const angles_deg, vec3 om_x, vec3 om_y, vec3 om_z);
 
 /*-------------------------------------------------------------------------------------------------*/
 
-#endif  // __MISC_H__
+#endif  /* __MISC_H__ */

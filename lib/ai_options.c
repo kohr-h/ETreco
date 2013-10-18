@@ -438,8 +438,7 @@ OptionData_set_fname_tiltangles (OptionData *od, char const *fname)
   return;
 }
 
-// /*-------------------------------------------------------------------------------------------------*/
-// 
+// /*-------------------------------------------------------------------------------------------------*
 // void
 // assemble_fname_axis2 (char **pfname_axis2, char const *fname_axis1)
 // {
@@ -484,8 +483,7 @@ OptionData_set_fname_tiltangles (OptionData *od, char const *fname)
   // return;
 // }
 // 
-// /*-------------------------------------------------------------------------------------------------*/
-// 
+// /*-------------------------------------------------------------------------------------------------*
 // void
 // OptionData_assemble_fname_in_axis2 (OptionData *od)
 // {
@@ -497,8 +495,7 @@ OptionData_set_fname_tiltangles (OptionData *od, char const *fname)
   // return;
 // }
 // 
-// /*-------------------------------------------------------------------------------------------------*/
-// 
+// /*-------------------------------------------------------------------------------------------------*
 // void
 // OptionData_assemble_fname_reco_params_axis2 (OptionData *od)
 // {
@@ -510,8 +507,7 @@ OptionData_set_fname_tiltangles (OptionData *od, char const *fname)
   // return;
 // }
 // 
-// /*-------------------------------------------------------------------------------------------------*/
-// 
+// /*-------------------------------------------------------------------------------------------------*
 // void
 // OptionData_assemble_fname_tiltangles_axis2 (OptionData *od)
 // {

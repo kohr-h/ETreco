@@ -88,6 +88,11 @@ typedef struct {
 
 /*-------------------------------------------------------------------------------------------------*/
 
+/* Create a new OptionData structure and return a pointer to it.
+ * 
+ * Thrown exceptions:  
+ * - Rethrows
+ */
 OptionData *
 new_OptionData (void);
 

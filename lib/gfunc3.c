@@ -86,9 +86,9 @@ gfunc3_free (gfunc3 **pgf)
   return;
 }
 
-/*-------------------------------------------------------------------------------------------------*/
-// Structure initialization
-/*-------------------------------------------------------------------------------------------------*/
+/*-------------------------------------------------------------------------------------------------*
+ * Structure initialization
+ *-------------------------------------------------------------------------------------------------*/
 
 void
 gfunc3_init (gfunc3 *gf, vec3 const x0, vec3 const cs, idx3 const shp, gfunc_type gf_type)
@@ -237,9 +237,9 @@ gfunc3_compute_xmin_xmax (gfunc3 *gf)
   return;
 }
 
-/*-------------------------------------------------------------------------------------------------*/
-// Function value initialization
-/*-------------------------------------------------------------------------------------------------*/
+/*-------------------------------------------------------------------------------------------------*
+ * Function value initialization
+ *-------------------------------------------------------------------------------------------------*/
 
 void
 gfunc3_assign_fvals_from_vfunc (gfunc3 *gf, const vfunc *vf)
@@ -278,9 +278,9 @@ gfunc3_assign_fvals_from_vfunc (gfunc3 *gf, const vfunc *vf)
   return;
 }
 
-/*-------------------------------------------------------------------------------------------------*/
-// Screen output
-/*-------------------------------------------------------------------------------------------------*/
+/*-------------------------------------------------------------------------------------------------*
+ * Screen output
+ *-------------------------------------------------------------------------------------------------*/
 
 void
 gfunc3_print_grid (gfunc3 const *gf, char const *intro_text)
@@ -323,9 +323,9 @@ gfunc3_print_grid (gfunc3 const *gf, char const *intro_text)
   return;
 }
 
-/*-------------------------------------------------------------------------------------------------*/
-// Attributes
-/*-------------------------------------------------------------------------------------------------*/
+/*-------------------------------------------------------------------------------------------------*
+ * Attributes
+ *-------------------------------------------------------------------------------------------------*/
 
 float
 gfunc3_min (gfunc3 const *gf)
@@ -576,9 +576,9 @@ gfunc3_grid_is_subgrid (gfunc3 const *gf, gfunc3 const *gf_sub)
   return TRUE;
 }
 
-/*-------------------------------------------------------------------------------------------------*/
-// Operations
-/*-------------------------------------------------------------------------------------------------*/
+/*-------------------------------------------------------------------------------------------------*
+ * Operations
+ *-------------------------------------------------------------------------------------------------*/
 
 void
 gfunc3_copy (gfunc3 *dest, gfunc3 const *src)
@@ -1647,9 +1647,9 @@ gfunc3_make_nonneg (gfunc3 *gf)
 }
 
 
-/*-------------------------------------------------------------------------------------------------*/
-// Evaluation
-/*-------------------------------------------------------------------------------------------------*/
+/*-------------------------------------------------------------------------------------------------*
+ * Evaluation
+ *-------------------------------------------------------------------------------------------------*/
 
 float
 gfunc3_eval (gfunc3 *gf, idx3 const idx)
@@ -1664,13 +1664,13 @@ gfunc3_eval (gfunc3 *gf, idx3 const idx)
   if (gf->is_halfcomplex)
     {
       EXC_THROW_CUSTOMIZED_PRINT (EXC_UNIMPL, "Complex version not yet implemented.");
-      return;
+      return FLT_MAX;
     }
 
   if (!idx3_inside_range (idx, gf->shape))
     {
       EXC_THROW_PRINT (EXC_INDEX);
-      return;
+      return FLT_MAX;
     }
   
   fi = idx3_flat (idx, gf->shape);
@@ -1694,7 +1694,7 @@ gfunc3_interp_nearest (gfunc3 const *gf, vec3 const pt)
   if (gf->is_halfcomplex)
     {
       EXC_THROW_CUSTOMIZED_PRINT (EXC_UNIMPL, "Complex version not yet implemented.");
-      return;
+      return FLT_MAX;
     }
 
   if (!vec3_between (pt, gf->xmin, gf->xmax))
@@ -1755,7 +1755,7 @@ gfunc3_interp_nearest_2d (gfunc3 const *gf, vec3 const pt)
   if (gf->is_halfcomplex)
     {
       EXC_THROW_CUSTOMIZED_PRINT (EXC_UNIMPL, "Complex version not yet implemented.");
-      return;
+      return FLT_MAX;
     }
 
   if ((pt[0] <= gf->xmin[0]) || (pt[0] >= gf->xmax[0]) || 
@@ -1765,7 +1765,7 @@ gfunc3_interp_nearest_2d (gfunc3 const *gf, vec3 const pt)
   if (!GFUNC_IS_2D(gf))
     {
       EXC_THROW_CUSTOMIZED_PRINT (EXC_GFDIM, "Function must be 2-dimensional.");
-      return;
+      return FLT_MAX;
     }
 
   #if HAVE_SSE
@@ -1826,7 +1826,10 @@ gfunc3_interp_linear (gfunc3 const *gf, vec3 const pt)
 
   /* TODO: implement half-complex version */
   if (gf->is_halfcomplex)
-    EXC_THROW_CUSTOMIZED_PRINT (EXC_UNIMPL, "Complex version not yet implemented.");
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_UNIMPL, "Complex version not yet implemented.");
+      return FLT_MAX;
+    }
 
   if (!vec3_between (pt, gf->xmin, gf->xmax))
     return 0.0;
@@ -1920,10 +1923,16 @@ gfunc3_interp_linear_2d (gfunc3 const *gf, vec3 const pt)
 
   /* TODO: implement half-complex version */
   if (gf->is_halfcomplex)
-    EXC_THROW_CUSTOMIZED_PRINT (EXC_UNIMPL, "Complex version not yet implemented.");
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_UNIMPL, "Complex version not yet implemented.");
+      return FLT_MAX;
+    }
 
   if (!GFUNC_IS_2D(gf))
-    EXC_THROW_CUSTOMIZED_PRINT (EXC_GFDIM, "Function must be 2-dimensional.");
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_GFDIM, "Function must be 2-dimensional.");
+      return FLT_MAX;
+    }
   
 
   if ((pt[0] <= gf->xmin[0]) || (pt[0] >= gf->xmax[0]) || 
@@ -2048,7 +2057,7 @@ gfunc3_zeropad (gfunc3 *gf, idx3 const padding)
 {
   CEXCEPTION_T _e = EXC_NONE;
   int i;
-  size_t idx, ntotal_old, *idcs;
+  size_t idx, ntotal_old, *idcs = NULL;
 
   float *fvals_old;
   gfunc3 *gf_tmp;
@@ -2104,7 +2113,7 @@ gfunc3_unpad (gfunc3 *gf, idx3 const padding)
 {
   CEXCEPTION_T _e = EXC_NONE;
   int i;
-  size_t idx, *idcs;
+  size_t idx, *idcs = NULL;
 
   idx3 ptmp;
   float *fvals_old;
