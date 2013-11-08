@@ -169,7 +169,7 @@ main (int argc, char *argv[])
       Try { gfunc3_scale (proj_image, weight); }  CATCH_EXIT_FAIL (_e);
 
       
-      /* Rotate image to align tilt axis with x axis */
+      /* Rotate image to align tilt axis with x or y axis */
       Try { image_rotation (proj_image, -rec_p->tilt_axis_rotation); }  CATCH_EXIT_FAIL (_e);
 
       if (DEBUGGING)
@@ -192,7 +192,7 @@ main (int argc, char *argv[])
           Try { gfunc3_init_from_foreign_grid (rk, proj_image); }  CATCH_EXIT_FAIL (_e);
           gfunc3_set_all (rk, c_zero);
 
-          Try { vfunc_init_ft_rk_single_axis_x (&vf_rk, rec_p); }  CATCH_EXIT_FAIL (_e);
+          Try { vfunc_init_ft_rk_single_axis (&vf_rk, rec_p); }  CATCH_EXIT_FAIL (_e);
           Try { gfunc3_assign_fvals_from_vfunc (rk, &vf_rk); }  CATCH_EXIT_FAIL (_e);
 
           if (DEBUGGING)
@@ -236,6 +236,7 @@ main (int argc, char *argv[])
             }
         }  
 
+      /* TODO: implement and distinguish lambda_x and lambda_y */
       /* Apply lambda if desired */
       if (use_lambda_flag)
         {
@@ -253,12 +254,12 @@ main (int argc, char *argv[])
       
       /* Compute backprojection */
       Try { 
-        xray_backprojection_sax (proj_image, theta_cur, rec_p->tilt_axis_par_shift_px, volume); 
+        xray_backprojection_single_axis (proj_image, theta_cur, rec_p, volume); 
       } CATCH_EXIT_FAIL (_e);
       // Try { tiltangles_get_angles (tilts, angles, i); }  CATCH_EXIT_FAIL (_e);
       // Try 
       // { 
-        // xray_backprojection (proj_image, angles, nul, volume); 
+        // xray_backprojection (proj_image, angles, volume); 
       // } CATCH_EXIT_FAIL (_e);
     
       
