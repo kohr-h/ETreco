@@ -3,9 +3,11 @@ TODO file for ETreco.
 
 Urgent goals are (from most to least urgent, but still urgent):
 
-- Implement shift for general backprojection
-
 - Implement conical tilt
+
+- Test "Single axis y" backprojection
+
+- Introduce tilt_type parameter in RecParams (single-axis-x/y, conical, unknown)
 
 - Document if a function can throw an exception
 
