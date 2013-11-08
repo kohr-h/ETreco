@@ -65,7 +65,7 @@ vfunc_init_detector_recip_mtf (vfunc *vf, RecParams const *rec_p);
 // without preceding 1/2pi
 /* may throw EXC_NULL */
 void
-vfunc_init_ft_rk_single_axis_x (vfunc *vf, RecParams const *rec_p);
+vfunc_init_ft_rk_single_axis (vfunc *vf, RecParams const *rec_p);
 
 /*-------------------------------------------------------------------------------------------------*/
 

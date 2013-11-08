@@ -234,6 +234,14 @@ ramp_filter_sax (float const *xi)
 /*-------------------------------------------------------------------------------------------------*/
 
 float
+ramp_filter_say (float const *xi)
+{
+  return fabsf (xi[0]) / M_SQRT2PI;
+}
+
+/*-------------------------------------------------------------------------------------------------*/
+
+float
 recip_ctf_unscaled_radial (float t, RecParams const *rec_p)
 {
   int i;
@@ -267,9 +275,10 @@ recip_ctf_unscaled_radial (float t, RecParams const *rec_p)
 
 /* TODO: insert the correct constants */
 
-void ft_rk_single_axis_x (float const *xi, float *zp, void const *params)
+void ft_rk_single_axis (float const *xi, float *zp, void const *params)
 {
   RecParams *rec_p = (RecParams *) params;
+  int axis = rec_p->tilt_axis;
   float mxi2;
   
   mxi2 = xi[0] * xi[0] + xi[1] * xi[1];
@@ -277,35 +286,44 @@ void ft_rk_single_axis_x (float const *xi, float *zp, void const *params)
 
   if (sqrtf (mxi2) >= rec_p->aper_cutoff)
     *zp = 0.0;
-
-  else
+  else if (axis == 0)
     {
       *zp = recip_ctf_unscaled_radial (mxi2, rec_p) / ctf_scaling_function (mxi2, rec_p) 
         * ramp_filter_sax (xi) * rec_p->moll_ft (xi, rec_p->gamma);
     }
+  else
+    {
+      *zp = recip_ctf_unscaled_radial (mxi2, rec_p) / ctf_scaling_function (mxi2, rec_p) 
+        * ramp_filter_say (xi) * rec_p->moll_ft (xi, rec_p->gamma);
+    }
+  
         
   return;
 }
 
-void ft_rk_single_axis_x_noctf (float const *xi, float *zp, void const *params)
+void ft_rk_single_axis_noctf (float const *xi, float *zp, void const *params)
 {
   RecParams *rec_p = (RecParams *)params;
+  int axis = rec_p->tilt_axis;
 
-  *zp = ramp_filter_sax (xi) * rec_p->moll_ft (xi, rec_p->gamma);
+  if (axis == 0)
+    *zp = ramp_filter_sax (xi) * rec_p->moll_ft (xi, rec_p->gamma);
+  else
+    *zp = ramp_filter_say (xi) * rec_p->moll_ft (xi, rec_p->gamma);
   
   return;
 }
 
 void
-vfunc_init_ft_rk_single_axis_x (vfunc *vf, RecParams const *rec_p)
+vfunc_init_ft_rk_single_axis (vfunc *vf, RecParams const *rec_p)
 {
   CAPTURE_NULL_VOID (vf);
   CAPTURE_NULL_VOID (rec_p);
     
   if (use_ctf_flag)
-    vf->f = ft_rk_single_axis_x;
+    vf->f = ft_rk_single_axis;
   else
-    vf->f = ft_rk_single_axis_x_noctf;
+    vf->f = ft_rk_single_axis_noctf;
     
   vf->params = rec_p;
   
