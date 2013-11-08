@@ -94,6 +94,7 @@ new_RecParams (void)
   rp->mtf_p                   = 0;
   rp->mtf_q                   = 0;
   rp->acr                     = 0.0;
+  rp->tilt_axis               = 0;
   rp->tilt_axis_rotation      = 0.0;
   rp->tilt_axis_par_shift_px  = 0.0;
   rp->wave_number             = 0.0;
@@ -189,14 +190,27 @@ RecParams_assign_from_OptionData (RecParams *rec_p, const OptionData *od)
   rec_p->vol_shift_px[1] = (float) iniparser_getdouble (dict, "volume:shift_y", FLT_MAX);
   rec_p->vol_shift_px[2] = (float) iniparser_getdouble (dict, "volume:shift_z", FLT_MAX);
 
+  
+  /* Single axis: parallel tilt axis shift */
   dtmp = iniparser_getdouble (dict, "geometry:tilt_axis", 0.0);
-  rec_p->tilt_axis_rotation = (float) dtmp;
+  if (fabsf (dtmp) < 45.0)  /* Use "x" backprojection variant */
+    {
+      rec_p->tilt_axis = 0;
+      rec_p->tilt_axis_rotation = (float) dtmp;
+    }
+  else
+    {
+      rec_p->tilt_axis = 1;
+      /* What's missing to +- 90 degrees */
+      rec_p->tilt_axis_rotation = (dtmp > 0) ? (float)(dtmp - 90.0) : (float)(-dtmp + 90.0);
+    }
 
   ta_sx = (float) iniparser_getdouble (dict, "geometry:axis_shift_x", 0.0);
   ta_sy = (float) iniparser_getdouble (dict, "geometry:axis_shift_y", 0.0);
 
   rec_p->tilt_axis_par_shift_px = ta_sx * sinf (rec_p->tilt_axis_rotation * ONE_DEGREE) 
     + ta_sy * cosf (rec_p->tilt_axis_rotation * ONE_DEGREE);
+
 
   if ((dtmp = iniparser_getdouble (dict, "optics:magnification", -1.0)) == -1.0)
     {

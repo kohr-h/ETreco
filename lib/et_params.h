@@ -68,6 +68,7 @@ typedef struct
   int mtf_p;
   int mtf_q;
   float acr;
+  int tilt_axis;
   float tilt_axis_rotation;
   float tilt_axis_par_shift_px;
 
