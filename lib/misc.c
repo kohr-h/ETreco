@@ -120,7 +120,7 @@ compute_rotated_basis (vec3 const angles_deg, vec3 om_x, vec3 om_y, vec3 om_z)
   om_x[1] = sinf (alpha) * cosf (gamma) + cosf (alpha) * cosf (beta) * sinf (gamma);
   om_x[2] = sinf (beta)  * sinf (gamma);
 
-  om_y[0] = -sinf (alpha) * cosf (gamma) - sinf (alpha) * cosf (beta) * cosf (gamma);
+  om_y[0] = -cosf (alpha) * sinf (gamma) - sinf (alpha) * cosf (beta) * cosf (gamma);
   om_y[1] = -sinf (alpha) * sinf (gamma) + cosf (alpha) * cosf (beta) * cosf (gamma);
   om_y[2] =  sinf (beta)  * cosf (gamma);
 
