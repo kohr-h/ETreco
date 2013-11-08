@@ -44,10 +44,8 @@
 
 /*-------------------------------------------------------------------------------------------------*/
 
-/* TODO: Implement tilt axis shift for this generic backprojection */
 void
-xray_backprojection (gfunc3 const *proj_img, vec3 const angles_deg, vec3 const axis_shift_px, 
-                     gfunc3 *volume)
+xray_backprojection (gfunc3 const *proj_img, vec3 const angles_deg, gfunc3 *volume)
 {
   int ix, iy, iz;
   size_t idx = 0;
@@ -84,7 +82,6 @@ xray_backprojection (gfunc3 const *proj_img, vec3 const angles_deg, vec3 const a
   vec3_axpby (1, xm, -1, proj_img->x0);
   Pxmin[0] = vec3_dot (omega_x, xm);
   Pxmin[1] = vec3_dot (omega_y, xm);
-  // TODO: include tilt axis shift
 
   Pdx[0] = omega_x[0] * volume->csize[0];
   Pdx[1] = omega_y[0] * volume->csize[0];
@@ -142,25 +139,6 @@ xray_backprojection_sax (gfunc3 const *proj_img, float const theta_deg, float co
   int *idx_x = NULL, idx_y;
   float fv;
   
-  CAPTURE_NULL_VOID (proj_img);
-  CAPTURE_NULL_VOID (volume);
-  GFUNC_CAPTURE_UNINIT_VOID (proj_img);
-  GFUNC_CAPTURE_UNINIT_VOID (volume);
-  
-  /* TODO: implement half-complex version */
-  if (proj_img->is_halfcomplex)
-    {
-      EXC_THROW_CUSTOMIZED_PRINT (EXC_UNIMPL, "Complex version not yet implemented.");
-      return;
-    }
-
-  if (!GFUNC_IS_2D(proj_img))
-    {
-      EXC_THROW_CUSTOMIZED_PRINT (EXC_GFDIM, "Projection image must be 2-dimensional.");
-      return;
-    }
-
-
   /* The projections of the increments in y and z directions as well as xmin are precomputed */
   cos_theta = cosf (theta_deg * ONE_DEGREE);
   sin_theta = sinf (theta_deg * ONE_DEGREE);
@@ -246,6 +224,148 @@ xray_backprojection_sax (gfunc3 const *proj_img, float const theta_deg, float co
   free (wlx);
   free (wux);
   free (idx_x);
+  
+  return;
+}
+
+/*-------------------------------------------------------------------------------------------------*/
+
+void
+xray_backprojection_say (gfunc3 const *proj_img, float const theta_deg, float const axis_shift_x_px, 
+                         gfunc3 *volume)
+{
+  CEXCEPTION_T _e = EXC_NONE;
+  
+  int ix, iy, iz;
+  size_t idx = 0l, idx0 = 0l, fi;
+  float Pxmin_x, Pdx, Pdz, Pvx, Pvx0;
+  float cos_theta, sin_theta;
+  float y, *wly = NULL, *wuy = NULL, idxf_y, wlx, wux, idxf_x;
+  int *idx_y = NULL, idx_x;
+  float fv;
+  
+  /* The projections of the increments in y and z directions as well as xmin are precomputed */
+  cos_theta = cosf (theta_deg * ONE_DEGREE);
+  sin_theta = sinf (theta_deg * ONE_DEGREE);
+
+  if (autocenter_vol_flag)
+    {
+      volume->x0[0] = proj_img->x0[0] - axis_shift_x_px * proj_img->csize[0];
+      volume->x0[1] = proj_img->x0[1];
+      gfunc3_compute_xmin_xmax (volume);
+    }
+
+  Pxmin_x = cos_theta * (volume->xmin[0] - axis_shift_x_px * proj_img->csize[0]) 
+    + sin_theta * volume->xmin[2];
+
+  Pdx = cos_theta * volume->csize[0];
+  Pdz = sin_theta * volume->csize[2];
+
+  Try {
+    /* Precompute weights and indices for the 'y' component since they don't change across the loop */
+    wly = (float *) ali16_malloc (volume->shape[1] * sizeof (float));
+    wuy = (float *) ali16_malloc (volume->shape[1] * sizeof (float));
+    idx_y = (int *) ali16_malloc (volume->shape[1] * sizeof (int));
+  }  CATCH_RETURN_VOID (_e);
+
+  y = volume->xmin[1];
+  for (iy = 0; iy < volume->shape[1]; iy++)
+    {
+      if ((y <= proj_img->xmin[1]) || (y >= proj_img->xmax[1]))
+        {
+          idx_y[iy] = -1;
+          y += volume->csize[1];
+          continue;
+        }
+        
+      idxf_y    = (y - proj_img->xmin[1]) / proj_img->csize[1];
+      idx_y[iy] = (int) idxf_y;
+      wuy[iy]   = idxf_y - idx_y[iy];
+      wly[iy]   = 1.0 - wuy[iy];
+      
+      y += volume->csize[1];
+    }
+
+  
+  Pvx = Pxmin_x;
+  for (iz = 0; iz < volume->shape[2]; iz++)
+    {
+      Pvx0 = Pvx;
+      idx0 = iz * volume->shape[1] * volume->shape[0];
+      
+      for (ix = 0; ix < volume->shape[0]; ix++)
+        {
+          if ((Pvx <= proj_img->xmin[0]) || (Pvx >= proj_img->xmax[0]))
+            {
+              Pvx += Pdx;
+              idx0++;
+              continue;
+            }
+          
+          idxf_x = (Pvx - proj_img->xmin[0]) / proj_img->csize[0];
+          idx_x = (int) idxf_x;
+          wux = idxf_x - idx_x;
+          wlx = 1.0f - wux;
+          
+          for (iy = 0; iy < volume->shape[1]; iy++, idx += volume->shape[0])
+            {
+              if (idx_y[iy] == -1)
+                continue;
+
+              fi = idx_x + idx_y[iy] * proj_img->shape[0];
+              
+              fv  = (wlx * proj_img->fvals[fi] + wux * proj_img->fvals[fi + 1]) * wly[iy];
+              fi += proj_img->shape[0];
+              fv += (wlx * proj_img->fvals[fi] + wux * proj_img->fvals[fi + 1]) * wuy[iy];
+
+              volume->fvals[idx] += fv;
+            }
+          idx = idx0++;
+          Pvx += Pdx;
+        }
+      Pvx = Pvx0 + Pdz;
+    }
+
+  free (wly);
+  free (wuy);
+  free (idx_y);
+  
+  return;
+}
+
+/*-------------------------------------------------------------------------------------------------*/
+
+void
+xray_backprojection_single_axis (gfunc3 const *proj_img, float const theta_deg, 
+                                 RecParams const *rec_p, gfunc3 *volume)
+{
+  CEXCEPTION_T _e = EXC_NONE;
+  
+  CAPTURE_NULL_VOID (proj_img);
+  CAPTURE_NULL_VOID (rec_p);
+  CAPTURE_NULL_VOID (volume);
+  GFUNC_CAPTURE_UNINIT_VOID (proj_img);
+  GFUNC_CAPTURE_UNINIT_VOID (volume);
+  
+  /* TODO: implement half-complex version */
+  if (proj_img->is_halfcomplex)
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_UNIMPL, "Complex version not yet implemented.");
+      return;
+    }
+
+  if (!GFUNC_IS_2D(proj_img))
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_GFDIM, "Projection image must be 2-dimensional.");
+      return;
+    }
+  
+  Try {  
+    if (rec_p->tilt_axis == 0)
+      xray_backprojection_sax (proj_img, theta_deg, rec_p->tilt_axis_par_shift_px, volume);
+    else
+      xray_backprojection_say (proj_img, theta_deg, rec_p->tilt_axis_par_shift_px, volume);
+  } CATCH_RETURN_VOID (_e);
   
   return;
 }
