@@ -36,8 +36,6 @@
 
 // TODO: write descriptions
 
-#define NUM_CTF_LOBES   8
-
 /*-------------------------------------------------------------------------------------------------*/
 
 typedef float (*mollifier_ft_function) (float const *, float const *);
@@ -68,9 +66,13 @@ typedef struct
   int mtf_p;
   int mtf_q;
   float acr;
-  int tilt_axis;
+
+  /* Single axis tilt */
   float tilt_axis_rotation;
   float tilt_axis_par_shift_px;
+  /* Conical tilt */
+  float rot_axis_shift_px_x;
+  float rot_axis_shift_px_y;
 
   /* Derived CTF parameters */
   float wave_number;

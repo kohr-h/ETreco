@@ -32,25 +32,37 @@
 #include "gfunc3.h"
 
 #include "et_params.h"
+#include "tiltangles.h"
 
 typedef enum { TRAPEZOIDAL } integration_rule; /* TODO: consider other rules */
 
-/*-------------------------------------------------------------------------------------------------*/
+/*-------------------------------------------------------------------------------------------------
+ *  Helper functions
+ * ------------------------------------------------------------------------------------------------*/
+
+void center_over_projection (gfunc3 *volume, gfunc3 const *proj_img, tiltangles const *ta, 
+                             RecParams const *rec_p);
+
+/*-------------------------------------------------------------------------------------------------
+ *  Operators
+ * ------------------------------------------------------------------------------------------------*/
 
 void
 xray_backprojection (gfunc3 const *proj_img, vec3 const angles_deg, gfunc3 *volume);
 
 void
-xray_backprojection_single_axis (gfunc3 const *proj_img, float const theta_deg, 
-                                 RecParams const *rec_p, gfunc3 *volume);
+xray_backprojection_single_axis (gfunc3 const *proj_img, float theta_deg, RecParams const *rec_p, 
+                                 gfunc3 *volume);
 
 void
-image_rotation (gfunc3 *proj_img, float const psi_deg);
+image_rotation (gfunc3 *proj_img, float psi_deg);
 
 void
 histogram_normalization (gfunc3 *proj_img, idx3 bg_ix0, idx3 const bg_shp);
 
 float
 lp_integral (gfunc3 const *gf, integration_rule rule);
+
+/*-------------------------------------------------------------------------------------------------*/
 
 #endif // __OPERATORS_H__

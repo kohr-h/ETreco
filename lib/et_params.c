@@ -61,6 +61,7 @@
 #define MAX_STEPS    15
 
 mollifier_ft_function moll_types[] = {NULL, ft_delta, ft_gaussian, NULL};
+char const *tilting_schemes[] = {"", "single-axis", "double-axis", "conical", ""};
 
 /*-------------------------------------------------------------------------------------------------*/
 
@@ -94,9 +95,12 @@ new_RecParams (void)
   rp->mtf_p                   = 0;
   rp->mtf_q                   = 0;
   rp->acr                     = 0.0;
-  rp->tilt_axis               = 0;
+  rp->tiltscheme              = SINGLE_AXIS;
+  rp->tilt_axis               = 'x';
   rp->tilt_axis_rotation      = 0.0;
   rp->tilt_axis_par_shift_px  = 0.0;
+  rp->rot_axis_shift_px_x     = 0.0;
+  rp->rot_axis_shift_px_y     = 0.0;
   rp->wave_number             = 0.0;
   rp->cc1                     = 0.0;
   rp->aper_cutoff             = 0.0;
@@ -130,6 +134,7 @@ void
 RecParams_assign_from_OptionData (RecParams *rec_p, const OptionData *od)
 {
   int itmp;
+  char *stmp, *p;
   float ta_sx, ta_sy;
   double dtmp;
   dictionary *dict;
@@ -191,25 +196,49 @@ RecParams_assign_from_OptionData (RecParams *rec_p, const OptionData *od)
   rec_p->vol_shift_px[2] = (float) iniparser_getdouble (dict, "volume:shift_z", FLT_MAX);
 
   
-  /* Single axis: parallel tilt axis shift */
-  dtmp = iniparser_getdouble (dict, "geometry:tilt_axis", 0.0);
-  if (fabsf (dtmp) < 45.0)  /* Use "x" backprojection variant */
-    {
-      rec_p->tilt_axis = 0;
-      rec_p->tilt_axis_rotation = (float) dtmp;
-    }
+  /* Tilting scheme stuff */
+  stmp = iniparser_getstring (dict, "geometry:tilting_scheme", "single-axis");
+  for (p = stmp; *p; p++)  *p = tolower (*p);
+  if ( (strcmp (stmp, "single-axis") == 0) || (strcmp (stmp, "single_axis") == 0) || 
+       (strcmp (stmp, "singleaxis") == 0) )
+    rec_p->tiltscheme = SINGLE_AXIS;
+  else if (strcmp (stmp, "conical") == 0) 
+    rec_p->tiltscheme = CONICAL;
   else
+    EXC_THROW_CUSTOMIZED_PRINT (EXC_BADARG, "Unknown tilting scheme '%s'.", stmp);
+
+  
+  if (rec_p->tiltscheme == SINGLE_AXIS)
     {
-      rec_p->tilt_axis = 1;
-      /* What's missing to +- 90 degrees */
-      rec_p->tilt_axis_rotation = (dtmp > 0) ? (float)(dtmp - 90.0) : (float)(-dtmp + 90.0);
+      /* Single axis: parallel tilt axis shift */
+      dtmp = iniparser_getdouble (dict, "geometry:tilt_axis", 0.0);
+      if (fabsf (dtmp) < 45.0)  /* Use "x" backprojection variant */
+        {
+          rec_p->tilt_axis = 'x';
+          rec_p->tilt_axis_rotation = (float) dtmp;
+        }
+      else
+        {
+          rec_p->tilt_axis = 'y';
+          /* What's missing to +- 90 degrees */
+          rec_p->tilt_axis_rotation = (dtmp > 0) ? (float)(dtmp - 90.0) : (float)(-dtmp + 90.0);
+        }
+
+      ta_sx = (float) iniparser_getdouble (dict, "geometry:tilt_axis_shift_x", 0.0);
+      ta_sy = (float) iniparser_getdouble (dict, "geometry:tilt_axis_shift_y", 0.0);
+
+      rec_p->tilt_axis_par_shift_px = - ta_sx * sinf (rec_p->tilt_axis_rotation * ONE_DEGREE) 
+        + ta_sy * cosf (rec_p->tilt_axis_rotation * ONE_DEGREE);
     }
 
-  ta_sx = (float) iniparser_getdouble (dict, "geometry:axis_shift_x", 0.0);
-  ta_sy = (float) iniparser_getdouble (dict, "geometry:axis_shift_y", 0.0);
-
-  rec_p->tilt_axis_par_shift_px = ta_sx * sinf (rec_p->tilt_axis_rotation * ONE_DEGREE) 
-    + ta_sy * cosf (rec_p->tilt_axis_rotation * ONE_DEGREE);
+  else if (rec_p->tiltscheme == CONICAL)
+    {
+      /* Conical tilt: rotation axis shift */
+      rec_p->rot_axis_shift_px_x = (float) iniparser_getdouble (dict, "geometry:rot_axis_shift_x", 
+        0.0);
+      rec_p->rot_axis_shift_px_y = (float) iniparser_getdouble (dict, "geometry:rot_axis_shift_y", 
+        0.0);
+    }
 
 
   if ((dtmp = iniparser_getdouble (dict, "optics:magnification", -1.0)) == -1.0)
@@ -221,7 +250,8 @@ RecParams_assign_from_OptionData (RecParams *rec_p, const OptionData *od)
 
   rec_p->magnification = (float) dtmp;
   
-  /* Overrides MRC header */
+  
+  /* Override MRC header */
   dtmp = iniparser_getdouble (dict, "detector:pixel_size", 0.0);
   rec_p->detector_px_size[0] = (float) dtmp * ONE_MICROMETER;
   rec_p->detector_px_size[1] = (float) dtmp * ONE_MICROMETER;
@@ -373,37 +403,39 @@ RecParams_print (RecParams const *rec_p)
       puts ("CTF part:");
       puts ("---------\n");
       
-      printf ("acc_voltage     : % 7.2e [V]\n", rec_p->acc_voltage);
-      printf ("energy_spread   : % 7.2f [eV]\n", rec_p->energy_spread);
-      printf ("magnification   : % 7.2f\n", rec_p->magnification);
-      printf ("cs              : % 7.2e [nm]\n", rec_p->cs);
-      printf ("cc              : % 7.2e [nm]\n", rec_p->cc);
-      printf ("aperture        : % 7.2f [nm]\n", rec_p->aperture);
-      printf ("focal_length    : % 7.2e [nm]\n", rec_p->focal_length);
-      printf ("cond_ap_angle   : % 7.5f [rad]\n", rec_p->cond_ap_angle);
-      printf ("defocus_nominal : % 7.2f [nm]\n", rec_p->defocus_nominal);
-      printf ("mtf_a           : % 7.2f\n", rec_p->mtf_a);
-      printf ("mtf_b           : % 7.2f\n", rec_p->mtf_b);
-      printf ("mtf_c           : % 7.2f\n", rec_p->mtf_c);
-      printf ("mtf_alpha       : % 7.2f\n", rec_p->mtf_alpha);
-      printf ("mtf_beta        : % 7.2f\n", rec_p->mtf_beta);
-      printf ("mtf_p           : % 7d\n", rec_p->mtf_p);
-      printf ("mtf_q           : % 7d\n", rec_p->mtf_q);
+      printf ("acc_voltage       : % 7.2e [V]\n", rec_p->acc_voltage);
+      printf ("energy_spread     : % 7.2f [eV]\n", rec_p->energy_spread);
+      printf ("magnification     : % 7.2f\n", rec_p->magnification);
+      printf ("cs                : % 7.2e [nm]\n", rec_p->cs);
+      printf ("cc                : % 7.2e [nm]\n", rec_p->cc);
+      printf ("aperture          : % 7.2f [nm]\n", rec_p->aperture);
+      printf ("focal_length      : % 7.2e [nm]\n", rec_p->focal_length);
+      printf ("cond_ap_angle     : % 7.5f [rad]\n", rec_p->cond_ap_angle);
+      printf ("defocus_nominal   : % 7.2f [nm]\n", rec_p->defocus_nominal);
+      printf ("mtf_a             : % 7.2f\n", rec_p->mtf_a);
+      printf ("mtf_b             : % 7.2f\n", rec_p->mtf_b);
+      printf ("mtf_c             : % 7.2f\n", rec_p->mtf_c);
+      printf ("mtf_alpha         : % 7.2f\n", rec_p->mtf_alpha);
+      printf ("mtf_beta          : % 7.2f\n", rec_p->mtf_beta);
+      printf ("mtf_p             : % 7d\n", rec_p->mtf_p);
+      printf ("mtf_q             : % 7d\n", rec_p->mtf_q);
       printf ("\n");
-      printf ("acr             : % 7.2f\n", rec_p->acr);
-      printf ("wave_number     : % 7.2f [1/nm]\n", rec_p->wave_number);
-      printf ("cc1             : % 7.2f [nm]\n", rec_p->cc1);
-      printf ("aperture cutoff : % 7.2f [1/nm]\n", rec_p->aper_cutoff);
+      printf ("acr               : % 7.2f\n", rec_p->acr);
+      printf ("wave_number       : % 7.2f [1/nm]\n", rec_p->wave_number);
+      printf ("cc1               : % 7.2f [nm]\n", rec_p->cc1);
+      printf ("aperture cutoff   : % 7.2f [1/nm]\n", rec_p->aper_cutoff);
       printf ("\n");
     }
     
   puts ("Geometry part:");
   puts ("------------\n");
   
-  printf ("vol_shape    : (%d, %d, %d)\n", rec_p->vol_shape[0], rec_p->vol_shape[1], 
-  rec_p->vol_shape[2]);
-  printf ("vol_csize    : % 7.2f [nm]\n", rec_p->vol_csize[0]);
-  printf ("vol_shift_px : (");
+  printf ("Tilting scheme    : %s\n\n", tilting_schemes[rec_p->tiltscheme]);
+  
+  printf ("vol_shape         : (%d, %d, %d)\n", rec_p->vol_shape[0], rec_p->vol_shape[1], 
+    rec_p->vol_shape[2]);
+  printf ("vol_csize         : % 7.2f [nm]\n", rec_p->vol_csize[0]);
+  printf ("vol_shift_px      : (");
   for (i = 0; i < 3; i++)
     {
       if (rec_p->vol_shift_px[i] == FLT_MAX)  printf ("(from data)");
@@ -415,11 +447,11 @@ RecParams_print (RecParams const *rec_p)
   printf ("detector_px_size  :");
   if (rec_p->detector_px_size[0] != 0.0)  printf ("% 7.2f\n", rec_p->detector_px_size[0]);
   else  printf ("(from data)\n");
-  printf ("tilt_axis       : % 7.2f [degrees]\n", rec_p->tilt_axis_rotation);
+  printf ("Tilt axis rotation: % 7.2f [degrees]\n", rec_p->tilt_axis_rotation);
   printf ("\n");
   if (!use_ctf_flag)
     {
-      printf ("magnification   : % 7.2f\n", rec_p->magnification);
+      printf ("magnification     : % 7.2f\n", rec_p->magnification);
       printf ("\n");
     }
 
@@ -524,6 +556,8 @@ approx_ctf_xval (float yval, RecParams const *rec_p, float xstart0, float xstart
 }
 
 /*-------------------------------------------------------------------------------------------------*/
+
+#define NUM_CTF_LOBES   8
 
 void
 compute_xover_spline_params (RecParams *rec_p)

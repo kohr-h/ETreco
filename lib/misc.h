@@ -43,8 +43,8 @@
  * Constants
  *-------------------------------------------------------------------------------------------------*/
 
-#define EPS_DENOM 1E-14
-#define EPS_GRID  2E-04
+#define EPS_DENOM 1E-14F
+#define EPS_GRID  2E-04F
 #define ONE_DEGREE 0.017453292519943295F  // [rad]
 #define M_SQRT2PI 2.5066282746310002F
 

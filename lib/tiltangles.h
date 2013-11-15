@@ -30,14 +30,25 @@
 
 #include <stdio.h>
 
+#include "matvec3.h"
+
+typedef enum {T_START, GENERIC, SINGLE_AXIS_XPOS, SINGLE_AXIS_XNEG, SINGLE_AXIS_YPOS, 
+  SINGLE_AXIS_YNEG, CONICAL, T_END} tilting_scheme;
 
 typedef struct
 {
+  /* Essential quantities */
   int ntilts;
-  int nangles;
-
-  float **angles_deg;
-
+  vec3 *angles_deg;
+  
+  /* Statistics */
+  vec3 angle_means;
+  vec3 angle_vars;
+  int nvarying;
+  
+  /* Geometry */
+  tilting_scheme tiltscheme;
+  
 } tiltangles;
 
 
@@ -52,7 +63,7 @@ new_tiltangles (void);
 
 // Allocate memory for tiltangles members
 void
-tiltangles_init (tiltangles *ta, int ntilts, int nangles);
+tiltangles_init (tiltangles *ta, int ntilts);
 
 void
 tiltangles_free (tiltangles **pta);
@@ -62,7 +73,7 @@ tiltangles_free (tiltangles **pta);
  *-------------------------------------------------------------------------------------------------*/
 
 void
-tiltangles_get_angles (tiltangles *ta, float *angles, int index);
+tiltangles_get_angles (tiltangles *ta, vec3 angles, int index);
 
 /*-------------------------------------------------------------------------------------------------*
  * I/O
@@ -74,13 +85,6 @@ tiltangles_assign_from_file (tiltangles *ta, char const *ta_fname);
 void
 tiltangles_to_file (tiltangles const *ta, char const *ta_fname);
 
-/*-------------------------------------------------------------------------------------------------*
- * Other stuff
- *-------------------------------------------------------------------------------------------------*/
-
-void
-compute_rotated_basis (vec3 const angles_deg, vec3 om_x, vec3 om_y, vec3 om_z);
-
 /*-------------------------------------------------------------------------------------------------*/
 
-#endif  // __TILTANGLES_H__
+#endif  /* __TILTANGLES_H__ */

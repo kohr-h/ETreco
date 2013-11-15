@@ -49,7 +49,6 @@ extern int fft_padding;
 
 /* START and END are dummy names to mark the beginning and end of the enumerated types */
 typedef enum { M_START, DELTA, GAUSSIAN, M_END } mollifier_type; 
-typedef enum { T_START, SINGLE_AXIS, DOUBLE_AXIS, CONICAL, T_END } tiltscheme;
 
 typedef struct {
   
@@ -58,14 +57,6 @@ typedef struct {
   char *fname_out;
   char *fname_reco_params;
   char *fname_tiltangles;
-  
-  /* Tilt scheme */
-  tiltscheme tilting_scheme;
-  
-  /* Additional files for double axis */
-  char *fname_in_axis2;
-  char *fname_reco_params_axis2;
-  char *fname_tiltangles_axis2;
   
   /* Regularization parameters */
   float gamma;

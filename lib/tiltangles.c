@@ -47,20 +47,24 @@ new_tiltangles (void)
   
   Try { ta = (tiltangles *) ali16_malloc (sizeof (tiltangles));  }  CATCH_RETURN (_e, NULL);
     
-  ta->ntilts     = 0;
-  ta->nangles    = 0;
-  ta->angles_deg = NULL;
+  ta->ntilts      = 0;
+  ta->angles_deg  = NULL;
   
+  ta->angle_means = {0.0, 0.0, 0.0};
+  ta->angle_vars  = {0.0, 0.0, 0.0};
+  ta->nvarying    = 0;
+  
+  ta->tiltscheme  = GENERIC;
   return ta;
 }
 
 /*-------------------------------------------------------------------------------------------------*/
 
 void
-tiltangles_init (tiltangles *ta, int ntilts, int nangles)
+tiltangles_init (tiltangles *ta, int ntilts)
 {
   CEXCEPTION_T _e = EXC_NONE;
-  int i, j;
+  int i;
 
   CAPTURE_NULL_VOID (ta);
 
@@ -70,32 +74,12 @@ tiltangles_init (tiltangles *ta, int ntilts, int nangles)
       return;
     }
 
-  if (nangles <= 0)
-    {
-      EXC_THROW_CUSTOMIZED_PRINT (EXC_BADARG, "nangles must be positive.");
-      return;
-    }
-
-  if (nangles > 3)
-    {
-      fprintf (stderr, "Warning: Only the first 3 tiltangles are evaluated!");
-      ta->nangles = 3;
-    }
-  else
-    ta->nangles = nangles;
-
   ta->ntilts = ntilts;
 
-  Try { ta->angles_deg = (float **) ali16_malloc (ntilts * sizeof (float *)); }
-  CATCH_RETURN_VOID (_e);
+  Try { ta->angles_deg = (vec3 *) ali16_malloc (ntilts * sizeof (vec3)); }  CATCH_RETURN_VOID (_e);
 
   for (i = 0; i < ntilts; i++)
-    {
-      Try { ta->angles_deg[i] =  ali16_malloc (nangles * sizeof (float)); }  CATCH_RETURN_VOID (_e);
-      
-      for (j = 0; j < nangles; j++)
-        ta->angles_deg[i][j] = 0.0;
-    }
+    ta->angles_deg[i] = {0.0, 0.0, 0.0};
   
   return;
 }
@@ -114,12 +98,7 @@ tiltangles_free (tiltangles **pta)
     return;
   
   if ((*pta)->angles_deg != NULL)
-    {
-      for (i = 0; i < (*pta)->ntilts; i++)
-        free ((*pta)->angles_deg[i]);
-
-      free ((*pta)->angles_deg);
-    }
+    free ((*pta)->angles_deg);
   
   free (*pta);
   
@@ -156,20 +135,9 @@ skip_comments (FILE *fp)
 
 /*-------------------------------------------------------------------------------------------------*/
 
-int
-scan_line (FILE *fp, int nangles, float *angles)
+void tiltangles_determine_scheme (tiltangles *ta)
 {
-  int i;
-  char fmt[13];
-
-  strcpy (fmt, " %f");
-
-  for (i = 1; i < nangles; i++)
-    strcat (fmt, " %f");
-
-  strcat (fmt, " \n");
-
-  return fscanf (fp, fmt, &angles[0], &angles[1], &angles[2]);
+  
 }
 
 /*-------------------------------------------------------------------------------------------------*/
@@ -178,7 +146,7 @@ void
 tiltangles_assign_from_file (tiltangles *ta, char const *ta_fname)
 {
   CEXCEPTION_T _e = EXC_NONE;
-  int i, nangles, ntilts;
+  int i, j, nangles, ntilts;
   FILE *fp;
 
   CAPTURE_NULL_VOID (ta);
@@ -212,12 +180,13 @@ tiltangles_assign_from_file (tiltangles *ta, char const *ta_fname)
       return;
     }
 
-  Try { tiltangles_init (ta, ntilts, nangles); }  
+  Try { tiltangles_init (ta, ntilts); }  
   Catch (_e) { EXC_RETHROW_REPRINT (_e);  fclose (fp);  return; }
 
   for (i = 0; i < ntilts; i++)
     {
-      if (scan_line (fp, nangles, ta->angles_deg[i]) == EOF)
+      if (fscanf (fp, " %f %f %f \n", &ta->angles_deg[i][0], &ta->angles_deg[i][1], 
+        &ta->angles_deg[i][2]) == EOF)
         {
           EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "End of file %s reached before all data was read!", 
             ta_fname);
@@ -225,6 +194,34 @@ tiltangles_assign_from_file (tiltangles *ta, char const *ta_fname)
           return;
         }
     }
+
+  /* Mean values */
+  for (i = 0; i < ntilts; i++)
+    {
+      for (j = 0; j < 3; j++)
+        ta->angle_means[j] += ta->angles_deg[i][j] / ntilts;
+    }
+    
+  /* Mean squares */
+  for (i = 0; i < ntilts; i++)
+    {
+      for (j = 0; j < 3; j++)
+        ta->angle_vars[j] += ta->angles_deg[i][j] * ta->angles_deg[i][j] / ntilts;
+    }
+
+  /* var = N/(N-1) * (mean squares - squared mean) */
+  for (j = 0; j < 3; j++)
+    {
+      ta->angle_vars[j] = (ta->angle_vars[j] - ta->angle_means[j] * ta->angle_means[j]) 
+        * ntilts / (ntilts - 1);
+      if (ta->angle_vars[j] > 1E-2)
+        ta->nvarying++;
+    }
+  
+  PRINT_VERBOSE ("Mean angles: (%f, %f, %f)\n", ta->angle_means[0], ta->angle_means[1], 
+    ta->angle_means[2]);
+  PRINT_VERBOSE ("Angle variances: %d\n", ta->angle_vars[0], ta->angle_vars[1], 
+    ta->angle_vars[2]);
 
   fclose (fp);
   return;
@@ -254,7 +251,7 @@ tiltangles_to_file (tiltangles const *ta, char const *ta_fname)
       return;
     }
     
-  if (fprintf (fp, "%d %d\n", ta->ntilts, ta->nangles) == 0)
+  if (fprintf (fp, "%d 3\n", ta->ntilts) == 0)
     {
       EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Unable to write to %s.", ta_fname);
       fclose (fp);
@@ -272,7 +269,7 @@ tiltangles_to_file (tiltangles const *ta, char const *ta_fname)
     {
       if (fprintf(fp, "       % .4f      % .4f      % .4f\n", 
             ta->angles_deg[i][0], ta->angles_deg[i][1], ta->angles_deg[i][2])
-          == 0)
+            == 0)
         {
           EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Unable to write to %s.", ta_fname);
           fclose (fp);
@@ -289,7 +286,7 @@ tiltangles_to_file (tiltangles const *ta, char const *ta_fname)
  *-------------------------------------------------------------------------------------------------*/
 
 void
-tiltangles_get_angles (tiltangles *ta, float *angles, int index)
+tiltangles_get_angles (tiltangles *ta, vec3 angles, int index)
 {
   int i;
   
@@ -303,8 +300,7 @@ tiltangles_get_angles (tiltangles *ta, float *angles, int index)
       return;
     }
 
-  for (i = 0; i < ta->nangles; i++)
-    angles[i] = ta->angles_deg[index][i];
+  vec3_copy (angles, ta->angles_deg[index]);
     
   return;
 }

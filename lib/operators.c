@@ -44,6 +44,32 @@
 
 /*-------------------------------------------------------------------------------------------------*/
 
+void center_over_projection (gfunc3 *volume, gfunc3 const *proj_img, tiltangles const *ta, 
+                             RecParams const *rec_p)
+{
+  CAPTURE_NULL_VOID (volume);
+  CAPTURE_NULL_VOID (proj_img_stack);
+  CAPTURE_NULL_VOID (ta);
+  CAPTURE_NULL_VOID (rec_p);
+
+  if (rec_p->tiltscheme == SINGLE_AXIS)
+    {
+      volume->x0[0] = proj_img->x0[0];
+      volume->x0[1] = proj_img->x0[1];
+      gfunc3_compute_xmin_xmax (volume);
+    }
+  else if (rec_p->tiltscheme == CONICAL)
+    {
+      volume->x0[0] = proj_img->x0[0];
+      volume->x0[1] = proj_img->x0[1] * cosf (ta->angle_means[1] * ONE_DEGREE);
+      gfunc3_compute_xmin_xmax (volume);
+    }
+    
+  return;
+}
+
+/*-------------------------------------------------------------------------------------------------*/
+
 void
 xray_backprojection (gfunc3 const *proj_img, vec3 const angles_deg, gfunc3 *volume)
 {
@@ -126,7 +152,7 @@ xray_backprojection (gfunc3 const *proj_img, vec3 const angles_deg, gfunc3 *volu
 /*-------------------------------------------------------------------------------------------------*/
 
 void
-xray_backprojection_sax (gfunc3 const *proj_img, float const theta_deg, float const axis_shift_y_px, 
+xray_backprojection_sax (gfunc3 const *proj_img, float theta_deg, float axis_shift_y_px, 
                          gfunc3 *volume)
 {
   CEXCEPTION_T _e = EXC_NONE;
@@ -143,14 +169,7 @@ xray_backprojection_sax (gfunc3 const *proj_img, float const theta_deg, float co
   cos_theta = cosf (theta_deg * ONE_DEGREE);
   sin_theta = sinf (theta_deg * ONE_DEGREE);
 
-  if (autocenter_vol_flag)
-    {
-      volume->x0[0] = proj_img->x0[0];
-      volume->x0[1] = proj_img->x0[1] + axis_shift_y_px * proj_img->csize[1];
-      gfunc3_compute_xmin_xmax (volume);
-    }
-
-  Pxmin_y = cos_theta * (volume->xmin[1] - axis_shift_y_px * proj_img->csize[1]) 
+  Pxmin_y = cos_theta * (volume->xmin[1] + axis_shift_y_px * proj_img->csize[1]) 
     + sin_theta * volume->xmin[2];
 
   Pdy = cos_theta * volume->csize[1];
@@ -231,7 +250,7 @@ xray_backprojection_sax (gfunc3 const *proj_img, float const theta_deg, float co
 /*-------------------------------------------------------------------------------------------------*/
 
 void
-xray_backprojection_say (gfunc3 const *proj_img, float const theta_deg, float const axis_shift_x_px, 
+xray_backprojection_say (gfunc3 const *proj_img, float theta_deg, float axis_shift_x_px, 
                          gfunc3 *volume)
 {
   CEXCEPTION_T _e = EXC_NONE;
@@ -248,14 +267,7 @@ xray_backprojection_say (gfunc3 const *proj_img, float const theta_deg, float co
   cos_theta = cosf (theta_deg * ONE_DEGREE);
   sin_theta = sinf (theta_deg * ONE_DEGREE);
 
-  if (autocenter_vol_flag)
-    {
-      volume->x0[0] = proj_img->x0[0] - axis_shift_x_px * proj_img->csize[0];
-      volume->x0[1] = proj_img->x0[1];
-      gfunc3_compute_xmin_xmax (volume);
-    }
-
-  Pxmin_x = cos_theta * (volume->xmin[0] - axis_shift_x_px * proj_img->csize[0]) 
+  Pxmin_x = cos_theta * (volume->xmin[0] + axis_shift_x_px * proj_img->csize[0]) 
     + sin_theta * volume->xmin[2];
 
   Pdx = cos_theta * volume->csize[0];
@@ -286,7 +298,6 @@ xray_backprojection_say (gfunc3 const *proj_img, float const theta_deg, float co
       y += volume->csize[1];
     }
 
-  
   Pvx = Pxmin_x;
   for (iz = 0; iz < volume->shape[2]; iz++)
     {
@@ -336,8 +347,8 @@ xray_backprojection_say (gfunc3 const *proj_img, float const theta_deg, float co
 /*-------------------------------------------------------------------------------------------------*/
 
 void
-xray_backprojection_single_axis (gfunc3 const *proj_img, float const theta_deg, 
-                                 RecParams const *rec_p, gfunc3 *volume)
+xray_backprojection_single_axis (gfunc3 const *proj_img, float theta_deg, RecParams const *rec_p, 
+                                 gfunc3 *volume)
 {
   CEXCEPTION_T _e = EXC_NONE;
   
@@ -361,11 +372,111 @@ xray_backprojection_single_axis (gfunc3 const *proj_img, float const theta_deg,
     }
   
   Try {  
-    if (rec_p->tilt_axis == 0)
+    if (rec_p->tilt_axis == 'x')
       xray_backprojection_sax (proj_img, theta_deg, rec_p->tilt_axis_par_shift_px, volume);
-    else
+    else if (rec_p->tilt_axis == 'y')
       xray_backprojection_say (proj_img, theta_deg, rec_p->tilt_axis_par_shift_px, volume);
   } CATCH_RETURN_VOID (_e);
+  
+  return;
+}
+
+/*-------------------------------------------------------------------------------------------------*/
+
+void
+xray_backprojection_conical (gfunc3 const *proj_img, float theta0_deg, float phi_deg, 
+                             RecParams const *rec_p, gfunc3 *volume)
+{
+  int ix, iy, iz;
+  size_t idx = 0;
+  vec3 omega_x, omega_y, omega;
+  vec3 xm;
+  float Pxmin[2], Pdx[2], Pdy[2], Pdz[2], Pv[3], Pvx0[2], Pvy0[2];
+  
+  CAPTURE_NULL_VOID (proj_img);
+  CAPTURE_NULL_VOID (angles_deg);
+  CAPTURE_NULL_VOID (volume);
+  GFUNC_CAPTURE_UNINIT_VOID (proj_img);
+  GFUNC_CAPTURE_UNINIT_VOID (volume);
+  
+  /* TODO: implement half-complex version */
+  if (proj_img->is_halfcomplex)
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_UNIMPL, "Complex version not yet implemented.");
+      return;
+    }
+
+  if (!GFUNC_IS_2D(proj_img))
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_GFDIM, "Projection image must be 2-dimensional.");
+      return;
+    }
+
+  if (autocenter_vol_flag)
+    {
+      /* FIXXME: insert correct shift */
+      volume->x0[0] = proj_img->x0[0];
+      volume->x0[1] = proj_img->x0[1];
+      gfunc3_compute_xmin_xmax (volume);
+    }
+
+  /* The projections of the increments in x, y and z directions as well as xmin are precomputed for 
+   * speed reasons.
+   * The letter "P" stands for "projected"
+   */
+  
+  sin_theta0  = sinf (theta0_deg * ONE_DEGREE);
+  cos_theta0  = cosf (theta0_deg * ONE_DEGREE);
+  sin_phi     = sinf (phi_deg * ONE_DEGREE);
+  cos_phi     = cosf (phi_deg * ONE_DEGREE);
+
+  Pxmin[0] = cos_phi * volume->xmin[0] + sin_phi * volume->xmin[1]
+    + rec_p->rot_axis_shift_px_x * proj_img->csize[0];
+
+  Pxmin[1] = cos_theta0 * (-sin_phi * volume->xmin[0] + cos_phi * volume->xmin[1]) 
+    + sin_theta0 * volume->xmin[2] + rec_p->rot_axis_shift_px_y * proj_img->csize[1];
+
+  Pdx[0] =               cos_phi * volume->csize[0];
+  Pdx[1] = -cos_theta0 * sin_phi * volume->csize[0];
+
+  Pdy[0] =               sin_phi * volume->csize[1];
+  Pdy[1] =  cos_theta0 * cos_phi * volume->csize[1];
+
+  Pdz[0] =  0.0;
+  Pdz[1] =  sin_theta0 * volume->csize[2];
+
+  vec3_copy (xm, volume->xmin);
+  vec3_axpby (1, xm, -1, proj_img->x0);
+  Pxmin[0] = vec3_dot (omega_x, xm);
+  Pxmin[1] = vec3_dot (omega_y, xm);
+
+  Pv[0] = Pxmin[0];
+  Pv[1] = Pxmin[1];
+  Pv[2] = 0.0;
+
+  for (iz = 0; iz < volume->shape[2]; iz++)
+    {
+      Pvy0[0] = Pv[0];
+      Pvy0[1] = Pv[1];
+
+      for (iy = 0; iy < volume->shape[1]; iy++)
+        {
+          Pvx0[0] = Pv[0];
+          Pvx0[1] = Pv[1];
+
+          for (ix = 0; ix < volume->shape[0]; ix++, idx++)
+            {
+              volume->fvals[idx] += gfunc3_interp_linear_2d (proj_img, Pv);
+
+              Pv[0] += Pdx[0];
+              Pv[1] += Pdx[1];
+            }
+          Pv[0] = Pvx0[0] + Pdy[0];
+          Pv[1] = Pvx0[1] + Pdy[1];
+        }
+      Pv[0] = Pvy0[0] + Pdz[0];
+      Pv[1] = Pvy0[1] + Pdz[1];
+    }
   
   return;
 }
@@ -422,7 +533,7 @@ fft_convolution (gfunc3 *gf1, gfunc3 *gf2)
 /*-------------------------------------------------------------------------------------------------*/
 
 void
-image_rotation (gfunc3 *proj_img, float const psi_deg)
+image_rotation (gfunc3 *proj_img, float const psi_deg, vec3 rot_center)
 {
   CEXCEPTION_T _e = EXC_NONE;
   int ix, iy;

@@ -81,7 +81,6 @@ int use_lambda_flag      = 0;
 int fft_padding          = 0;
 
 char const *mollifiers[]      = {"", "delta", "gaussian", ""};
-char const *tilting_schemes[] = {"", "single-axis", "double-axis", "conical", ""};
 
 /*-------------------------------------------------------------------------------------------------*/
 
@@ -97,7 +96,6 @@ new_OptionData (void)
   od->fname_out               = NULL;
   od->fname_reco_params       = NULL;
   od->fname_tiltangles        = NULL;
-  od->tilting_scheme          = SINGLE_AXIS;
   od->fname_in_axis2          = NULL;
   od->fname_reco_params_axis2 = NULL;
   od->fname_tiltangles_axis2  = NULL;
@@ -157,19 +155,6 @@ OptionData_print (OptionData *od)
   printf ("Output file           : %s\n", od->fname_out);
   printf ("Reco parameter file   : %s\n", od->fname_reco_params);
   printf ("Tiltangles file       : %s\n", od->fname_tiltangles);
-
-  printf ("Tilting scheme        : ");
-  if      (od->tilting_scheme == SINGLE_AXIS)  printf ("single axis\n");
-  else if (od->tilting_scheme == DOUBLE_AXIS)  printf ("double axis\n");
-  else if (od->tilting_scheme == CONICAL)      printf ("conical\n");
-
-  if (od->tilting_scheme == DOUBLE_AXIS)
-    {
-      printf ("Input file 2          : %s\n", od->fname_in_axis2);
-      printf ("Reco parameter file 2 : %s\n", od->fname_reco_params_axis2);
-      printf ("Tiltangles file 2     : %s\n", od->fname_tiltangles_axis2);
-    }
-  
   printf ("gamma                 : %e\n", od->gamma);
 
   printf ("1/CTF cutoff          : ");
@@ -225,8 +210,6 @@ void
 print_help (char const *progname)
 {
   mollifier_type iter_m;
-  tiltscheme iter_t;
-  // TODO: write double axis and conical tilt help
   
   printf ("Usage: %s [options] tiltseries_file\n", progname);
   puts ("");
@@ -242,19 +225,6 @@ print_help (char const *progname)
   puts ("");
   puts ("Options:");
   puts ("");
-  puts ("  -T scheme, --tilting-scheme=scheme");
-  puts ("                 interpret data according to SCHEME. Possible values are:");
-  printf ("               ");
-  for (iter_t = T_START + 1; iter_t < T_END; iter_t++)
-    printf ("  %s", tilting_schemes[iter_t]);
-  printf ("\n");
-  puts ("                 Default: single-axis");
-  puts ("                 NOTE: if double-axis is selected, the programm automatically");
-  puts ("                 looks for tiltseries, reco params and tiltangles files ");
-  puts ("                 corresponding to axis 2. The naming scheme is");
-  puts ("                 file[a/A/0/1/(none)].extension -> file[b/B/1/2/2].extension.");
-  puts ("                 Example: par1.cfg -> par2.cfg, seriesA.mrc -> seriesB.mrc,");
-  puts ("                          tiltangles.txt -> tiltangles2.txt");
   puts ("  -o file, --output-file=file");
   puts ("                 write reconstruction to FILE; if no parameter is given, the");
   puts ("                 output file is determined from tiltseries_file by appending");
@@ -588,8 +558,7 @@ OptionData_set_moll_type (OptionData *od, char *moll_str)
   char *p;
   mollifier_type iter;
   
-  for (p = moll_str; *p; p++) 
-    *p = tolower (*p);
+  for (p = moll_str; *p; p++)  *p = tolower (*p);
   
   for (iter = M_START + 1; iter < M_END; iter++)
     {
