@@ -34,6 +34,7 @@
 
 
 typedef enum {REAL, HALFCOMPLEX} gfunc_type;
+typedef enum {EUCLIDEAN, POLAR} grid_type;
 
 /** Structure for a function defined on a 3-dimensional cartesian grid.
  * 
@@ -503,6 +504,17 @@ gfunc3_interp_linear (gfunc3 const *gf, vec3 const pt);
  */
 float
 gfunc3_interp_linear_2d (gfunc3 const *gf, vec3 const pt);
+
+
+/* Store the coordinates of GF's grid in a float* array. This array is allocated in the function and 
+ * returned. Interpret the grid according to GRID_TYPE as the transform of an Euclidean grid.
+ * 
+ * Thrown exceptions:
+ * - EXC_NULL
+ */
+
+float *
+gfunc3_grid_points (gfunc3 const *gf, grid_type gridtype);
 
 
 

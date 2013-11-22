@@ -2000,6 +2000,110 @@ gfunc3_interp_linear_2d (gfunc3 const *gf, vec3 const pt)
   return fv;
 }
 
+/*-------------------------------------------------------------------------------------------------*/
+
+void
+store_grid_points_euclidean (gfunc3 const *gf, float *points)
+{
+  vec3 p;
+  int ix, iy, iz;
+  float *cur_pt = points;
+
+  vec3_copy (p, gf->xmin);
+
+  for (iz = 0; iz < gf->shape[2]; iz++)
+    {
+      for (iy = 0; iy < gf->shape[1]; iy++)
+        {
+          for (ix = 0; ix < gf->shape[0]; ix++, cur_pt += 3)
+            {
+              /* Just copy over the point */
+              cur_pt[0] = p[0];
+              cur_pt[1] = p[1];
+              cur_pt[2] = p[2];
+              
+              p[0] += gf->csize[0];
+            }
+          p[0] = gf->xmin[0];
+          p[1] += gf->csize[1];
+        }
+      p[1] = gf->xmin[1];
+      p[2] += gf->csize[2];
+    }
+  
+  return;
+}
+
+void
+store_grid_points_polar (gfunc3 const *gf, float *points)
+{
+  vec3 p;
+  int ix, iy, iz;
+  float sin_theta, cos_theta, sin_phi, cos_phi;
+  float *cur_pt = points;
+
+  vec3_copy (p, gf->xmin);
+  cos_theta = cosf (p[1]);
+  sin_theta = sinf (p[1]);
+  cos_phi = cosf (p[2]);
+  sin_phi = sinf (p[2]);
+  
+
+  for (iz = 0; iz < gf->shape[2]; iz++)
+    {
+      for (iy = 0; iy < gf->shape[1]; iy++)
+        {
+          for (ix = 0; ix < gf->shape[0]; ix++, cur_pt += 3)
+            {
+              /* p[0] = radius, p[1] = polar angle, p[2] = azimuth angle 
+               * The resulting point corresponds to the rotated version of (0,0,radius) 
+               * following the 'x' convention in https://de.wikipedia.org/wiki/Eulersche_Winkel */
+              cur_pt[0] =   p[0] * sin_theta * sin_phi;
+              cur_pt[1] = - p[0] * sin_theta * cos_phi;
+              cur_pt[2] =   p[0] * cos_theta;
+              
+              p[0] += gf->csize[0];
+            }
+          p[0] = gf->xmin[0];
+          
+          p[1] += gf->csize[1];
+          cos_theta = cosf (p[1]);
+          sin_theta = sinf (p[1]);
+        }
+      p[1] = gf->xmin[1];
+      cos_theta = cosf (p[1]);
+      sin_theta = sinf (p[1]);
+
+      p[2] += gf->csize[2];
+      cos_phi = cosf (p[2]);
+      sin_phi = sinf (p[2]);
+    }
+  
+  return;
+}
+
+float *
+gfunc3_grid_points (gfunc3 const *gf, grid_type gridtype)
+{
+  CEXCEPTION_T _e = EXC_NONE;
+  
+  float *points = NULL;
+
+  CAPTURE_NULL (gf, NULL);
+  
+  Try { 
+    /* 1 element extra to be safe with vec3_copy at the last point */
+    points = (float *) ali16_malloc ((gf->ntotal * 3) * sizeof (float)); 
+  } CATCH_RETURN (_e, NULL);
+  
+  if (gridtype == EUCLIDEAN)
+    store_grid_points_euclidean (gf, points);
+  else if (gridtype == POLAR)
+    store_grid_points_polar (gf, points);
+    
+  return points;
+}
+
 /*-------------------------------------------------------------------------------------------------
  * Domain change
  *-------------------------------------------------------------------------------------------------*/
