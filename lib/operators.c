@@ -44,6 +44,152 @@
 
 /*-------------------------------------------------------------------------------------------------*/
 
+float *
+perp_plane_freqs (gfunc3 const *ft_proj_img_grid, vec3 const normal_angles_deg)
+{
+  CEXCEPTION_T _e = EXC_NONE;
+  
+  float *freqs = NULL;
+  
+  vec3 p;
+  int ix, iy;
+  float sin_psi, cos_psi, sin_theta, cos_theta, sin_phi, cos_phi;
+  float *cur_freq = freqs;
+
+  Try { 
+    freqs = (float *) ali16_malloc ((ft_proj_img_grid->ntotal * 3) * sizeof (float));
+  } CATCH_RETURN (_e, NULL);
+
+  sin_psi   = sinf (normal_angles_deg[0] * ONE_DEGREE);
+  cos_psi   = cosf (normal_angles_deg[0] * ONE_DEGREE);
+  sin_theta = sinf (normal_angles_deg[1] * ONE_DEGREE);
+  cos_theta = cosf (normal_angles_deg[1] * ONE_DEGREE);
+  sin_phi   = sinf (normal_angles_deg[2] * ONE_DEGREE);
+  cos_phi   = cosf (normal_angles_deg[2] * ONE_DEGREE);
+  
+  vec3_copy (p, ft_proj_img_grid->xmin);
+
+  for (iy = 0; iy < ft_proj_img_grid->shape[1]; iy++)
+    {
+      for (ix = 0; ix < ft_proj_img_grid->shape[0]; ix++, cur_freq += 3)
+        {
+          /* p[0] is the coefficient of the first unit vector in omega^\perp, 
+           * p[1] the coefficient of the second one. These vectors correspond to the first two
+           * columns of the transposed rotation matrix in 'x' convention, see
+           * https://de.wikipedia.org/wiki/Eulersche_Winkel
+           */
+          cur_freq[0] =   p[0] * ( cos_phi * cos_psi - sin_phi * cos_theta * sin_psi)
+                        + p[1] * (-cos_phi * sin_psi - sin_phi * cos_theta * cos_psi);
+          cur_freq[1] =   p[0] * ( sin_phi * cos_psi + cos_phi * cos_theta * sin_psi)
+                        + p[1] * (-sin_phi * sin_psi + cos_phi * cos_theta * cos_psi);
+          cur_freq[2] =   p[0] * ( sin_theta * sin_psi)
+                        + p[1] * ( sin_theta * cos_psi);
+          
+          p[0] += ft_proj_img_grid->csize[0];
+        }
+      p[0]  = ft_proj_img_grid->xmin[0];
+      p[1] += ft_proj_img_grid->csize[1];
+    }
+
+  return freqs;
+}
+
+float *
+ewald_sphere_freqs (gfunc3 const *ft_proj_img_grid, vec3 const normal_angles_deg, float wave_number)
+{
+  CEXCEPTION_T _e = EXC_NONE;
+  
+  float *freqs = NULL;
+
+  vec3 p;
+  int ix, iy;
+  float sin_psi, cos_psi, sin_theta, cos_theta, sin_phi, cos_phi;
+  float *cur_freq = freqs;
+  double tmp, v;
+
+  Try { 
+    freqs = (float *) ali16_malloc ((ft_proj_img_grid->ntotal * 3) * sizeof (float));
+  } CATCH_RETURN (_e, NULL);
+  
+  sin_psi   = sinf (normal_angles_deg[0] * ONE_DEGREE);
+  cos_psi   = cosf (normal_angles_deg[0] * ONE_DEGREE);
+  sin_theta = sinf (normal_angles_deg[1] * ONE_DEGREE);
+  cos_theta = cosf (normal_angles_deg[1] * ONE_DEGREE);
+  sin_phi   = sinf (normal_angles_deg[2] * ONE_DEGREE);
+  cos_phi   = cosf (normal_angles_deg[2] * ONE_DEGREE);
+  
+  vec3_copy (p, ft_proj_img_grid->xmin);
+
+  for (iy = 0; iy < ft_proj_img_grid->shape[1]; iy++)
+    {
+      for (ix = 0; ix < ft_proj_img_grid->shape[0]; ix++, cur_freq += 3)
+        {
+          /* The same as in perp_plane_freqs, but with an additional summand consisting of
+           * (k-v(\xi))\omega, where k is the wave number, v(xi) = sqrt(k^2-v^2), and \omega
+           * is the third column of the transpose of the rotation matrix.
+           */
+          tmp = p[0] * p[0] + p[1] * p[1];
+          v = sqrt (wave_number * wave_number - tmp);
+          tmp = wave_number - v;
+          
+          cur_freq[0] =   p[0] * ( cos_phi * cos_psi - sin_phi * cos_theta * sin_psi)
+                        + p[1] * (-cos_phi * sin_psi - sin_phi * cos_theta * cos_psi)
+                        + tmp  * ( sin_phi * sin_theta);
+          cur_freq[1] =   p[0] * ( sin_phi * cos_psi + cos_phi * cos_theta * sin_psi)
+                        + p[1] * (-sin_phi * sin_psi + cos_phi * cos_theta * cos_psi)
+                        + tmp  * (-cos_phi * sin_theta);
+          cur_freq[2] =   p[0] * ( sin_theta * sin_psi)
+                        + p[1] * ( sin_theta * cos_psi)
+                        + tmp  * ( cos_theta);
+          
+          p[0] += ft_proj_img_grid->csize[0];
+        }
+      p[0]  = ft_proj_img_grid->xmin[0];
+      p[1] += ft_proj_img_grid->csize[1];
+    }
+
+  return freqs;
+}
+
+/*-------------------------------------------------------------------------------------------------*/
+
+void
+et_scattering_projection (gfunc3 const *scatterer_re, gfunc3 const *scatterer_im, 
+                          vec3 const angles_deg, RecParams const *rec_p, 
+                          gfunc3 *proj_img_re, gfunc3 *proj_img_im, scattering_model sct_model)
+{
+  CEXCEPTION_T _e = EXC_NONE;
+  
+  float *freqs = NULL;
+  
+  CAPTURE_NULL_VOID (scatterer_re);
+  CAPTURE_NULL_VOID (proj_img_re);
+  CAPTURE_NULL_VOID (proj_img_im);
+  CAPTURE_NULL_VOID (angles_deg);
+  
+  if (sct_model != PROJ_ASSUMPTION)
+    CAPTURE_NULL_VOID (rec_p);
+  
+  GFUNC_CAPTURE_UNINIT_VOID (scatterer_re);
+  if (scatterer_im)
+    GFUNC_CAPTURE_UNINIT_VOID (scatterer_im);
+  
+  if ( (sct_model == PROJ_ASSUMPTION) || ((sct_model == BORN_APPROX) && rec_p->wave_number == 0.0) )
+    {
+      Try { freqs = perp_plane_freqs (proj_img_re, angles_deg); }  CATCH_RETURN_VOID (_e);
+    }
+  else if (sct_model == BORN_APPROX)
+    {
+      Try { 
+        freqs = ewald_sphere_freqs (proj_img_re, angles_deg, rec_p->wave_number); 
+      } CATCH_RETURN_VOID (_e);
+    }
+  
+  return;
+}
+
+/*-------------------------------------------------------------------------------------------------*/
+
 void
 xray_backprojection (gfunc3 const *proj_img, vec3 const angles_deg, gfunc3 *volume)
 {
