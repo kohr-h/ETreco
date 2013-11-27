@@ -48,7 +48,6 @@
 extern int fft_padding;
 
 // TODO: use interpolation functions
-// TODO: write NFFT functions
 
 /*-------------------------------------------------------------------------------------------------*/
 
@@ -58,6 +57,8 @@ gfunc3_grid_fwd_reciprocal (gfunc3 *gf)
   int i;
 
   CAPTURE_NULL_VOID (gf);
+  if (gf->is_initialized)
+    EXC_THROW_CUSTOMIZED_PRINT (EXC_GFINIT, "Grid function must not be initialized!");
 
   /* Store old x0 internally and set new one to zero */
   vec3_copy (gf->_fbuf, gf->x0);
@@ -88,6 +89,8 @@ gfunc3_hc_grid_bwd_reciprocal (gfunc3 *gf_hc)
   int i;
   
   CAPTURE_NULL_VOID (gf_hc);
+  if (gf_hc->is_initialized)
+    EXC_THROW_CUSTOMIZED_PRINT (EXC_GFINIT, "Grid function must not be initialized!");
 
   /* Restore old x0 and shape[0] */
   vec3_copy (gf_hc->x0, gf_hc->_fbuf);
@@ -263,10 +266,11 @@ fft_forward (gfunc3 *gf)
   fftwf_destroy_plan (p);
 
   fftwf_free (gf->fvals);
-  gf->fvals = (float *) d_ft;
-
-  gf->is_halfcomplex = 1;
+  gf->is_initialized = FALSE;
   gfunc3_grid_fwd_reciprocal (gf);
+
+  gf->fvals = (float *) d_ft;
+  gf->is_initialized = TRUE;
 
   fft_fwd_postmod (gf);
   
@@ -377,7 +381,7 @@ fft_bwd_postmod (gfunc3 *gf)
 /*-------------------------------------------------------------------------------------------------*/
 
 void
-fft_backward (gfunc3 *gf)
+fft_backward (gfunc3 *gf_hc)
 {
   CEXCEPTION_T _e = EXC_NONE;
   size_t n_ift;
@@ -385,47 +389,48 @@ fft_backward (gfunc3 *gf)
   idx3 padding = {0, 0, 0};
   fftwf_plan p;
 
-  CAPTURE_NULL_VOID (gf);
-  GFUNC_CAPTURE_UNINIT_VOID (gf);
-  if (!gf->is_halfcomplex)
+  CAPTURE_NULL_VOID (gf_hc);
+  GFUNC_CAPTURE_UNINIT_VOID (gf_hc);
+  if (!gf_hc->is_halfcomplex)
     {
       EXC_THROW_CUSTOMIZED_PRINT (EXC_GFTYPE, "Expected HALFCOMPLEX type function.");
       return;
     }
 
-  n_ift = gf->_ntmp * gf->shape[1] * gf->shape[2];
+  n_ift = gf_hc->_ntmp * gf_hc->shape[1] * gf_hc->shape[2];
   Try { d_ift = (float *) ali16_malloc (n_ift * sizeof (float)); } CATCH_RETURN_VOID (_e);
 
-  fft_bwd_premod (gf);
+  fft_bwd_premod (gf_hc);
 
-  if (GFUNC_IS_2D (gf))
-    p = fftwf_plan_dft_c2r_2d (gf->shape[1], gf->_ntmp,
-      (fftwf_complex *) gf->fvals, d_ift, FFTW_ESTIMATE);
+  if (GFUNC_IS_2D (gf_hc))
+    p = fftwf_plan_dft_c2r_2d (gf_hc->shape[1], gf_hc->_ntmp,
+      (fftwf_complex *) gf_hc->fvals, d_ift, FFTW_ESTIMATE);
 
   else
-    p = fftwf_plan_dft_c2r_3d (gf->shape[2], gf->shape[1],
-      gf->_ntmp, (fftwf_complex *) gf->fvals, d_ift, FFTW_ESTIMATE);
+    p = fftwf_plan_dft_c2r_3d (gf_hc->shape[2], gf_hc->shape[1],
+      gf_hc->_ntmp, (fftwf_complex *) gf_hc->fvals, d_ift, FFTW_ESTIMATE);
     
   fftwf_execute (p);
   fftwf_destroy_plan (p);
 
-  fftwf_free (gf->fvals);
-  gf->fvals = d_ift;
-
-  gf->is_halfcomplex = 0;
-  gfunc3_hc_grid_bwd_reciprocal (gf);
+  fftwf_free (gf_hc->fvals);
+  gf_hc->is_initialized = FALSE;
+  gfunc3_hc_grid_bwd_reciprocal (gf_hc);
+  
+  gf_hc->fvals = d_ift;
+  gf_hc->is_initialized = TRUE;
 
   if (fft_padding > 0)
     {
       idx3_set_all (padding, fft_padding);
       
-      if (GFUNC_IS_2D (gf))
+      if (GFUNC_IS_2D (gf_hc))
         padding[2] = 0;
         
-      Try { gfunc3_unpad (gf, padding); } CATCH_RETURN_VOID (_e);
+      Try { gfunc3_unpad (gf_hc, padding); } CATCH_RETURN_VOID (_e);
     }
 
-  fft_bwd_postmod (gf);
+  fft_bwd_postmod (gf_hc);
 
   return;
 }
@@ -485,7 +490,7 @@ nfft3_transform (gfunc3 const *f_re, gfunc3 const *f_im, float const *freqs, siz
   
   int i;
   size_t j;
-  float *real, *imag;
+  float *real = NULL, *imag = NULL;
 
   nfft_plan p;
 
