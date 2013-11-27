@@ -31,7 +31,7 @@
 #include <float.h>
 #include <limits.h>
 
-#if HAVE_CBLAS == 1
+#if HAVE_CBLAS
 #include <gsl/gsl_blas.h>
 #endif
 
