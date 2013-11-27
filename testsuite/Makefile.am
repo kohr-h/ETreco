@@ -6,7 +6,7 @@ AM_LDFLAGS = -L$(top_builddir)/lib -L$(top_builddir)/gnulib
 AUTOMAKE_OPTIONS = dejagnu
 
 if HAVE_SSE
-AM_CPPFLAGS += -msse  
+AM_CPPFLAGS += -msse
 #AM_CPPFLAGS += -mfpmath=sse
 endif
 
@@ -28,7 +28,7 @@ endif
 
 AM_CPPFLAGS += $(OPENMP_CFLAGS)
 
-bin_PROGRAMS =  store_points_test
+bin_PROGRAMS =  nfft_test
 # 
 # gf3_test_grid_SOURCES = $(srcdir)/gf3_test_grid.c
 # gf3_test_grid_LDFLAGS = -lm
@@ -45,7 +45,6 @@ bin_PROGRAMS =  store_points_test
 											# $(libdir)/libiniparser.a \
 											# $(gnulibdir)/libgnu.a
 
-store_points_test_SOURCES = $(srcdir)/store_points_test.c
-store_points_test_LDADD = $(lib_libdir)/libgfunc3.a $(lib_libdir)/libutil.a  \
-													$(lib_libdir)/libCException.a \
-													$(gnulib_libdir)/libgnu.a 
+nfft_test_SOURCES = $(srcdir)/nfft_test.c
+nfft_test_LDADD = $(lib_libdir)/libgfunc3.a $(lib_libdir)/libutil.a $(lib_libdir)/libCException.a \
+									$(gnulib_libdir)/libgnu.a 
