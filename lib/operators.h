@@ -40,6 +40,14 @@ typedef enum { TRAPEZOIDAL } integration_rule; /* TODO: consider other rules */
  * ET Forward operator 
  *-------------------------------------------------------------------------------------------------*/
 
+/* Just for testing */
+float *
+perp_plane_freqs (gfunc3 const *ft_proj_img_grid, vec3 const normal_angles_deg);
+
+float *
+ewald_sphere_freqs (gfunc3 const *ft_proj_img_grid, vec3 const normal_angles_deg, float wave_number);
+
+
 void
 et_scattering_projection (gfunc3 const *scatterer_re, gfunc3 const *scatterer_im, 
                           vec3 const angles_deg, RecParams const *rec_p, 
