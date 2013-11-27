@@ -304,10 +304,17 @@ AC_CHECK_HEADER([gsl/gsl_sf_bessel.h], [], \
 AC_CHECK_HEADER([gsl/gsl_blas.h], [], \
                 [AC_MSG_ERROR([GSL headers not found.])])
 
-# FFWT related checks
+
+# FFTW related checks
 AC_CHECK_LIB([fftw3f], [fftwf_malloc], [], \
                 [AC_MSG_ERROR([FFTW3 single-precision library not found.])])
 AC_CHECK_HEADERS([fftw3.h], [], \
+                [AC_MSG_ERROR([FFTW3 header not found.])])
+
+# NFFT related checks
+AC_CHECK_LIB([nfft3], [nfft_init], [], \
+                [AC_MSG_ERROR([NFFT3 library not found.])])
+AC_CHECK_HEADERS([nfft3.h], [], \
                 [AC_MSG_ERROR([FFTW3 header not found.])])
 
 # Targets to configure
