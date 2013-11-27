@@ -54,7 +54,7 @@ perp_plane_freqs (gfunc3 const *ft_proj_img_grid, vec3 const normal_angles_deg)
   vec3 p;
   int ix, iy;
   float sin_psi, cos_psi, sin_theta, cos_theta, sin_phi, cos_phi;
-  float *cur_freq = freqs;
+  float *cur_freq;
 
   Try { 
     freqs = (float *) ali16_malloc ((ft_proj_img_grid->ntotal * 3) * sizeof (float));
@@ -69,7 +69,7 @@ perp_plane_freqs (gfunc3 const *ft_proj_img_grid, vec3 const normal_angles_deg)
   
   vec3_copy (p, ft_proj_img_grid->xmin);
 
-  for (iy = 0; iy < ft_proj_img_grid->shape[1]; iy++)
+  for (iy = 0, cur_freq = freqs; iy < ft_proj_img_grid->shape[1]; iy++)
     {
       for (ix = 0; ix < ft_proj_img_grid->shape[0]; ix++, cur_freq += 3)
         {
@@ -104,7 +104,7 @@ ewald_sphere_freqs (gfunc3 const *ft_proj_img_grid, vec3 const normal_angles_deg
   vec3 p;
   int ix, iy;
   float sin_psi, cos_psi, sin_theta, cos_theta, sin_phi, cos_phi;
-  float *cur_freq = freqs;
+  float *cur_freq;
   double tmp, v;
 
   Try { 
@@ -120,7 +120,7 @@ ewald_sphere_freqs (gfunc3 const *ft_proj_img_grid, vec3 const normal_angles_deg
   
   vec3_copy (p, ft_proj_img_grid->xmin);
 
-  for (iy = 0; iy < ft_proj_img_grid->shape[1]; iy++)
+  for (iy = 0, cur_freq = freqs; iy < ft_proj_img_grid->shape[1]; iy++)
     {
       for (ix = 0; ix < ft_proj_img_grid->shape[0]; ix++, cur_freq += 3)
         {
