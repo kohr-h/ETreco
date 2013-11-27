@@ -34,30 +34,67 @@
 #include "vfunc.h"
 
 
+/* Standard Fourier Transform functions */
+
+
 /* Replace the grid of GF by its reciprocal (half-complex shape).
- * May throw EXC_NULL
+ * 
+ * Thrown exceptions:
+ * - EXC_NULL
  */
 void
 gfunc3_grid_fwd_reciprocal (gfunc3 *gf);
 
+
 /* Replace the reciprocal grid of GF (half-complex shape) by the original one.
- * May throw EXC_NULL
+ * 
+ * Thrown exceptions:
+ * - EXC_NULL
  */
 void
 gfunc3_hc_grid_bwd_reciprocal (gfunc3 *gf_hc);
 
+
 /* The forward Fourier transform of GF, stored as half-complex array.
- * May throw EXC_NULL
- * May throw other exceptions
+ * 
+ * Thrown exceptions:
+ * - EXC_NULL
+ * - EXC_GFINIT
+ * - EXC_GFTYPE
+ * - Rethrows
  */
 void
 fft_forward (gfunc3 *gf);
 
+
 /* The backward Fourier transform of the half-complex GF.
- * May throw EXC_NULL
- * May throw other exceptions
+ * 
+ * Thrown exceptions:
+ * - EXC_NULL
+ * - EXC_GFINIT
+ * - EXC_GFTYPE
+ * - Rethrows
  */
 void
 fft_backward (gfunc3 *gf_hc);
 
-#endif // __FFT_H__
+
+/* The 3D forward Fourier transform of a complex function defined by F_RE (real part) and F_IM 
+ * (imaginary part) for NFREQS arbitrary spatial frequencies FREQS using the NFFT library. Result
+ * of the transform is stored in the arrays FT_RE (real part) and FT_IM (imaginary part), both of 
+ * which are assumed to be allocated and of size NFREQS.
+ * 
+ * Thrown exceptions:
+ * - EXC_NULL
+ * - EXC_GFINIT
+ * - EXC_GFTYPE
+ * - EXC_GFDIM
+ * - EXC_BADARG
+ * - Rethrows
+ * 
+ */
+void
+nfft3_transform (gfunc3 const *f_re, gfunc3 const *f_im, float const *freqs, size_t nfreqs, 
+                 float *ft_re, float *ft_im);
+
+#endif /* __FFT_H__ */
