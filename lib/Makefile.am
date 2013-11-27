@@ -5,7 +5,7 @@ AM_LDFLAGS = -L$(top_builddir)/lib -L$(top_builddir)/gnulib
 
 
 if HAVE_SSE
-AM_CPPFLAGS += -msse  
+AM_CPPFLAGS += -msse
 #AM_CPPFLAGS += -mfpmath=sse
 endif
 
