@@ -29,7 +29,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <fftw3.h>
-// #include <nfft3.h>  // This is for the future
+#include <nfft3.h>
 
 #include "CException.h"
 
@@ -71,6 +71,8 @@ gfunc3_grid_fwd_reciprocal (gfunc3 *gf)
   gf->_ntmp = gf->shape[0];
   gf->shape[0] = gf->shape[0] / 2 + 1;
 
+  gf->is_halfcomplex = TRUE;
+
   gfunc3_compute_xmin_xmax (gf);
 
   gf->ntotal = idx3_product (gf->shape);
@@ -81,7 +83,7 @@ gfunc3_grid_fwd_reciprocal (gfunc3 *gf)
 /*-------------------------------------------------------------------------------------------------*/
 
 void
-gfunc3_grid_bwd_reciprocal (gfunc3 *gf_hc)
+gfunc3_hc_grid_bwd_reciprocal (gfunc3 *gf_hc)
 {
   int i;
   
@@ -95,6 +97,8 @@ gfunc3_grid_bwd_reciprocal (gfunc3 *gf_hc)
   /* New csize = 2*PI / (old shape * old csize) */
   for (i = 0; i < 3; i++)
     gf_hc->csize[i] = 2 * M_PI / (gf_hc->shape[i] * gf_hc->csize[i]);
+
+  gf_hc->is_halfcomplex = FALSE;
  
   /* Restore xmin and xmax */
   gfunc3_compute_xmin_xmax (gf_hc);
@@ -409,7 +413,7 @@ fft_backward (gfunc3 *gf)
   gf->fvals = d_ift;
 
   gf->is_halfcomplex = 0;
-  gfunc3_grid_bwd_reciprocal (gf);
+  gfunc3_hc_grid_bwd_reciprocal (gf);
 
   if (fft_padding > 0)
     {
@@ -423,6 +427,139 @@ fft_backward (gfunc3 *gf)
 
   fft_bwd_postmod (gf);
 
+  return;
+}
+
+/*-------------------------------------------------------------------------------------------------*/
+
+void
+nfft3_normalize_freqs (double *freqs, vec3 const csize, size_t nfreqs)
+{
+  int i;
+  size_t j;
+  double *cur_freq;
+  
+  for (j = 0, cur_freq = freqs; j < nfreqs; j++, cur_freq += 3)
+    {
+      for (i = 0; i < 3; i++)
+        cur_freq[i] *= csize[i] / (2*M_PI);
+    }
+  
+  return;
+}
+
+/*-------------------------------------------------------------------------------------------------*/
+
+void
+nfft3_postmod (float *ft_re, float *ft_im, vec3 const x0, vec3 const csize, float const *freqs, 
+               size_t nfreqs)
+{
+  size_t j;
+  float sp, co, si, re, im, cs_prod;
+  float const *cur_freq = freqs;
+  
+  cs_prod = vec3_product (csize);
+  
+  for (j = 0; j < nfreqs; j++, cur_freq += 3)
+    {
+      /* Multiply complex ft with exp(-<x0, freq_j>) * [product of csize] */
+      sp = x0[0] * cur_freq[0] + x0[1] * cur_freq[1] + x0[2] * cur_freq[2];
+      co = cosf (-sp);
+      si = sinf (-sp);
+      re = ft_re[j] * co - ft_im[j] * si;
+      im = ft_re[j] * si + ft_im[j] * co;
+      ft_re[j] = re * cs_prod;
+      ft_im[j] = im;
+    }
+    
+  return;
+}
+
+/*-------------------------------------------------------------------------------------------------*/
+
+void
+nfft3_transform (gfunc3 const *f_re, gfunc3 const *f_im, float const *freqs, size_t nfreqs, 
+                 float *ft_re, float *ft_im)
+{
+  CEXCEPTION_T _e = EXC_NONE;
+  
+  int i;
+  size_t j;
+  float *real, *imag;
+
+  nfft_plan p;
+
+  CAPTURE_NULL_VOID (f_re);
+  CAPTURE_NULL_VOID (freqs);
+  CAPTURE_NULL_VOID (ft_re);
+  
+  GFUNC_CAPTURE_UNINIT_VOID (f_re);
+  if (GFUNC_IS_2D (f_re))
+    EXC_THROW_CUSTOMIZED_PRINT (EXC_GFDIM, "Only 3D functions are supported.");
+  
+  if (f_im != NULL)
+    {
+      if (GFUNC_IS_2D (f_im))
+        EXC_THROW_CUSTOMIZED_PRINT (EXC_GFDIM, "Only 3D functions are supported.");
+      if (f_re->ntotal != f_im->ntotal)
+        EXC_THROW_CUSTOMIZED_PRINT (EXC_BADARG, "Real and imaginary parts must agree in size.");
+    }
+
+  /* Use real and imag as dummies if the corresponding output array is NULL */
+  if (ft_re == NULL)
+    {
+      Try { real = (float *) ali16_malloc (nfreqs * sizeof (float)); } CATCH_RETURN_VOID (_e);
+    }
+  else
+    real = ft_re;
+
+  if (ft_im == NULL)
+    {
+      Try { imag = (float *) ali16_malloc (nfreqs * sizeof (float)); } CATCH_RETURN_VOID (_e);
+    }
+  else
+    imag = ft_im;
+
+  nfft_init_3d (&p, f_re->shape[2], f_re->shape[1], f_re->shape[0], nfreqs);
+  
+  /* TODO: Swap axes 0 and 2 ?? */
+  for (j = 0; j < f_re->ntotal; j++)
+  {
+    ((double *) p.f_hat)[2 * j]     = (double) f_re->fvals[j];
+    ((double *) p.f_hat)[2 * j + 1] = (f_im != NULL) ? (double) f_im->fvals[j] : 0.0;
+  }
+  
+  /* Copy over the points due to only double precision support */
+  /* TODO: Swap axes 0 and 2 ?? */
+  for (j = 0; j < nfreqs; j++)
+    {
+      for (i = 0; i < 3; i++)
+        p.x[3 * j + i] = (double) freqs[3 * j + i];
+    }
+  
+  /* Prepare and execute the transform */
+  nfft3_normalize_freqs (p.x, f_re->csize, nfreqs);
+  nfft_precompute_one_psi (&p);
+  nfft_trafo (&p); // TODO: something goes wrong in the transform
+  
+  for (j = 0; j < nfreqs; j++)
+    {
+      real[j] = (float) ((double *) p.f)[2 * j];
+      imag[j] = (float) ((double *) p.f)[2 * j + 1];
+    }
+
+  /* The plan is no longer needed, so free the space */
+  nfft_finalize (&p);
+  
+  /* Apply the modification due to shift and scaling */
+  nfft3_postmod (real, imag, f_re->x0, f_re->csize, freqs, nfreqs);
+  
+  if (ft_re == NULL)
+    free (real);
+
+  if (ft_im == NULL)
+    free (imag);
+  
   return;
 }
 
