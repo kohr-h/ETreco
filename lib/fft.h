@@ -34,23 +34,10 @@
 #include "vfunc.h"
 
 
-/* Standard Fourier Transform functions */
-
-
-/* Replace the grid of GF by its reciprocal (half-complex shape).
- * 
- * Thrown exceptions:
- * - EXC_NULL
- */
+/* Only for testing purposes */
 void
 gfunc3_grid_fwd_reciprocal (gfunc3 *gf);
 
-
-/* Replace the reciprocal grid of GF (half-complex shape) by the original one.
- * 
- * Thrown exceptions:
- * - EXC_NULL
- */
 void
 gfunc3_hc_grid_bwd_reciprocal (gfunc3 *gf_hc);
 

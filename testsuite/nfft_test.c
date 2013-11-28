@@ -37,7 +37,7 @@ int main(int argc, char **argv)
 {
   CEXCEPTION_T _e = EXC_NONE;
   int i;
-  vec3 x0 = {0.1, 0, 0}, cs = {0.2, 0.3, 0.5}, cs_plane = {0.1, 0.1, 1.0}, angles = {0.0, 45.0, 45.0};
+  vec3 x0 = {0.1, 0, 0}, cs = {1.0, 1.0, 1.0}, cs_plane = {0.1, 0.1, 1.0}, angles = {0.0, 45.0, 45.0};
   idx3 shp = {10, 7, 3}, padding = {2, 2, 2}, shp_plane = {25, 24, 1};
 
   float *freqs = NULL, wave_number = 45.0;
@@ -52,12 +52,15 @@ int main(int argc, char **argv)
   gfunc3_zeropad (vol, padding);
   gfunc3_to_mrc (vol, "temp/vol.mrc");
 
-  gfunc3_grid_fwd_reciprocal (perp_plane_re);
-  gfunc3_grid_fwd_reciprocal (perp_plane_im);
+  gfunc3_print_grid (vol, "Volume grid:");
+  gfunc3_print_grid (perp_plane_re, "Perp plane grid:");
 
   Try { freqs = perp_plane_freqs (perp_plane_re, angles); } CATCH_EXIT_FAIL (_e);
-  nfft3_transform (vol, NULL, freqs, perp_plane_re->ntotal, 
-    perp_plane_re->fvals, perp_plane_im->fvals);
+
+  Try { 
+    nfft3_transform (vol, NULL, freqs, perp_plane_re->ntotal, perp_plane_re->fvals, 
+      perp_plane_im->fvals);
+  } CATCH_EXIT_FAIL (_e);
   
   gfunc3_to_mrc (perp_plane_re, "temp/plane_re.mrc");
   gfunc3_to_mrc (perp_plane_re, "temp/plane_im.mrc");

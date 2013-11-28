@@ -447,7 +447,15 @@ nfft3_normalize_freqs (double *freqs, vec3 const csize, size_t nfreqs)
   for (j = 0, cur_freq = freqs; j < nfreqs; j++, cur_freq += 3)
     {
       for (i = 0; i < 3; i++)
-        cur_freq[i] *= csize[i] / (2*M_PI);
+        {
+          cur_freq[i] *= csize[i] / (2*M_PI);
+          if (fabsf (cur_freq[i]) > 0.5)
+            {
+              EXC_THROW_CUSTOMIZED_PRINT (EXC_COMPUTE, "Normalized frequencies must be between "
+                "-0.5 and 0.5 (value %g for x[%d][%d]).", cur_freq[i], j, i);
+              return;
+            }
+        }
     }
   
   return;
@@ -465,6 +473,7 @@ nfft3_postmod (float *ft_re, float *ft_im, vec3 const x0, vec3 const csize, floa
   
   cs_prod = vec3_product (csize);
   
+  // TODO: interpolation function!
   for (j = 0; j < nfreqs; j++, cur_freq += 3)
     {
       /* Multiply complex ft with exp(-<x0, freq_j>) * [product of csize] */
@@ -500,14 +509,23 @@ nfft3_transform (gfunc3 const *f_re, gfunc3 const *f_im, float const *freqs, siz
   
   GFUNC_CAPTURE_UNINIT_VOID (f_re);
   if (GFUNC_IS_2D (f_re))
-    EXC_THROW_CUSTOMIZED_PRINT (EXC_GFDIM, "Only 3D functions are supported.");
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_GFDIM, "Only 3D functions are supported.");
+      return;
+    }
   
   if (f_im != NULL)
     {
       if (GFUNC_IS_2D (f_im))
-        EXC_THROW_CUSTOMIZED_PRINT (EXC_GFDIM, "Only 3D functions are supported.");
+        {
+          EXC_THROW_CUSTOMIZED_PRINT (EXC_GFDIM, "Only 3D functions are supported.");
+          return;
+        }
       if (f_re->ntotal != f_im->ntotal)
-        EXC_THROW_CUSTOMIZED_PRINT (EXC_BADARG, "Real and imaginary parts must agree in size.");
+        {
+          EXC_THROW_CUSTOMIZED_PRINT (EXC_BADARG, "Real and imaginary parts must agree in size.");
+          return;
+        }
     }
 
   /* Use real and imag as dummies if the corresponding output array is NULL */
@@ -543,9 +561,9 @@ nfft3_transform (gfunc3 const *f_re, gfunc3 const *f_im, float const *freqs, siz
     }
   
   /* Prepare and execute the transform */
-  nfft3_normalize_freqs (p.x, f_re->csize, nfreqs);
+  Try { nfft3_normalize_freqs (p.x, f_re->csize, nfreqs); } CATCH_RETURN_VOID (_e);
   nfft_precompute_one_psi (&p);
-  nfft_trafo (&p); // TODO: something goes wrong in the transform
+  nfft_trafo (&p);
   
   for (j = 0; j < nfreqs; j++)
     {
@@ -569,3 +587,6 @@ nfft3_transform (gfunc3 const *f_re, gfunc3 const *f_im, float const *freqs, siz
 }
 
 /*-------------------------------------------------------------------------------------------------*/
+
+/* TODO: implement complex back-transform */
+
