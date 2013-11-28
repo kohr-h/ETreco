@@ -33,7 +33,7 @@
 #include "vfunc.h"
 
 
-typedef enum {REAL, HALFCOMPLEX} gfunc_type;
+typedef enum {REAL, HALFCOMPLEX, COMPLEX} gfunc_type;
 typedef enum {EUCLIDEAN, POLAR} grid_type;
 
 /** Structure for a function defined on a 3-dimensional cartesian grid.
@@ -61,11 +61,12 @@ typedef struct
 
   /* status flags */
   int is_initialized;  /**< 1 if grid is initialized and memory for fvals is allocated, 0 otherwise */
-  int is_halfcomplex;  /**< If this flag is 1, the x dimension is halved and the values are 
-                            interpreted as complex numbers. 0 means standard real-valued. */
+  gfunc_type type;     /**< If HALFCOMPLEX, the x dimension is halved and the values are 
+                            interpreted as complex numbers. COMPLEX means that FVALS holds 
+                            2 * NTOTAL entries. */
 
   /* function values */
-  float *fvals;    /**< float[ntotal] array holding the function values */
+  float *fvals;    /**< Array holding the function values. Size depends on TYPE. */
   
 } gfunc3;
 

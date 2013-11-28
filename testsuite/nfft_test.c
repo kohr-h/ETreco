@@ -45,8 +45,8 @@ int main(int argc, char **argv)
   gfunc3 *vol = new_gfunc3 (), *perp_plane_re = new_gfunc3 (), *perp_plane_im = new_gfunc3 ();
   
   gfunc3_init (vol, x0, cs, shp, VOLUME);
-  gfunc3_init (perp_plane_re, NULL, cs_plane, shp_plane, VOLUME);
-  gfunc3_init (perp_plane_im, NULL, cs_plane, shp_plane, VOLUME);
+  gfunc3_init (perp_plane_re, NULL, cs_plane, shp_plane, REAL);
+  gfunc3_init (perp_plane_im, NULL, cs_plane, shp_plane, REAL);
 
   gfunc3_set_all (vol, c_one);
   gfunc3_zeropad (vol, padding);

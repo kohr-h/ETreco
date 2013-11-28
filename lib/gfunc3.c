@@ -58,7 +58,7 @@ new_gfunc3 (void)
   Try { gf = (gfunc3 *) ali16_malloc (sizeof (gfunc3)); }  CATCH_RETURN (_e, NULL);
         
   gf->is_initialized = 0;
-  gf->is_halfcomplex = 0;
+  gf->type           = REAL;
   gf->fvals          = NULL;
     
   return gf;
@@ -79,7 +79,7 @@ gfunc3_free (gfunc3 **pgf)
     free ((*pgf)->fvals);
   
   (*pgf)->is_initialized = 0;
-  (*pgf)->is_halfcomplex = 0;
+  (*pgf)->type           = REAL;
 
   free (*pgf);
 
@@ -99,12 +99,15 @@ gfunc3_init (gfunc3 *gf, vec3 const x0, vec3 const cs, idx3 const shp, gfunc_typ
   CAPTURE_NULL_VOID (cs);
   CAPTURE_NULL_VOID (shp);
 
+  size_t ntotal;
+
   /* Initialize grid */
   idx3_copy (gf->shape, shp);
   
   if (shp[2] == 0)
     gf->shape[2] = 1;
   gf->ntotal = idx3_product (gf->shape);
+  ntotal = gf->ntotal;
 
   if (x0 == NULL)
     vec3_set_all (gf->x0, 0.0);
@@ -119,12 +122,13 @@ gfunc3_init (gfunc3 *gf, vec3 const x0, vec3 const cs, idx3 const shp, gfunc_typ
       gf->csize[2] = 1.0;
     }
 
-  if (gf_type == HALFCOMPLEX)
-    gf->is_halfcomplex = 1;
+  gf->type = gf_type;
+  if ((gf_type == HALFCOMPLEX) || (gf_type == COMPLEX))
+    ntotal *= 2;
 
   gfunc3_compute_xmin_xmax (gf);
 
-  Try { gf->fvals = (float *) ali16_malloc (gf->ntotal * sizeof (float)); }  CATCH_RETURN_VOID (_e);
+  Try { gf->fvals = (float *) ali16_malloc (ntotal * sizeof (float)); }  CATCH_RETURN_VOID (_e);
 
   gf->is_initialized = 1;
   gfunc3_set_all (gf, c_zero);
@@ -136,6 +140,7 @@ gfunc3_init (gfunc3 *gf, vec3 const x0, vec3 const cs, idx3 const shp, gfunc_typ
 void
 gfunc3_init_from_foreign_grid (gfunc3 *gf, gfunc3 const *gf_template)
 {
+  /* TODO: continue here */
   CEXCEPTION_T _e = EXC_NONE;
   
   CAPTURE_NULL_VOID (gf);

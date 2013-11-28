@@ -452,7 +452,7 @@ nfft3_normalize_freqs (double *freqs, vec3 const csize, size_t nfreqs)
           if (fabsf (cur_freq[i]) > 0.5)
             {
               EXC_THROW_CUSTOMIZED_PRINT (EXC_COMPUTE, "Normalized frequencies must be between "
-                "-0.5 and 0.5 (value %g for x[%d][%d]).", cur_freq[i], j, i);
+                "-0.5 and 0.5 (value %g for x[%lu][%d]).", cur_freq[i], j, i);
               return;
             }
         }
@@ -500,27 +500,47 @@ nfft3_transform (gfunc3 const *f_re, gfunc3 const *f_im, float const *freqs, siz
   int i;
   size_t j;
   float *real = NULL, *imag = NULL;
+  vec3 x0 = {0.0, 0.0, 0.0}, cs = {1.0, 1.0, 1.0};
+  idx3 shp = {1, 1, 1};
+  size_t ntotal = 0; 
 
   nfft_plan p;
 
-  CAPTURE_NULL_VOID (f_re);
   CAPTURE_NULL_VOID (freqs);
-  CAPTURE_NULL_VOID (ft_re);
   
-  GFUNC_CAPTURE_UNINIT_VOID (f_re);
-  if (GFUNC_IS_2D (f_re))
+  if ( (f_re == NULL) && (f_im == NULL) )
     {
-      EXC_THROW_CUSTOMIZED_PRINT (EXC_GFDIM, "Only 3D functions are supported.");
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_BADARG, "F_RE and F_IM may not be NULL at the same time.");
       return;
     }
-  
   if (f_im != NULL)
     {
+      GFUNC_CAPTURE_UNINIT_VOID (f_im);
       if (GFUNC_IS_2D (f_im))
         {
           EXC_THROW_CUSTOMIZED_PRINT (EXC_GFDIM, "Only 3D functions are supported.");
           return;
         }
+      vec3_copy (x0, f_im->x0);
+      vec3_copy (cs, f_im->csize);
+      idx3_copy (shp, f_im->shape);
+      ntotal = f_im->ntotal;
+    }
+  if (f_re != NULL)
+    {
+      GFUNC_CAPTURE_UNINIT_VOID (f_re);
+      if (GFUNC_IS_2D (f_re))
+        {
+          EXC_THROW_CUSTOMIZED_PRINT (EXC_GFDIM, "Only 3D functions are supported.");
+          return;
+        }
+      vec3_copy (x0, f_re->x0);
+      vec3_copy (cs, f_re->csize);
+      idx3_copy (shp, f_re->shape);
+      ntotal = f_re->ntotal;
+    }  
+  if ( (f_re != NULL) && (f_im != NULL) )
+    {
       if (f_re->ntotal != f_im->ntotal)
         {
           EXC_THROW_CUSTOMIZED_PRINT (EXC_BADARG, "Real and imaginary parts must agree in size.");
@@ -543,12 +563,12 @@ nfft3_transform (gfunc3 const *f_re, gfunc3 const *f_im, float const *freqs, siz
   else
     imag = ft_im;
 
-  nfft_init_3d (&p, f_re->shape[2], f_re->shape[1], f_re->shape[0], nfreqs);
+  nfft_init_3d (&p, shp[2], shp[1], shp[0], nfreqs);
   
   /* TODO: Swap axes 0 and 2 ?? */
-  for (j = 0; j < f_re->ntotal; j++)
+  for (j = 0; j < ntotal; j++)
   {
-    ((double *) p.f_hat)[2 * j]     = (double) f_re->fvals[j];
+    ((double *) p.f_hat)[2 * j]     = (f_re != NULL) ? (double) f_re->fvals[j] : 0.0;
     ((double *) p.f_hat)[2 * j + 1] = (f_im != NULL) ? (double) f_im->fvals[j] : 0.0;
   }
   
@@ -561,7 +581,7 @@ nfft3_transform (gfunc3 const *f_re, gfunc3 const *f_im, float const *freqs, siz
     }
   
   /* Prepare and execute the transform */
-  Try { nfft3_normalize_freqs (p.x, f_re->csize, nfreqs); } CATCH_RETURN_VOID (_e);
+  Try { nfft3_normalize_freqs (p.x, cs, nfreqs); } CATCH_RETURN_VOID (_e);
   nfft_precompute_one_psi (&p);
   nfft_trafo (&p);
   
@@ -575,7 +595,7 @@ nfft3_transform (gfunc3 const *f_re, gfunc3 const *f_im, float const *freqs, siz
   nfft_finalize (&p);
   
   /* Apply the modification due to shift and scaling */
-  nfft3_postmod (real, imag, f_re->x0, f_re->csize, freqs, nfreqs);
+  nfft3_postmod (real, imag, x0, cs, freqs, nfreqs);
   
   if (ft_re == NULL)
     free (real);
@@ -588,5 +608,9 @@ nfft3_transform (gfunc3 const *f_re, gfunc3 const *f_im, float const *freqs, siz
 
 /*-------------------------------------------------------------------------------------------------*/
 
-/* TODO: implement complex back-transform */
+void
+fft_backward_fullcomplex (gfunc3 *f_re, gfunc3 *f_im, vec3 const shift)
+{
+  
+}
 
