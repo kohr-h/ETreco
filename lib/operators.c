@@ -30,7 +30,7 @@
 
 #include "CException.h"
 
-#include "matvec3.h"
+#include "vec3.h"
 #include "misc.h"
 
 #include "fft.h"

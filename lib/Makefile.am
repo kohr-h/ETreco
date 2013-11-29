@@ -35,8 +35,8 @@ libCException_a_SOURCES = $(lib_srcdir)/CException.c $(lib_srcdir)/CException.h 
 libiniparser_a_SOURCES = $(lib_srcdir)/iniparser.c  	$(lib_srcdir)/iniparser.h \
 												 $(lib_srcdir)/dictionary.c  	$(lib_srcdir)/dictionary.h
 
-libutil_a_SOURCES = $(lib_srcdir)/matvec3.c		$(lib_srcdir)/matvec3.h \
-										$(lib_srcdir)/misc.c 			$(lib_srcdir)/misc.h \
+libutil_a_SOURCES = $(lib_srcdir)/vec3.c		$(lib_srcdir)/vec3.h \
+										$(lib_srcdir)/misc.c 		$(lib_srcdir)/misc.h \
 										$(lib_srcdir)/simd.h										
 
 libgfunc3_a_SOURCES = $(lib_srcdir)/gfunc3.c  		$(lib_srcdir)/gfunc3.h \

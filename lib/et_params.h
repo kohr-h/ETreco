@@ -28,7 +28,7 @@
 #include <config.h>
 #endif
 
-#include "matvec3.h"
+#include "vec3.h"
 
 #include "gfunc3.h"
 

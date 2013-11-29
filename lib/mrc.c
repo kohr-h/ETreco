@@ -36,7 +36,7 @@
 
 #include "CException.h"
 #include "gfunc3.h"
-#include "matvec3.h"
+#include "vec3.h"
 #include "misc.h"
 #include "mrc.h"
 
@@ -514,7 +514,7 @@ gfunc3_init_mrc (gfunc3 *gf, char const *mrc_fname, FILE **pfp_in, int *pn_img, 
         gf->fvals[i] = i16_arr[i];
 
       free (i16_arr);
-      gf->is_initialized = 1;
+      gf->is_initialized = TRUE;
       gf->is_halfcomplex = 0;
 
       break;
@@ -526,7 +526,7 @@ gfunc3_init_mrc (gfunc3 *gf, char const *mrc_fname, FILE **pfp_in, int *pn_img, 
       
       read_float_arr (gf->fvals, gf->ntotal, fp, MRC_HEADER_BYTES + next);
       
-      gf->is_initialized = 1;
+      gf->is_initialized = TRUE;
       gf->is_halfcomplex = 0;
       
       break;
@@ -538,7 +538,7 @@ gfunc3_init_mrc (gfunc3 *gf, char const *mrc_fname, FILE **pfp_in, int *pn_img, 
       
       read_float_arr (gf->fvals, 2 * gf->ntotal, fp, MRC_HEADER_BYTES + next);
       
-      gf->is_initialized = 1;
+      gf->is_initialized = TRUE;
       gf->is_halfcomplex = 1;
       
       break;
