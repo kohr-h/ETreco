@@ -41,10 +41,6 @@ typedef struct
 #define VFUNC_EVAL(pvf, pval, x) ((pvf)->f((x), (pval), (pvf)->params))
 
 
-/* Aligned float[2] data type for complex data */
-typedef float __attribute__ ((__aligned__ (16)))  cplx[2];
-
-
 /*-------------------------------------------------------------------------------------------------*/
 
 #endif /* __VFUNC_H__ */
