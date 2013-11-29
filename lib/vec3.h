@@ -1,5 +1,5 @@
 /*
- * matvec3.h -- manipulation of 3d vectors and matrices
+ * vec3.h -- manipulation of 3d vectors and matrices
  * 
  * Copyright 2013 Holger Kohr <kohr@num.uni-sb.de>
  * 
@@ -21,8 +21,8 @@
  * 
  */
 
-#ifndef __MATVEC3_H__
-#define __MATVEC3_H__
+#ifndef __VEC3_H__
+#define __VEC3_H__
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>
@@ -74,13 +74,25 @@ idx3_lt (idx3 const n1, idx3 const n2);
 int
 idx3_le (idx3 const n1, idx3 const n2);
 
-inline int
-idx3_inside_range (idx3 const n, idx3 const shp);
+static inline int
+idx3_inside_range (idx3 const n, idx3 const shp)
+{
+  #if RANGE_CHECKING
+  return idx3_ispos(n) && idx3_lt(n, shp);
+  
+  #else
+  return 1;
 
-inline int
-vec3_between (vec3 const v, vec3 const lb, vec3 const ub);
+  #endif
+}
 
-inline int
+static inline int
+vec3_between (vec3 const v, vec3 const lb, vec3 const ub)
+{
+  return vec3_gt (v, lb) && vec3_lt (v, ub);
+}
+
+int
 vec3_between_ints (vec3 const v, idx3 const lb, idx3 const ub);
 
 /*-------------------------------------------------------------------------------------------------*
@@ -109,37 +121,47 @@ vec3_copy (vec3 dest, vec3 const src);
 void
 idx3_copy (idx3 dest, idx3 const src);
 
-inline void
+void
 vec3_axpby (float a, vec3 x, float b, vec3 const y);
 
-inline void
+void
 vec3_mul (vec3 v1, vec3 const v2);
 
-inline void
+void
 vec3_mul_int (vec3 v, idx3 const n);
 
-inline void
+void
 vec3_div (vec3 v1, vec3 const v2);
 
-inline void
+void
 vec3_div_int (vec3 v, idx3 const n);
 
 /*-------------------------------------------------------------------------------------------------*
  * Vector contraction
  *-------------------------------------------------------------------------------------------------*/
 
-inline size_t
-idx3_flat (idx3 const n, idx3 const shp);
+static inline size_t
+idx3_flat (idx3 const n, idx3 const shp)
+{
+  size_t flat;
 
-inline size_t
+  flat  = n[2] * shp[1];
+  flat += n[1];
+  flat *= shp[0];
+  flat += n[0];
+
+  return flat;
+}
+
+size_t
 idx3_product (idx3 const n);
 
-inline float 
+float 
 vec3_dot (vec3 const v1, vec3 const v2);
 
-inline float
+float
 vec3_product (vec3 const v);
 
 /*-------------------------------------------------------------------------------------------------*/
 
-#endif  /* __MATVEC3_H__ */
+#endif  /* __VEC3_H__ */

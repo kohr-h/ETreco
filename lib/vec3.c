@@ -1,5 +1,5 @@
 /*
- * matvec3.c -- manipulation of 3d vtors and matrices
+ * vec3.c -- manipulation of 3d vtors and matrices
  * 
  * Copyright 2013 Holger Kohr <kohr@num.uni-sb.de>
  * 
@@ -30,7 +30,7 @@
 #include <limits.h>
 #include <gsl/gsl_math.h>
 
-#include "matvec3.h"
+#include "vec3.h"
 #include "misc.h"
 #include "simd.h"
 
@@ -267,30 +267,7 @@ idx3_le (idx3 const n1, idx3 const n2)
 
 /*-------------------------------------------------------------------------------------------------*/
 
-
-inline int
-idx3_inside_range (idx3 const n, idx3 const shp)
-{
-  #if RANGE_CHECKING
-  return idx3_ispos(n) && idx3_lt(n, shp);
-  
-  #else
-  return 1;
-
-  #endif
-}
-
-/*-------------------------------------------------------------------------------------------------*/
-
-inline int
-vec3_between (vec3 const v, vec3 const lb, vec3 const ub)
-{
-  return vec3_gt (v, lb) && vec3_lt (v, ub);
-}
-
-/*-------------------------------------------------------------------------------------------------*/
-
-inline int
+int
 vec3_between_ints (vec3 const v, idx3 const lb, idx3 const ub)
 {
   #if HAVE_SSE2
@@ -438,7 +415,7 @@ idx3_copy (idx3 dest, idx3 const src)
 
 /*-------------------------------------------------------------------------------------------------*/
 
-inline void
+void
 vec3_axpby (float a, vec3 x, float b, vec3 const y)
 {
   if ((b == 0.0) || (y == NULL))
@@ -477,7 +454,7 @@ vec3_axpby (float a, vec3 x, float b, vec3 const y)
 
 /*-------------------------------------------------------------------------------------------------*/
 
-inline void
+void
 vec3_mul (vec3 v1, vec3 const v2)
 {
   #if HAVE_SSE
@@ -496,7 +473,7 @@ vec3_mul (vec3 v1, vec3 const v2)
 
 /*-------------------------------------------------------------------------------------------------*/
 
-inline void
+void
 vec3_mul_int (vec3 v, idx3 const n)
 {
   #if HAVE_SSE && HAVE_SSE2
@@ -516,7 +493,7 @@ vec3_mul_int (vec3 v, idx3 const n)
 
 /*-------------------------------------------------------------------------------------------------*/
 
-inline void
+void
 vec3_div (vec3 v1, vec3 const v2)
 {
   #if HAVE_SSE
@@ -536,7 +513,7 @@ vec3_div (vec3 v1, vec3 const v2)
 
 /*-------------------------------------------------------------------------------------------------*/
 
-inline void
+void
 vec3_div_int (vec3 v, idx3 const n)
 {
   #if HAVE_SSE && HAVE_SSE2
@@ -555,26 +532,13 @@ vec3_div_int (vec3 v, idx3 const n)
   return;
 }
 
+
 /*-------------------------------------------------------------------------------------------------*
  * Vector contraction
  *-------------------------------------------------------------------------------------------------*/
 
-inline size_t
-idx3_flat (idx3 const n, idx3 const shp)
-{
-  size_t flat;
 
-  flat  = n[2] * shp[1];
-  flat += n[1];
-  flat *= shp[0];
-  flat += n[0];
-
-  return flat;
-}
-
-/*-------------------------------------------------------------------------------------------------*/
-
-inline size_t
+size_t
 idx3_product (idx3 const n)
 {
   size_t prod = n[0];
@@ -586,7 +550,7 @@ idx3_product (idx3 const n)
 
 /*-------------------------------------------------------------------------------------------------*/
 
-inline float 
+float 
 vec3_dot (vec3 const v1, vec3 const v2)
 {
   #if HAVE_SSE
@@ -606,7 +570,7 @@ vec3_dot (vec3 const v1, vec3 const v2)
 
 /*-------------------------------------------------------------------------------------------------*/
 
-inline float
+float
 vec3_product (vec3 const v)
 {
   return v[0] * v[1] * v[2];
