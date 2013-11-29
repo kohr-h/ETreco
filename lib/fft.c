@@ -28,12 +28,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <complex.h>
 #include <fftw3.h>
 #include <nfft3.h>
 
 #include "CException.h"
 
-#include "matvec3.h"
+#include "vec3.h"
 #include "misc.h"
 
 #include "fft.h"
@@ -50,6 +51,8 @@ extern int fft_padding;
 // TODO: use interpolation functions
 
 /*-------------------------------------------------------------------------------------------------*/
+
+/* TODO: Continue here with the adaption to full-complex functions */
 
 void
 gfunc3_grid_fwd_reciprocal (gfunc3 *gf)
@@ -72,7 +75,7 @@ gfunc3_grid_fwd_reciprocal (gfunc3 *gf)
   gf->_ntmp = gf->shape[0];
   gf->shape[0] = gf->shape[0] / 2 + 1;
 
-  gf->is_halfcomplex = TRUE;
+  gf->type = HALFCOMPLEX;
 
   gfunc3_compute_xmin_xmax (gf);
 

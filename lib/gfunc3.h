@@ -28,7 +28,9 @@
 #include <config.h>
 #endif
 
-#include "matvec3.h"
+#include <complex.h>
+
+#include "vec3.h"
 
 #include "vfunc.h"
 
@@ -76,6 +78,8 @@ typedef struct
  *-------------------------------------------------------------------------------------------------*/
 
 #define GFUNC_IS_2D(_pgf) ((_pgf)->shape[2] == 1)
+#define GFUNC_IS_REAL(_pgf) ((_pgf)->type == REAL)
+#define GFUNC_IS_COMPLEX(_pgf) (((_pgf)->type == HALFCOMPLEX) || ((_pgf)->type == COMPLEX))
 
 #define GFUNC_CAPTURE_UNINIT(_pgf, _retval)  \
 do { \
@@ -415,7 +419,7 @@ gfunc3_dilate (gfunc3 *gf, float a);
  * - EXC_INDEX
  */
 void
-gfunc3_set (gfunc3 *gf, idx3 const idx, float const *pval);
+gfunc3_set (gfunc3 *gf, idx3 const idx, float complex val);
 
 
 /* Set all values of GF to VAL. *
@@ -425,7 +429,7 @@ gfunc3_set (gfunc3 *gf, idx3 const idx, float const *pval);
  * - EXC_GFINIT
  */
 void
-gfunc3_set_all (gfunc3 *gf, float const *pval);
+gfunc3_set_all (gfunc3 *gf, float complex val);
 
 
 /* Make GF non-negative by setting negative values to 0.0f *

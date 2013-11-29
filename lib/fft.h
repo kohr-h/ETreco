@@ -28,6 +28,7 @@
 #include <config.h>
 #endif
 
+#include <complex.h>
 #include <fftw3.h>
 
 #include "gfunc3.h"

@@ -30,6 +30,7 @@
 #include <math.h>
 #include <float.h>
 #include <limits.h>
+#include <complex.h>
 
 #if HAVE_CBLAS
 #include <gsl/gsl_blas.h>
@@ -37,7 +38,7 @@
 
 #include "CException.h"
 
-#include "matvec3.h"
+#include "vec3.h"
 #include "misc.h"
 #include "simd.h"
 
@@ -57,7 +58,7 @@ new_gfunc3 (void)
   
   Try { gf = (gfunc3 *) ali16_malloc (sizeof (gfunc3)); }  CATCH_RETURN (_e, NULL);
         
-  gf->is_initialized = 0;
+  gf->is_initialized = FALSE;
   gf->type           = REAL;
   gf->fvals          = NULL;
     
@@ -78,7 +79,7 @@ gfunc3_free (gfunc3 **pgf)
   if ((*pgf)->fvals != NULL)
     free ((*pgf)->fvals);
   
-  (*pgf)->is_initialized = 0;
+  (*pgf)->is_initialized = FALSE;
   (*pgf)->type           = REAL;
 
   free (*pgf);
@@ -95,11 +96,11 @@ gfunc3_init (gfunc3 *gf, vec3 const x0, vec3 const cs, idx3 const shp, gfunc_typ
 {
   CEXCEPTION_T _e = EXC_NONE;
   
+  size_t nfloats = 0;
+
   CAPTURE_NULL_VOID (gf);
   CAPTURE_NULL_VOID (cs);
   CAPTURE_NULL_VOID (shp);
-
-  size_t ntotal;
 
   /* Initialize grid */
   idx3_copy (gf->shape, shp);
@@ -107,7 +108,6 @@ gfunc3_init (gfunc3 *gf, vec3 const x0, vec3 const cs, idx3 const shp, gfunc_typ
   if (shp[2] == 0)
     gf->shape[2] = 1;
   gf->ntotal = idx3_product (gf->shape);
-  ntotal = gf->ntotal;
 
   if (x0 == NULL)
     vec3_set_all (gf->x0, 0.0);
@@ -124,14 +124,16 @@ gfunc3_init (gfunc3 *gf, vec3 const x0, vec3 const cs, idx3 const shp, gfunc_typ
 
   gf->type = gf_type;
   if ((gf_type == HALFCOMPLEX) || (gf_type == COMPLEX))
-    ntotal *= 2;
+    nfloats = 2 * gf->ntotal;
+  else if (gf_type == REAL)
+    nfloats = gf->ntotal;
 
   gfunc3_compute_xmin_xmax (gf);
 
-  Try { gf->fvals = (float *) ali16_malloc (ntotal * sizeof (float)); }  CATCH_RETURN_VOID (_e);
+  Try { gf->fvals = (float *) ali16_malloc (nfloats * sizeof (float)); }  CATCH_RETURN_VOID (_e);
 
-  gf->is_initialized = 1;
-  gfunc3_set_all (gf, c_zero);
+  gf->is_initialized = TRUE;
+  gfunc3_set_all (gf, 0.0);
   return;
 }
 
@@ -140,9 +142,10 @@ gfunc3_init (gfunc3 *gf, vec3 const x0, vec3 const cs, idx3 const shp, gfunc_typ
 void
 gfunc3_init_from_foreign_grid (gfunc3 *gf, gfunc3 const *gf_template)
 {
-  /* TODO: continue here */
   CEXCEPTION_T _e = EXC_NONE;
   
+  size_t nfloats = 0;
+
   CAPTURE_NULL_VOID (gf);
   CAPTURE_NULL_VOID (gf_template);
 
@@ -159,22 +162,17 @@ gfunc3_init_from_foreign_grid (gfunc3 *gf, gfunc3 const *gf_template)
   
   vec3_copy (gf->_fbuf, gf_template->_fbuf);
   gf->_ntmp = gf_template->_ntmp;
+  gf->type = gf_template->type;
   
-  Try {
-    if (gf_template->is_halfcomplex)
-      {
-        gf->fvals = (float *) ali16_malloc (2 * gf->ntotal * sizeof (float));
-        gf->is_halfcomplex = 1;
-      }
-    else
-      {
-        gf->fvals = (float *) ali16_malloc (gf->ntotal * sizeof (float));
-        gf->is_halfcomplex = 0;
-      }
-  } CATCH_RETURN_VOID (_e);
+  if (GFUNC_IS_REAL (gf))
+    nfloats = gf_template->ntotal;
+  else if (GFUNC_IS_COMPLEX (gf))
+    nfloats = 2 * gf_template->ntotal;
 
-  gf->is_initialized = 1;
-  gfunc3_set_all (gf, c_zero);
+  Try { gf->fvals = (float *) ali16_malloc (nfloats * sizeof (float)); }  CATCH_RETURN_VOID (_e);
+
+  gf->is_initialized = TRUE;
+  gfunc3_set_all (gf, 0.0);
   return;
 }
 
@@ -215,7 +213,7 @@ gfunc3_compute_xmin_xmax (gfunc3 *gf)
 
   int i;
   
-  if (gf->is_halfcomplex)
+  if (gf->type == HALFCOMPLEX)
     {
       gf->xmin[0] = gf->x0[0] - (gf->shape[0] - 1) * gf->csize[0];
       gf->xmax[0] = gf->x0[0];
@@ -257,10 +255,9 @@ gfunc3_assign_fvals_from_vfunc (gfunc3 *gf, const vfunc *vf)
   CAPTURE_NULL_VOID (vf);
   GFUNC_CAPTURE_UNINIT_VOID (gf);
 
-  incr = (gf->is_halfcomplex) ? 2 : 1;
+  incr = GFUNC_IS_COMPLEX (gf) ? 2 : 1;
 
-  gfunc3_set_all (gf, c_zero);
-
+  gfunc3_set_all (gf, 0.0);
   vec3_copy (p, gf->xmin);
 
   idx = 0;
@@ -300,10 +297,12 @@ gfunc3_print_grid (gfunc3 const *gf, char const *intro_text)
   else
     printf ("    [ 3D ]");
   
-  if (gf->is_halfcomplex)
+  if (gf->type == REAL)
+    puts ("    [real]\n");
+  else if (gf->type == HALFCOMPLEX)
     puts ("    [half-complex]\n");
-  else
-    puts ("\n");
+  else if (gf->type == COMPLEX)
+    puts ("    [complex]\n");
 
   puts ("Shape:");
   idx3_print (gf->shape);
@@ -341,7 +340,7 @@ gfunc3_min (gfunc3 const *gf)
   CAPTURE_NULL (gf, FLT_MAX);
   GFUNC_CAPTURE_UNINIT (gf, FLT_MAX);
   
-  if (gf->is_halfcomplex)
+  if (GFUNC_IS_COMPLEX (gf))
     {
       EXC_THROW_CUSTOMIZED_PRINT (EXC_GFTYPE, "Minimum not defined for complex functions.");
       return FLT_MAX;
@@ -370,12 +369,9 @@ gfunc3_min (gfunc3 const *gf)
 
   #else  /* !HAVE_SSE */
   for (i = 1; i < gf->ntotal; i++)
-    {
-      if (gf->fvals[i] < min)
-        min = gf->fvals[i];
-    }
-  
-  #endif
+    min = fminf (min, gf->fvals[i]);
+    
+  #endif  /* HAVE_SSE */
   return min;
 }
 
@@ -390,7 +386,7 @@ gfunc3_max (gfunc3 const *gf)
   CAPTURE_NULL (gf, -FLT_MAX);
   GFUNC_CAPTURE_UNINIT (gf, -FLT_MAX);
 
-  if (gf->is_halfcomplex)
+  if (GFUNC_IS_COMPLEX (gf))
     {
       EXC_THROW_CUSTOMIZED_PRINT (EXC_GFTYPE, "Maximum not defined for complex functions.");
       return -FLT_MAX;
@@ -421,7 +417,7 @@ gfunc3_max (gfunc3 const *gf)
   for (i = 1; i < gf->ntotal; i++)
     {
       if (gf->fvals[i] > max)
-        max = gf->fvals[i];
+        max = fmaxf (max, gf->fvals[i]);
     }
 
   #endif
@@ -439,11 +435,11 @@ gfunc3_mean (gfunc3 const *gf)
   CAPTURE_NULL (gf, FLT_MAX);
   GFUNC_CAPTURE_UNINIT (gf, FLT_MAX);
 
-  /* TODO: implement half-complex version; this changes the return value to float * */
-  if (gf->is_halfcomplex)
+  /* TODO: implement complex version; this changes the return value to 'float complex' */
+  if (GFUNC_IS_COMPLEX (gf))
     {
       EXC_THROW_CUSTOMIZED_PRINT (EXC_UNIMPL, 
-        "Mean value not yet implemented for complex functions.");
+        "Mean value not implemented for complex functions.");
       return FLT_MAX;
     }
   
@@ -481,10 +477,10 @@ gfunc3_variance (gfunc3 const *gf, float const *pmean)
   CAPTURE_NULL (gf, FLT_MAX);
   GFUNC_CAPTURE_UNINIT (gf, FLT_MAX);
 
-  /* TODO: implement half-complex version */
-  if (gf->is_halfcomplex)
+  /* TODO: implement complex version */
+  if (GFUNC_IS_COMPLEX (gf))
     {
-      EXC_THROW_CUSTOMIZED_PRINT (EXC_UNIMPL, "Variance not yet implemented for complex functions.");
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_UNIMPL, "Variance not implemented for complex functions.");
       return FLT_MAX;
     }
   
@@ -589,7 +585,7 @@ void
 gfunc3_copy (gfunc3 *dest, gfunc3 const *src)
 {
   CEXCEPTION_T _e = EXC_NONE;
-  size_t ntotal_flt;
+  size_t nfloats = 0;
   
   CAPTURE_NULL_VOID (dest);
   CAPTURE_NULL_VOID (src);
@@ -606,33 +602,32 @@ gfunc3_copy (gfunc3 *dest, gfunc3 const *src)
   vec3_copy (dest->xmax, src->xmax);
   dest->ntotal = src->ntotal;
 
-  if (src->is_halfcomplex)
-    ntotal_flt = 2 * src->ntotal;
-  else
-    ntotal_flt = src->ntotal;
+  if (GFUNC_IS_REAL (src))
+    nfloats = src->ntotal;
+  else if (GFUNC_IS_COMPLEX (src))
+    nfloats = 2 * src->ntotal;
   
-  Try { dest->fvals = (float *) ali16_malloc (ntotal_flt * sizeof (float)); }
-  CATCH_RETURN_VOID (_e);
+  Try { dest->fvals = (float *) ali16_malloc (nfloats * sizeof (float)); }  CATCH_RETURN_VOID (_e);
   
-  dest->is_initialized = 1;
+  dest->is_initialized = TRUE;
 
   #if HAVE_CBLAS
-  cblas_scopy (ntotal_flt, src->fvals, 1, dest->fvals, 1);
+  cblas_scopy (nfloats, src->fvals, 1, dest->fvals, 1);
 
   #elif HAVE_SSE
-  size_t i, N4 = ntotal_flt / 4, N4rem = ntotal_flt % 4;
+  size_t i, N4 = nfloats / 4, N4rem = nfloats % 4;
   __m128 *p1 = (__m128 *) dest->fvals;
   __m128 const *p2 = (__m128 const *) src->fvals;
 
   for (i = 0; i < N4; i++, p1++, p2++)
     *p1 = *p2;
   
-  for (i = ntotal_flt - N4rem; i < ntotal_flt; i++)
+  for (i = nfloats - N4rem; i < nfloats; i++)
     dest->fvals[i] = src->fvals[i];
 
   #else  /* !(HAVE_CBLAS || HAVE_SSE) */
   size_t i;
-  for (i = 0; i < ntotal_flt; i++)
+  for (i = 0; i < nfloats; i++)
     dest->fvals[i] = src->fvals[i];
 
   #endif
@@ -644,7 +639,7 @@ gfunc3_copy (gfunc3 *dest, gfunc3 const *src)
 void
 gfunc3_axpy (float a, gfunc3 *gf1, gfunc3 const *gf2)
 {
-  size_t ntotal_flt;
+  size_t nfloats = 0;
 
   CAPTURE_NULL_VOID (gf1);
   CAPTURE_NULL_VOID (gf2);
@@ -652,25 +647,26 @@ gfunc3_axpy (float a, gfunc3 *gf1, gfunc3 const *gf2)
   GFUNC_CAPTURE_UNINIT_VOID (gf2);
 
   /* TODO: implement mixed axpy */
-  if (gf1->is_halfcomplex != gf2->is_halfcomplex)
+  if ( ((GFUNC_IS_REAL (gf1)) && (GFUNC_IS_COMPLEX (gf2))) ||
+       ((GFUNC_IS_REAL (gf2)) && (GFUNC_IS_COMPLEX (gf1))) )
     {
       EXC_THROW_CUSTOMIZED_PRINT (EXC_UNIMPL, "Not implemented for mixed function types.");
       return;
     }
 
-  if (gf2->is_halfcomplex)
-    ntotal_flt = 2 * gf2->ntotal;
-  else
-    ntotal_flt = gf2->ntotal;
-
+  if (GFUNC_IS_REAL (gf2))
+    nfloats = gf2->ntotal;
+  else if (GFUNC_IS_COMPLEX (gf2))
+    nfloats = 2 * gf2->ntotal;
+  
   if (gfunc3_grids_are_equal (gf1, gf2))
     {
       #if HAVE_CBLAS
-      cblas_sscal (ntotal_flt, a, gf1->fvals, 1);
-      cblas_saxpy (ntotal_flt, 1.0, gf2->fvals, 1, gf1->fvals, 1);
+      cblas_sscal (nfloats, a, gf1->fvals, 1);
+      cblas_saxpy (nfloats, 1.0, gf2->fvals, 1, gf1->fvals, 1);
 
       #elif HAVE_SSE
-      size_t i, N4 = ntotal_flt / 4, N4rem = ntotal_flt % 4;
+      size_t i, N4 = nfloats / 4, N4rem = nfloats % 4;
       __m128 *p1 = (__m128 *) gf1->fvals;
       __m128 const *p2 = (__m128 const *) gf2->fvals;
       __m128 ma = _mm_set1_ps (a);
@@ -681,12 +677,12 @@ gfunc3_axpy (float a, gfunc3 *gf1, gfunc3 const *gf2)
           *p1 = _mm_add_ps (*p1, *p2);
         }
       
-      for (i = ntotal_flt - N4rem; i < ntotal_flt; i++)
+      for (i = nfloats - N4rem; i < nfloats; i++)
         gf1->fvals[i] += a * gf2->fvals[i];
 
       #else  /* !(HAVE_CBLAS || HAVE_SSE) */
       size_t i;
-      for (i = 0; i < ntotal_flt; i++)
+      for (i = 0; i < nfloats; i++)
         gf1->fvals[i] = a * gf1->fvals[i] + gf2->fvals[i];
         
       #endif
@@ -699,7 +695,7 @@ gfunc3_axpy (float a, gfunc3 *gf1, gfunc3 const *gf2)
       Try { idcs = gfunc3_subgrid_flatidcs (gf1, gf2); }  CATCH_RETURN_VOID (_e);
 
       #if HAVE_SSE
-      size_t i, l = 0, N4 = ntotal_flt / 4, N4rem = ntotal_flt % 4;
+      size_t i, l = 0, N4 = nfloats / 4, N4rem = nfloats % 4;
       __m128 const *p2 = (__m128 const *) gf2->fvals;
       __m128 ma = _mm_set1_ps (a), v1;
       float *pv1 = (float *) &v1;
@@ -717,12 +713,12 @@ gfunc3_axpy (float a, gfunc3 *gf1, gfunc3 const *gf2)
           gf1->fvals[idcs[l + 3]] = pv1[3];
         }
       
-      for (i = ntotal_flt - N4rem; i < ntotal_flt; i++)
+      for (i = nfloats - N4rem; i < nfloats; i++)
         gf1->fvals[idcs[i]] += a * gf2->fvals[i];
 
       #else  /* !HAVE_SSE */
       size_t i;
-      for (i = 0; i < ntotal_flt; i++)
+      for (i = 0; i < nfloats; i++)
         gf1->fvals[idcs[i]] = a * gf1->fvals[idcs[i]] + gf2->fvals[i];
                   
       #endif
@@ -736,23 +732,22 @@ gfunc3_axpy (float a, gfunc3 *gf1, gfunc3 const *gf2)
 /*-------------------------------------------------------------------------------------------------*/
 
 void
-gfunc3_axpy_vfunc_re (float a, gfunc3 *gf, const vfunc *vf)
+gfunc3_axpy_vfunc_r (float a, gfunc3 *gf, const vfunc *vf)
 {
   int ix, iy, iz;
-  size_t idx;
-  float vfval;
+  float vfval = 0.0, *pfval = gf->fvals;
   vec3 p;
 
   vec3_copy (p, gf->xmin);
-  idx = 0;
   for (iz = 0; iz < gf->shape[2]; iz++)
     {
       for (iy = 0; iy < gf->shape[1]; iy++)
         {
-          for (ix = 0; ix < gf->shape[0]; ix++, idx++)
+          for (ix = 0; ix < gf->shape[0]; ix++, pfval++)
             {
               VFUNC_EVAL (vf, &vfval, p);
-              gf->fvals[idx] = a * gf->fvals[idx] + vfval;
+              *pfval = a * (*pfval) + vfval;
+              
               p[0] += gf->csize[0];
             }
           p[0] = gf->xmin[0];
@@ -768,24 +763,22 @@ gfunc3_axpy_vfunc_re (float a, gfunc3 *gf, const vfunc *vf)
 /*-------------------------------------------------------------------------------------------------*/
 
 void
-gfunc3_axpy_vfunc_hc (float a, gfunc3 *gf, const vfunc *vf)
+gfunc3_axpy_vfunc_c (float a, gfunc3 *gf, const vfunc *vf)
 {
   int ix, iy, iz;
-  size_t idx;
-  cplx vfval;
+  float complex vfval, *pfval = (float complex *) gf->fvals;
   vec3 p;
 
   vec3_copy (p, gf->xmin);
-  idx = 0;
   for (iz = 0; iz < gf->shape[2]; iz++)
     {
       for (iy = 0; iy < gf->shape[1]; iy++)
         {
-          for (ix = 0; ix < gf->shape[0]; ix++, idx += 2)
+          for (ix = 0; ix < gf->shape[0]; ix++, pfval++)
             {
-              VFUNC_EVAL (vf, vfval, p);
-              gf->fvals[idx]     = a * gf->fvals[idx]     + vfval[0];
-              gf->fvals[idx + 1] = a * gf->fvals[idx + 1] + vfval[1];
+              VFUNC_EVAL (vf, (float *) &vfval, p);
+              *pfval = a * (*pfval) + vfval;
+              
               p[0] += gf->csize[0];
             }
           p[0] = gf->xmin[0];
@@ -807,10 +800,10 @@ gfunc3_axpy_vfunc (float a, gfunc3 *gf, const vfunc *vf)
   CAPTURE_NULL_VOID (vf);
   GFUNC_CAPTURE_UNINIT_VOID (gf);
 
-  if (gf->is_halfcomplex)
-    gfunc3_axpy_vfunc_hc (a, gf, vf);
-  else
-    gfunc3_axpy_vfunc_re (a, gf, vf);
+  if (GFUNC_IS_REAL (gf))
+    gfunc3_axpy_vfunc_r (a, gf, vf);
+  else if (GFUNC_IS_COMPLEX (gf))
+    gfunc3_axpy_vfunc_c (a, gf, vf);
     
   return;
 }
@@ -818,7 +811,7 @@ gfunc3_axpy_vfunc (float a, gfunc3 *gf, const vfunc *vf)
 /*-------------------------------------------------------------------------------------------------*/
 
 void
-gfunc3_mul_re (gfunc3 *gf1, gfunc3 const *gf2)
+gfunc3_mul_r (gfunc3 *gf1, gfunc3 const *gf2)
 {
   if (gfunc3_grids_are_equal (gf1, gf2))
     {
@@ -885,19 +878,19 @@ gfunc3_mul_re (gfunc3 *gf1, gfunc3 const *gf2)
 /*-------------------------------------------------------------------------------------------------*/
 
 void
-gfunc3_mul_hc (gfunc3 *gf1, gfunc3 const *gf2)
+gfunc3_mul_c (gfunc3 *gf1, gfunc3 const *gf2)
 {
   if (gfunc3_grids_are_equal (gf1, gf2))
     {
       #if HAVE_SSE
-      size_t i, iarr;
+      size_t i;
       size_t N2 = gf2->ntotal / 2, N2rem = gf2->ntotal % 2;
       __m128 *p1 = (__m128 *) gf1->fvals;
       __m128 const *p2 = (__m128 const *) gf2->fvals;
 
       __m128 prod_eq, prod_across;
       float *p1f, *p2f, *pprod_eq = (float *) &prod_eq, *pprod_across = (float *) &prod_across;
-      float re, im;
+      float complex *pf1val, *pf2val;
       
       for (i = 0; i < N2; i++, p1++, p2++)
         {
@@ -915,25 +908,18 @@ gfunc3_mul_hc (gfunc3 *gf1, gfunc3 const *gf2)
         }
       if (N2rem != 0)
         {
-          iarr = 2 * (gf2->ntotal - N2rem);
-          
-          re = gf1->fvals[iarr] * gf2->fvals[iarr]     - gf1->fvals[iarr + 1] * gf2->fvals[iarr + 1];
-          im = gf1->fvals[iarr] * gf2->fvals[iarr + 1] + gf1->fvals[iarr + 1] * gf2->fvals[iarr];
-          gf1->fvals[iarr]     = re;
-          gf1->fvals[iarr + 1] = im;
+          pf1val = (float complex *) &gf1->fvals[2 * (gf2->ntotal - N2rem)];
+          pf2val = (float complex *) &gf2->fvals[2 * (gf2->ntotal - N2rem)];
+  
+          *pf1val *= *pf2val;
         }
         
       #else  /* !HAVE_SSE */
-      size_t iarr;
-      float re, im;
+      size_t i;
+      float complex *pf1val = (float complex *) gf1->fvals, *pf2val = (float complex *) gf2->fvals;
 
-      for (iarr = 0; iarr < 2 * gf2->ntotal; iarr += 2)
-        {
-          re = gf1->fvals[iarr] * gf2->fvals[iarr]     - gf1->fvals[iarr + 1] * gf2->fvals[iarr + 1];
-          im = gf1->fvals[iarr] * gf2->fvals[iarr + 1] + gf1->fvals[iarr + 1] * gf2->fvals[iarr];
-          gf1->fvals[iarr]     = re;
-          gf1->fvals[iarr + 1] = im;
-        }
+      for (i = 0; i < gf2->ntotal; i++, pf1val++, pf2val++)
+        *pf1val *= *pf2val;
 
       #endif
     }
@@ -945,8 +931,8 @@ gfunc3_mul_hc (gfunc3 *gf1, gfunc3 const *gf2)
       Try { idcs = gfunc3_subgrid_flatidcs (gf1, gf2); }  CATCH_RETURN_VOID (_e);
 
       #if HAVE_SSE
-      size_t i, i2, i2arr, i1, i1next, ntotal_flt = 2 * gf2->ntotal;
-      size_t N4 = ntotal_flt / 4, N4rem = ntotal_flt % 4;
+      size_t i, i2, i2arr, i1, i1next, nfloats = 2 * gf2->ntotal;
+      size_t N4 = nfloats / 4, N4rem = nfloats % 4;
       __m128 const *p2 = (__m128 const *) gf2->fvals;
       __m128 v1, prod_eq, prod_across;
       float *p2f, *pprod_eq = (float *) &prod_eq, *pprod_across = (float *) &prod_across;
@@ -1005,7 +991,7 @@ gfunc3_mul_hc (gfunc3 *gf1, gfunc3 const *gf2)
 /*-------------------------------------------------------------------------------------------------*/
 
 void
-gfunc3_mul_hc_re (gfunc3 *gf1, gfunc3 const *gf2)
+gfunc3_mul_c_r (gfunc3 *gf1, gfunc3 const *gf2)
 {
   if (gfunc3_grids_are_equal (gf1, gf2))
     {
@@ -1113,14 +1099,14 @@ gfunc3_mul (gfunc3 *gf1, gfunc3 const *gf2)
   GFUNC_CAPTURE_UNINIT_VOID (gf2);
 
   Try {
-    if ((gf1->is_halfcomplex) && (gf2->is_halfcomplex))
-      gfunc3_mul_hc (gf1, gf2);
-    else if ((!gf1->is_halfcomplex) && (!gf2->is_halfcomplex))
-      gfunc3_mul_re (gf1, gf2);
-    else if ((gf1->is_halfcomplex) && (!gf2->is_halfcomplex))
-      gfunc3_mul_hc_re (gf1, gf2);
-    else
-      EXC_THROW_CUSTOMIZED_PRINT (EXC_UNIMPL, "Not implemented for half-complex * real.");
+    if ((GFUNC_IS_REAL (gf1)) && (GFUNC_IS_REAL (gf2)))
+      gfunc3_mul_r (gf1, gf2);
+    else if ((GFUNC_IS_COMPLEX (gf1)) && (GFUNC_IS_COMPLEX (gf2)))
+      gfunc3_mul_c (gf1, gf2);
+    else if ((GFUNC_IS_COMPLEX (gf1)) && (GFUNC_IS_REAL (gf2)))
+      gfunc3_mul_c_r (gf1, gf2);
+    else if ((GFUNC_IS_REAL (gf1)) && (GFUNC_IS_COMPLEX (gf2)))
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_UNIMPL, "Not implemented for real x complex.");
   }  CATCH_RETURN_VOID (_e);
   
   return;
@@ -1129,23 +1115,22 @@ gfunc3_mul (gfunc3 *gf1, gfunc3 const *gf2)
 /*-------------------------------------------------------------------------------------------------*/
 
 void
-gfunc3_mul_vfunc_re (gfunc3 *gf, const vfunc *vf)
+gfunc3_mul_vfunc_r (gfunc3 *gf, const vfunc *vf)
 {
   int ix, iy, iz;
-  size_t idx;
-  float vfval;
+  float vfval = 0.0, *pfval = gf->fvals;
   vec3 p;
 
   vec3_copy (p, gf->xmin);
-  idx = 0;
   for (iz = 0; iz < gf->shape[2]; iz++)
     {
       for (iy = 0; iy < gf->shape[1]; iy++)
         {
-          for (ix = 0; ix < gf->shape[0]; ix++, idx++)
+          for (ix = 0; ix < gf->shape[0]; ix++, pfval++)
             {
               VFUNC_EVAL (vf, &vfval, p);
-              gf->fvals[idx] *= vfval;
+              *pfval *= vfval;
+              
               p[0] += gf->csize[0];
             }
           p[0] = gf->xmin[0];
@@ -1161,27 +1146,21 @@ gfunc3_mul_vfunc_re (gfunc3 *gf, const vfunc *vf)
 /*-------------------------------------------------------------------------------------------------*/
 
 void
-gfunc3_mul_vfunc_hc (gfunc3 *gf, const vfunc *vf)
+gfunc3_mul_vfunc_c (gfunc3 *gf, const vfunc *vf)
 {
   int ix, iy, iz;
-  size_t idx;
-  float re, im;
-  cplx vfval;
+  float complex vfval = 0.0, *pfval = (float complex *) gf->fvals;
   vec3 p;
 
   vec3_copy (p, gf->xmin);
-  idx = 0;
   for (iz = 0; iz < gf->shape[2]; iz++)
     {
       for (iy = 0; iy < gf->shape[1]; iy++)
         {
-          for (ix = 0; ix < gf->shape[0]; ix++, idx += 2)
+          for (ix = 0; ix < gf->shape[0]; ix++, pfval++)
             {
-              VFUNC_EVAL (vf, vfval, p);
-              re = gf->fvals[idx] * vfval[0] - gf->fvals[idx + 1] * vfval[1];
-              im = gf->fvals[idx] * vfval[1] + gf->fvals[idx + 1] * vfval[0];
-              gf->fvals[idx]     = re;
-              gf->fvals[idx + 1] = im;
+              VFUNC_EVAL (vf, (float *) &vfval, p);
+              *pfval *= vfval;
               
               p[0] += gf->csize[0];
             }
@@ -1204,10 +1183,10 @@ gfunc3_mul_vfunc (gfunc3 *gf, const vfunc *vf)
   CAPTURE_NULL_VOID (vf);
   GFUNC_CAPTURE_UNINIT_VOID (gf);
 
-  if (gf->is_halfcomplex)
-    gfunc3_mul_vfunc_hc (gf, vf);
-  else
-    gfunc3_mul_vfunc_re (gf, vf);
+  if (GFUNC_IS_REAL (gf))
+    gfunc3_mul_vfunc_r (gf, vf);
+  else if (GFUNC_IS_COMPLEX (gf))
+    gfunc3_mul_vfunc_c (gf, vf);
     
   return;
 }
@@ -1215,7 +1194,7 @@ gfunc3_mul_vfunc (gfunc3 *gf, const vfunc *vf)
 /*-------------------------------------------------------------------------------------------------*/
 
 void
-gfunc3_div_re (gfunc3 *gf1, gfunc3 const *gf2)
+gfunc3_div_r (gfunc3 *gf1, gfunc3 const *gf2)
 {
   if (gfunc3_grids_are_equal (gf1, gf2))
     {
@@ -1289,43 +1268,36 @@ gfunc3_div (gfunc3 *gf1, gfunc3 const *gf2)
   GFUNC_CAPTURE_UNINIT_VOID (gf2);
   
   /* TODO: implement mixed and complex divisions */
-  if (gf1->is_halfcomplex != gf2->is_halfcomplex)
+  if ((GFUNC_IS_REAL (gf1)) && (GFUNC_IS_REAL (gf2)))
+    gfunc3_div_r (gf1, gf2);
+  else if ((GFUNC_IS_COMPLEX (gf1)) || (GFUNC_IS_COMPLEX (gf2)))
     {
-      EXC_THROW_CUSTOMIZED_PRINT (EXC_UNIMPL, "Not implemented for mixed function types.");
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_UNIMPL, "Not implemented mixed or complex types.");
       return;
     }
 
-  if (gf1->is_halfcomplex)
-    {
-      EXC_THROW_CUSTOMIZED_PRINT (EXC_UNIMPL, "Complex version not yet implemented.");
-      return;
-    }
-  else
-    gfunc3_mul_re (gf1, gf2);
-    
   return;
 }
 
 /*-------------------------------------------------------------------------------------------------*/
 
 void
-gfunc3_div_vfunc_re (gfunc3 *gf, const vfunc *vf)
+gfunc3_div_vfunc_r (gfunc3 *gf, const vfunc *vf)
 {
   int ix, iy, iz;
-  size_t idx;
   vec3 p;
-  float vfval;
+  float vfval, *pfval = gf->fvals;
 
   vec3_copy (p, gf->xmin);
-  idx = 0;
   for (iz = 0; iz < gf->shape[2]; iz++)
     {
       for (iy = 0; iy < gf->shape[1]; iy++)
         {
-          for (ix = 0; ix < gf->shape[0]; ix++, idx++)
+          for (ix = 0; ix < gf->shape[0]; ix++, pfval++)
             {
               VFUNC_EVAL (vf, &vfval, p);
-              gf->fvals[idx] /= vfval;
+              *pfval /= vfval;
+              
               p[0] += gf->csize[0];
             }
           p[0] = gf->xmin[0];
@@ -1347,32 +1319,26 @@ gfunc3_div_vfunc (gfunc3 *gf, const vfunc *vf)
   CAPTURE_NULL_VOID (vf);
   GFUNC_CAPTURE_UNINIT_VOID (gf);
 
-  /* TODO: implement half-complex version */
-  if (gf->is_halfcomplex)
+  /* TODO: implement complex version */
+  if (GFUNC_IS_REAL (gf))
+   gfunc3_div_vfunc_r (gf, vf);
+  else if (GFUNC_IS_COMPLEX (gf))
     {
-      EXC_THROW_CUSTOMIZED_PRINT (EXC_UNIMPL, "Complex version not yet implemented.");
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_UNIMPL, "Complex version not implemented.");
       return;
     }
-  else
-    gfunc3_div_vfunc_re (gf, vf);
 
   return;
 }
 
 /*-------------------------------------------------------------------------------------------------*/
 
+/* TODO: implement version with complex A; This may change gf->type. */
 void
 gfunc3_scale (gfunc3 *gf, float a)
 {
   CAPTURE_NULL_VOID (gf);
   GFUNC_CAPTURE_UNINIT_VOID (gf);
-  
-  /* TODO: implement complex version; this changes the data type of A to float*. */
-  if (gf->is_halfcomplex)
-    {
-      EXC_THROW_CUSTOMIZED_PRINT (EXC_UNIMPL, "Complex version not yet implemented.");
-      return;
-    }
   
   #if HAVE_CBLAS
   cblas_sscal (gf->ntotal, a, gf->fvals, 1);
@@ -1407,8 +1373,8 @@ gfunc3_add_constant (gfunc3 *gf, float c)
   CAPTURE_NULL_VOID (gf);
   GFUNC_CAPTURE_UNINIT_VOID (gf);
 
-  /* TODO: implement complex version; this changes the data type of A to float*. */
-  if (gf->is_halfcomplex)
+  /* TODO: implement complex version */
+  if (GFUNC_IS_COMPLEX (gf))
     {
       EXC_THROW_CUSTOMIZED_PRINT (EXC_UNIMPL, "Complex version not yet implemented.");
       return;
@@ -1513,7 +1479,7 @@ gfunc3_dilate (gfunc3 *gf, float a)
 /*-------------------------------------------------------------------------------------------------*/
 
 void
-gfunc3_set (gfunc3 *gf, idx3 const idx, float const *pval)
+gfunc3_set (gfunc3 *gf, idx3 const idx, float complex val)
 {
   size_t fi;
 
@@ -1529,14 +1495,14 @@ gfunc3_set (gfunc3 *gf, idx3 const idx, float const *pval)
   
   fi = idx3_flat (idx, gf->shape);
 
-  if (gf->is_halfcomplex)
+  if (GFUNC_IS_REAL (gf))
+    gf->fvals[fi] = crealf (val);
+  else if (GFUNC_IS_COMPLEX (gf))
     {
       fi *= 2;
-      gf->fvals[fi]     = pval[0];
-      gf->fvals[fi + 1] = pval[1];
+      gf->fvals[fi]     = crealf (val);
+      gf->fvals[fi + 1] = cimagf (val);
     }
-  else
-    gf->fvals[fi] = *pval;
 
   return;
 }
@@ -1544,24 +1510,24 @@ gfunc3_set (gfunc3 *gf, idx3 const idx, float const *pval)
 /*-------------------------------------------------------------------------------------------------*/
 
 void
-gfunc3_set_all_re (gfunc3 *gf, float const *pval)
+gfunc3_set_all_r (gfunc3 *gf, float val)
 {
   size_t i;
 
   #if HAVE_SSE
   size_t N4 = gf->ntotal / 4, N4rem = gf->ntotal % 4;
   __m128 *p = (__m128 *) gf->fvals;
-  __m128 mval = _mm_set1_ps (*pval);
+  __m128 mval = _mm_set1_ps (val);
   
   for (i = 0; i < N4; i++, p++)
     *p = mval;
 
   for (i = gf->ntotal - N4rem; i < gf->ntotal; i++)
-    gf->fvals[i] = *pval;
+    gf->fvals[i] = val;
 
   #else  /* !HAVE_SSE */
   for (i = 0; i < gf->ntotal; i++)
-    gf->fvals[i] = *pval;
+    gf->fvals[i] = val;
 
   #endif
   return;
@@ -1570,31 +1536,28 @@ gfunc3_set_all_re (gfunc3 *gf, float const *pval)
 /*-------------------------------------------------------------------------------------------------*/
 
 void
-gfunc3_set_all_hc (gfunc3 *gf, float const *pval)
+gfunc3_set_all_c (gfunc3 *gf, float complex val)
 {
-  size_t i, ntotal_flt = 2 * gf->ntotal;
+  size_t i, nfloats = 2 * gf->ntotal;
+  float complex *pfval = (float complex *) gf->fvals;
 
   #if HAVE_SSE
-  size_t N4 = ntotal_flt / 4, N4rem = ntotal_flt % 4;
+  size_t N4 = nfloats / 4, N4rem = nfloats % 4;
   __m128 *p = (__m128 *) gf->fvals;
-  __m128 mval = _mm_set_ps (pval[1], pval[0], pval[1], pval[0]);
+  __m128 mval = _mm_set_ps (cimagf (val), crealf (val), cimagf (val), crealf (val));
   
   for (i = 0; i < N4; i++, p++)
     *p = mval;
 
   if (N4rem != 0)
     {
-      i = ntotal_flt - N4rem;
-      gf->fvals[i]     = pval[0];
-      gf->fvals[i + 1] = pval[1];
+      pfval = (float complex *) &gf->fvals [nfloats - N4rem];
+      *pfval = val;
     }
     
   #else  /* !HAVE_SSE */
-  for (i = 0; i < ntotal_flt; i += 2)
-    {
-      gf->fvals[i]     = pval[0];
-      gf->fvals[i + 1] = pval[1];
-    }
+  for (i = 0; i < gf->ntotal; i++, pfval++)
+    *pfval = val;
 
   #endif
   return;
@@ -1603,16 +1566,19 @@ gfunc3_set_all_hc (gfunc3 *gf, float const *pval)
 /*-------------------------------------------------------------------------------------------------*/
 
 void
-gfunc3_set_all (gfunc3 *gf, float const *pval)
+gfunc3_set_all (gfunc3 *gf, float complex val)
 {
   CAPTURE_NULL_VOID (gf);
-  CAPTURE_NULL_VOID (pval);
   GFUNC_CAPTURE_UNINIT_VOID (gf);
   
-  if (gf->is_halfcomplex)
-    gfunc3_set_all_hc (gf, pval);
-  else
-    gfunc3_set_all_re (gf, pval);
+  if (GFUNC_IS_REAL (gf))
+    {
+      if (cimagf (val) != 0.0)
+        EXC_THROW_CUSTOMIZED_PRINT (EXC_BADARG, "Imaginary part is ignored.");
+      gfunc3_set_all_r (gf, crealf (val));
+    }
+  else if (GFUNC_IS_COMPLEX (gf))
+    gfunc3_set_all_c (gf, val);
     
   return;
 }
@@ -1626,7 +1592,7 @@ gfunc3_make_nonneg (gfunc3 *gf)
   CAPTURE_NULL_VOID (gf);
   GFUNC_CAPTURE_UNINIT_VOID (gf);
   
-  if (gf->is_halfcomplex)
+  if (GFUNC_IS_COMPLEX (gf))
     {
       EXC_THROW_CUSTOMIZED_PRINT (EXC_GFTYPE, "Cannot compare complex values against zero.");
       return;
@@ -1665,8 +1631,8 @@ gfunc3_eval (gfunc3 *gf, idx3 const idx)
   CAPTURE_NULL (idx, FLT_MAX);
   GFUNC_CAPTURE_UNINIT (gf, FLT_MAX);
 
-  /* TODO: implement half-complex version */
-  if (gf->is_halfcomplex)
+  /* TODO: implement complex version */
+  if (GFUNC_IS_COMPLEX (gf))
     {
       EXC_THROW_CUSTOMIZED_PRINT (EXC_UNIMPL, "Complex version not yet implemented.");
       return FLT_MAX;
@@ -1695,10 +1661,10 @@ gfunc3_interp_nearest (gfunc3 const *gf, vec3 const pt)
   CAPTURE_NULL (pt, FLT_MAX);
   GFUNC_CAPTURE_UNINIT (gf, FLT_MAX);
 
-  /* TODO: implement half-complex version */
-  if (gf->is_halfcomplex)
+  /* TODO: implement complex version */
+  if (GFUNC_IS_COMPLEX (gf))
     {
-      EXC_THROW_CUSTOMIZED_PRINT (EXC_UNIMPL, "Complex version not yet implemented.");
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_UNIMPL, "Complex version not implemented.");
       return FLT_MAX;
     }
 
@@ -1715,7 +1681,7 @@ gfunc3_interp_nearest (gfunc3 const *gf, vec3 const pt)
   #if HAVE_SSE41
   mx = _mm_round_ps (mx, _MM_FROUND_TO_NEAREST_INT);
 
-  #else
+  #else  /* !HAVE_SSE41 */
   __m128 m05 = _mm_set1_ps (0.5);  /* use floor (x + 0.5) */
   mx = _mm_add_ps (mx, m05);
   idxf[0] = floorf (idxf[0]);
@@ -1756,10 +1722,10 @@ gfunc3_interp_nearest_2d (gfunc3 const *gf, vec3 const pt)
   CAPTURE_NULL (pt, FLT_MAX);
   GFUNC_CAPTURE_UNINIT (gf, FLT_MAX);
 
-  /* TODO: implement half-complex version */
-  if (gf->is_halfcomplex)
+  /* TODO: implement complex version */
+  if (GFUNC_IS_COMPLEX (gf))
     {
-      EXC_THROW_CUSTOMIZED_PRINT (EXC_UNIMPL, "Complex version not yet implemented.");
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_UNIMPL, "Complex version not implemented.");
       return FLT_MAX;
     }
 
@@ -1829,10 +1795,10 @@ gfunc3_interp_linear (gfunc3 const *gf, vec3 const pt)
   CAPTURE_NULL (pt, FLT_MAX);
   GFUNC_CAPTURE_UNINIT (gf, FLT_MAX);
 
-  /* TODO: implement half-complex version */
-  if (gf->is_halfcomplex)
+  /* TODO: implement complex version */
+  if (GFUNC_IS_COMPLEX (gf))
     {
-      EXC_THROW_CUSTOMIZED_PRINT (EXC_UNIMPL, "Complex version not yet implemented.");
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_UNIMPL, "Complex version not implemented.");
       return FLT_MAX;
     }
 
@@ -1926,10 +1892,10 @@ gfunc3_interp_linear_2d (gfunc3 const *gf, vec3 const pt)
   CAPTURE_NULL (pt, FLT_MAX);
   GFUNC_CAPTURE_UNINIT (gf, FLT_MAX);
 
-  /* TODO: implement half-complex version */
-  if (gf->is_halfcomplex)
+  /* TODO: implement complex version */
+  if (GFUNC_IS_COMPLEX (gf))
     {
-      EXC_THROW_CUSTOMIZED_PRINT (EXC_UNIMPL, "Complex version not yet implemented.");
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_UNIMPL, "Complex version not implemented.");
       return FLT_MAX;
     }
 
@@ -2097,7 +2063,6 @@ gfunc3_grid_points (gfunc3 const *gf, grid_type gridtype)
   CAPTURE_NULL (gf, NULL);
   
   Try { 
-    /* 1 element extra to be safe with vec3_copy at the last point */
     points = (float *) ali16_malloc ((gf->ntotal * 3) * sizeof (float)); 
   } CATCH_RETURN (_e, NULL);
   
@@ -2175,10 +2140,10 @@ gfunc3_zeropad (gfunc3 *gf, idx3 const padding)
   CAPTURE_NULL_VOID (padding);
   GFUNC_CAPTURE_UNINIT_VOID (gf);
 
-  /* TODO: implement half-complex version */
-  if (gf->is_halfcomplex)
+  /* TODO: implement complex version */
+  if (GFUNC_IS_COMPLEX (gf))
     {
-      EXC_THROW_CUSTOMIZED_PRINT (EXC_UNIMPL, "Complex version not yet implemented.");
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_UNIMPL, "Complex version not implemented.");
       return;
     }
 
@@ -2206,7 +2171,7 @@ gfunc3_zeropad (gfunc3 *gf, idx3 const padding)
     
   Try { gf->fvals = (float *) ali16_malloc (gf->ntotal * sizeof (float)); }  CATCH_RETURN_VOID (_e);
   
-  gfunc3_set_all (gf, c_zero);
+  gfunc3_set_all (gf, 0.0);
   for (idx = 0; idx < ntotal_old; idx++)
     gf->fvals[idcs[idx]] = fvals_old[idx];
     
@@ -2232,10 +2197,10 @@ gfunc3_unpad (gfunc3 *gf, idx3 const padding)
   CAPTURE_NULL_VOID (padding);
   GFUNC_CAPTURE_UNINIT_VOID (gf);
 
-  /* TODO: implement half-complex version */
-  if (gf->is_halfcomplex)
+  /* TODO: implement complex version */
+  if (GFUNC_IS_COMPLEX (gf))
     {
-      EXC_THROW_CUSTOMIZED_PRINT (EXC_UNIMPL, "Complex version not yet implemented.");
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_UNIMPL, "Complex version not implemented.");
       return;
     }
 
