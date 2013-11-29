@@ -1,5 +1,5 @@
 # Preliminaries
-AC_INIT([ETreco], [20131122], [kohr(at)num.uni-sb.de], [], [https://github.com/kohr-h/ETreco])
+AC_INIT([ETreco], [20131129], [kohr(at)num.uni-sb.de], [], [https://github.com/kohr-h/ETreco])
 AC_CONFIG_SRCDIR([src/ai_single_axis.c])
 AC_CONFIG_AUX_DIR([build-aux])
 AM_INIT_AUTOMAKE([-Wall -Werror])
@@ -9,6 +9,12 @@ AC_DEFINE([AUTHORS], ["Holger Kohr"], [The authors of this software.])
 
 # Checks for programs
 AC_PROG_CC
+
+# Check if compiler can be put into C99 mode; abort if not
+AC_PROG_CC_C99
+if test "x$ac_cv_prog_cc_c99" = xno ; then
+  AC_MSG_ERROR([C99 mode not supported by Compiler.])
+fi
 
 # Gnulib macro (should come right after AC_PROG_CC)
 gl_EARLY
@@ -280,12 +286,13 @@ AC_ARG_ENABLE(
 AC_FUNC_MALLOC
 AC_FUNC_ERROR_AT_LINE
 AC_CHECK_FUNC([powf], [], AC_CHECK_LIB([m], [powf]))
+AC_CHECK_FUNC([sqrt], [], AC_CHECK_LIB([m], [sqrt]))
 AC_CHECK_FUNC([sqrtf], [], AC_CHECK_LIB([m], [sqrtf]))
 AC_CHECK_FUNCS([strchr strrchr strtol strdup memset mkdir])
 
 
 # Checks for headers
-AC_CHECK_HEADERS([stdlib.h string.h error.h float.h stddef.h limits.h])
+AC_CHECK_HEADERS([stdlib.h string.h error.h float.h stddef.h limits.h complex.h])
 
 # BLAS related checks
 AC_SEARCH_LIBS([cblas_scopy], \
