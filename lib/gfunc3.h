@@ -247,7 +247,7 @@ gfunc3_variance (gfunc3 const *gf, float const *pmean);
 
 
 /*-------------------------------------------------------------------------------------------------*
- * Comparisons
+ * Comparison
  *-------------------------------------------------------------------------------------------------*/
 
 
@@ -286,6 +286,48 @@ gfunc3_grid_is_subgrid (gfunc3 const *gf, gfunc3 const *gf_sub);
  */
 void
 gfunc3_copy (gfunc3 *dest, gfunc3 const *src);
+
+
+/* Store the real part of the COMPLEX type GF in RE and return RE. If RE is NULL, a new gfunc3 is 
+ * initialized with the real part values and returned. 
+ * 
+ * Thrown exceptions: 
+ * - EXC_NULL
+ * - EXC_GFINIT
+ * - EXC_GFTYPE
+ * - EXC_SUBGRID
+ * - Rethrows
+ */
+gfunc3 *
+gfunc3_realpart (gfunc3 const *gf, gfunc3 *re);
+
+
+/* Store the imaginary part of the COMPLEX type GF in IM and return IM. If IM is NULL, a new gfunc3 
+ * is initialized with the imaginary part values and returned.
+ * 
+ * Thrown exceptions: 
+ * - EXC_NULL
+ * - EXC_GFINIT
+ * - EXC_GFTYPE
+ * - EXC_SUBGRID
+ * - Rethrows
+ */
+gfunc3 *
+gfunc3_imagpart (gfunc3 const *gf, gfunc3 *im);
+
+
+/* Transfer the REAL type function GF to a COMPLEX function by allocating sufficient space and 
+ * use the old values as the real part of the new values.
+ */
+void
+gfunc3_real2complex (gfunc3 *gf);
+
+
+/* Transfer the REAL type function GF to a COMPLEX function by allocating sufficient space and 
+ * use the old values as the imaginary part of the new values.
+ */
+void
+gfunc3_imag2complex (gfunc3 *gf);
 
 
 /* Set GF1 <- A * GF1 + GF2.  GF2 may be defined on a subgrid of GF1's grid.

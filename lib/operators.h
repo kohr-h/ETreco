@@ -29,6 +29,8 @@
 #include <config.h>
 #endif
 
+#include <complex.h>
+
 #include "gfunc3.h"
 
 #include "et_params.h"
@@ -49,14 +51,16 @@ ewald_sphere_freqs (gfunc3 const *ft_proj_img_grid, vec3 const normal_angles_deg
 
 
 void
-et_scattering_projection (gfunc3 const *scatterer_re, gfunc3 const *scatterer_im, 
-                          vec3 const angles_deg, RecParams const *rec_p, 
-                          gfunc3 *proj_img_re, gfunc3 *proj_img_im, scattering_model sct_model);
+et_scattering_projection (gfunc3 const *scatterer, vec3 const angles_deg, RecParams const *rec_p, 
+                          gfunc3 *proj_img, scattering_model sct_model);
 
 
 /*-------------------------------------------------------------------------------------------------
- * Back-projection operators
+ * X-ray transform operators
  *-------------------------------------------------------------------------------------------------*/
+
+void
+xray_projection (gfunc3 const *volume, vec3 const angles_deg, gfunc3 *proj_img);
 
 void
 xray_backprojection (gfunc3 const *proj_img, vec3 const angles_deg, gfunc3 *volume);

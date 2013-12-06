@@ -190,7 +190,7 @@ main (int argc, char *argv[])
       if ((i == opt_data->start_index) || kernel_varies_with_tilt )
         {
           Try { gfunc3_init_from_foreign_grid (rk, proj_image); }  CATCH_EXIT_FAIL (_e);
-          gfunc3_set_all (rk, c_zero);
+          gfunc3_set_all (rk, 0.0);
 
           Try { vfunc_init_ft_rk_single_axis (&vf_rk, rec_p); }  CATCH_EXIT_FAIL (_e);
           Try { gfunc3_assign_fvals_from_vfunc (rk, &vf_rk); }  CATCH_EXIT_FAIL (_e);
@@ -214,7 +214,7 @@ main (int argc, char *argv[])
           Try { gfunc3_init_from_foreign_grid (recip_mtf, proj_image); }  CATCH_EXIT_FAIL (_e);
           gfunc3_set_csize (recip_mtf, ones);
           gfunc3_compute_xmin_xmax (recip_mtf);
-          gfunc3_set_all (recip_mtf, c_zero);
+          gfunc3_set_all (recip_mtf, 0.0);
 
           Try { vfunc_init_detector_recip_mtf (&vf_recip_mtf, rec_p); }  CATCH_EXIT_FAIL (_e);
           Try { gfunc3_assign_fvals_from_vfunc (recip_mtf, &vf_recip_mtf); }  CATCH_EXIT_FAIL (_e);

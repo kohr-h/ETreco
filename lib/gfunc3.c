@@ -61,7 +61,6 @@ new_gfunc3 (void)
   gf->is_initialized = FALSE;
   gf->type           = REAL;
   gf->fvals          = NULL;
-    
   return gf;
 }
 
@@ -83,7 +82,6 @@ gfunc3_free (gfunc3 **pgf)
   (*pgf)->type           = REAL;
 
   free (*pgf);
-
   return;
 }
 
@@ -186,7 +184,6 @@ gfunc3_set_csize (gfunc3 *gf, vec3 const cs)
 
   vec3_copy (gf->csize, cs);
   gfunc3_compute_xmin_xmax (gf);
-  
   return;
 }
 
@@ -200,7 +197,6 @@ gfunc3_set_x0 (gfunc3 *gf, vec3 const x0)
 
   vec3_copy (gf->x0, x0);
   gfunc3_compute_xmin_xmax (gf);
-  
   return;
 }
 
@@ -236,7 +232,6 @@ gfunc3_compute_xmin_xmax (gfunc3 *gf)
       gf->xmax[2]  = 0.0;
       gf->csize[2] = 1.0;
     }
-
   return;
 }
 
@@ -276,7 +271,6 @@ gfunc3_assign_fvals_from_vfunc (gfunc3 *gf, const vfunc *vf)
       p[1]  = gf->xmin[1];
       p[2] += gf->csize[2];
     }
-
   return;
 }
 
@@ -573,7 +567,6 @@ gfunc3_grid_is_subgrid (gfunc3 const *gf, gfunc3 const *gf_sub)
       if (fabsf (tmp - roundf (tmp)) > EPS_GRID)
         return FALSE;
     }
-
   return TRUE;
 }
 
@@ -610,6 +603,7 @@ gfunc3_copy (gfunc3 *dest, gfunc3 const *src)
   Try { dest->fvals = (float *) ali16_malloc (nfloats * sizeof (float)); }  CATCH_RETURN_VOID (_e);
   
   dest->is_initialized = TRUE;
+  dest->type = src->type;
 
   #if HAVE_CBLAS
   cblas_scopy (nfloats, src->fvals, 1, dest->fvals, 1);
@@ -632,6 +626,205 @@ gfunc3_copy (gfunc3 *dest, gfunc3 const *src)
 
   #endif
   return;
+}
+
+/*-------------------------------------------------------------------------------------------------*/
+
+gfunc3 *
+gfunc3_realpart (gfunc3 const *gf, gfunc3 *re)
+{
+  CEXCEPTION_T  _e = EXC_NONE;
+  size_t j;
+  float *pre_val;
+  float complex *pfval;
+  gfunc3 *re_out = NULL;
+  
+  CAPTURE_NULL (gf, NULL);
+  GFUNC_CAPTURE_UNINIT (gf, NULL);
+  
+  if (re != NULL)
+    {
+      GFUNC_CAPTURE_UNINIT (re, NULL);
+      if (!gfunc3_grids_are_equal (gf, re))
+        {
+          EXC_THROW_CUSTOMIZED_PRINT (EXC_SUBGRID, "Grids of both arguments must be equal.");
+          return NULL; 
+        }
+      if (GFUNC_IS_COMPLEX (re))
+        {
+          EXC_THROW_CUSTOMIZED_PRINT (EXC_GFTYPE, "Real part function must be of REAL type.");
+          return NULL; 
+        }
+      re_out = re;
+    }
+  else
+    {
+      Try { re_out = new_gfunc3 (); }  CATCH_RETURN (_e, NULL);
+      Try { gfunc3_init (re_out, gf->x0, gf->csize, gf->shape, REAL); }  CATCH_RETURN (_e, NULL);
+    }
+    
+  if (GFUNC_IS_REAL (gf))
+    {
+      Try { gfunc3_copy (re_out, gf); }  CATCH_RETURN (_e, NULL);
+    }
+  else
+    {
+      pfval = (float complex *) gf->fvals;
+      pre_val = re_out->fvals;
+      for (j = 0; j < gf->ntotal; j++)
+        *(pre_val++) = crealf (*(pfval++));
+    }
+  return re_out;
+}
+
+/*-------------------------------------------------------------------------------------------------*/
+
+gfunc3 *
+gfunc3_imagpart (gfunc3 const *gf, gfunc3 *im)
+{
+  CEXCEPTION_T  _e = EXC_NONE;
+  size_t j;
+  float *pim_val;
+  float complex *pfval;
+  gfunc3 *im_out = NULL;
+  
+  CAPTURE_NULL (gf, NULL);
+  GFUNC_CAPTURE_UNINIT (gf, NULL);
+  
+  if (im != NULL)
+    {
+      GFUNC_CAPTURE_UNINIT (im, NULL);
+      if (!gfunc3_grids_are_equal (gf, im))
+        {
+          EXC_THROW_CUSTOMIZED_PRINT (EXC_SUBGRID, "Grids of both arguments must be equal.");
+          return NULL; 
+        }
+      if (GFUNC_IS_COMPLEX (im))
+        {
+          EXC_THROW_CUSTOMIZED_PRINT (EXC_GFTYPE, "Imaginary part function must be of REAL type.");
+          return NULL; 
+        }
+      im_out = im;
+    }
+  else
+    {
+      Try { im_out = new_gfunc3 (); }  CATCH_RETURN (_e, NULL);
+      Try { gfunc3_init (im_out, gf->x0, gf->csize, gf->shape, REAL); }  CATCH_RETURN (_e, NULL);
+    }
+    
+  if (GFUNC_IS_REAL (gf))
+    {
+      Try { gfunc3_set_all (im_out, 0.0); }  CATCH_RETURN (_e, NULL);
+    }
+  else
+    {
+      pfval = (float complex *) gf->fvals;
+      pim_val = im_out->fvals;
+      for (j = 0; j < gf->ntotal; j++)
+        *(pim_val++) = cimagf (*(pfval++));
+    }
+  return im_out;
+}
+
+/*-------------------------------------------------------------------------------------------------*/
+
+void
+gfunc3_real2complex (gfunc3 *gf)
+{
+  CEXCEPTION_T _e = EXC_NONE;
+  
+  size_t j;
+  float *pfold_val, *fvals_old;
+  float complex *pfval;
+  
+  CAPTURE_NULL_VOID (gf);
+  GFUNC_CAPTURE_UNINIT_VOID (gf);
+  
+  if (!GFUNC_IS_REAL (gf))
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_GFTYPE, "Grid function must be of REAL type.");
+      return;
+    }
+  
+  fvals_old = gf->fvals;
+  Try { 
+    gf->fvals = (float *) ali16_malloc (2 * gf->ntotal * sizeof (float)); 
+  } CATCH_RETURN_VOID (_e);
+  
+  pfold_val = fvals_old;
+  pfval = (float complex *) gf->fvals;
+  for (j = 0; j < gf->ntotal; j++)
+    *(pfval++) = *(pfold_val++) + 0.0 * I;
+  
+  gf->type = COMPLEX;
+  free (fvals_old);
+  return;
+}
+
+/*-------------------------------------------------------------------------------------------------*/
+
+void
+gfunc3_imag2complex (gfunc3 *gf)
+{
+  CEXCEPTION_T _e = EXC_NONE;
+  
+  size_t j;
+  float *pfold_val, *fvals_old;
+  float complex *pfval;
+  
+  CAPTURE_NULL_VOID (gf);
+  GFUNC_CAPTURE_UNINIT_VOID (gf);
+  
+  if (!GFUNC_IS_REAL (gf))
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_GFTYPE, "Grid function must be of REAL type.");
+      return;
+    }
+  
+  fvals_old = gf->fvals;
+  Try { 
+    gf->fvals = (float *) ali16_malloc (2 * gf->ntotal * sizeof (float)); 
+  } CATCH_RETURN_VOID (_e);
+  
+  pfold_val = fvals_old;
+  pfval = (float complex *) gf->fvals;
+  for (j = 0; j < gf->ntotal; j++)
+    *(pfval++) = 0.0 + *(pfold_val++) * I;
+  
+  gf->type = COMPLEX;
+  free (fvals_old);
+  return;
+}
+
+/*-------------------------------------------------------------------------------------------------*/
+
+void 
+gfunc3_swapxz (gfunc3 *gf)
+{
+  int ix, iy, iz;
+  size_t idx, incx;
+  
+  CAPTURE_NULL_VOID (gf);
+  GFUNC_CAPTURE_UNINIT_VOID (gf);
+  
+  if (GFUNC_IS_2D (gf))
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_GFDIM, "Grid function must be 3D.");
+      return;
+    }
+    
+  idx = 0;
+  incx = gf->shape[1] * gf->shape[2];
+  for (iz = 0; iz < gf->shape[2]; iz++)
+    {
+      for (iy = 0; iy < gf->shape[1]; iy++)
+        {
+          idx = iy * gf->shape[2] + iz;
+          for (ix = 0; ix < gf->shape[0]; ix++, idx += incx)
+            *(pfhat_val++) = (double complex) pfval[idx];
+        }
+    }
+  /* TODO: continue here */
 }
 
 /*-------------------------------------------------------------------------------------------------*/
@@ -918,8 +1111,8 @@ gfunc3_mul_c (gfunc3 *gf1, gfunc3 const *gf2)
       size_t i;
       float complex *pf1val = (float complex *) gf1->fvals, *pf2val = (float complex *) gf2->fvals;
 
-      for (i = 0; i < gf2->ntotal; i++, pf1val++, pf2val++)
-        *pf1val *= *pf2val;
+      for (i = 0; i < gf2->ntotal; i++)
+        *(pf1val++) *= *(pf2val++);
 
       #endif
     }
@@ -1126,10 +1319,10 @@ gfunc3_mul_vfunc_r (gfunc3 *gf, const vfunc *vf)
     {
       for (iy = 0; iy < gf->shape[1]; iy++)
         {
-          for (ix = 0; ix < gf->shape[0]; ix++, pfval++)
+          for (ix = 0; ix < gf->shape[0]; ix++)
             {
               VFUNC_EVAL (vf, &vfval, p);
-              *pfval *= vfval;
+              *(pfval++) *= vfval;
               
               p[0] += gf->csize[0];
             }
@@ -1157,10 +1350,10 @@ gfunc3_mul_vfunc_c (gfunc3 *gf, const vfunc *vf)
     {
       for (iy = 0; iy < gf->shape[1]; iy++)
         {
-          for (ix = 0; ix < gf->shape[0]; ix++, pfval++)
+          for (ix = 0; ix < gf->shape[0]; ix++)
             {
               VFUNC_EVAL (vf, (float *) &vfval, p);
-              *pfval *= vfval;
+              *(pfval++) *= vfval;
               
               p[0] += gf->csize[0];
             }
@@ -1293,10 +1486,10 @@ gfunc3_div_vfunc_r (gfunc3 *gf, const vfunc *vf)
     {
       for (iy = 0; iy < gf->shape[1]; iy++)
         {
-          for (ix = 0; ix < gf->shape[0]; ix++, pfval++)
+          for (ix = 0; ix < gf->shape[0]; ix++)
             {
               VFUNC_EVAL (vf, &vfval, p);
-              *pfval /= vfval;
+              *(pfval++) /= vfval;
               
               p[0] += gf->csize[0];
             }
@@ -1337,26 +1530,33 @@ gfunc3_div_vfunc (gfunc3 *gf, const vfunc *vf)
 void
 gfunc3_scale (gfunc3 *gf, float a)
 {
+  size_t ntotal_flt = 0;
+  
   CAPTURE_NULL_VOID (gf);
   GFUNC_CAPTURE_UNINIT_VOID (gf);
   
+  if (GFUNC_IS_REAL (gf))
+    ntotal_flt = gf->ntotal;
+  else if (GFUNC_IS_COMPLEX (gf))
+    ntotal_flt = 2 * gf->ntotal;
+  
   #if HAVE_CBLAS
-  cblas_sscal (gf->ntotal, a, gf->fvals, 1);
+  cblas_sscal (ntotal_flt, a, gf->fvals, 1);
   
   #elif HAVE_SSE
-  size_t i, N4 = gf->ntotal / 4, N4rem = gf->ntotal % 4;
+  size_t i, N4 = ntotal_flt / 4, N4rem = ntotal_flt % 4;
   __m128 *p = (__m128 *) gf->fvals;
   __m128 ma = _mm_set1_ps (a);
   
   for (i = 0; i < N4; i++, p++)
     *p = _mm_mul_ps (*p, ma);
 
-  for (i = gf->ntotal - N4rem; i < gf->ntotal; i++)
+  for (i = ntotal_flt - N4rem; i < ntotal_flt; i++)
     gf->fvals[i] *= a;
 
   #else  /* !(HAVE_CBLAS || HAVE_SSE) */
   size_t i;
-  for (i = 0; i < gf->ntotal; i++)
+  for (i = 0; i < ntotal_flt; i++)
     gf->fvals[i] *= a;
 
   #endif  
@@ -1556,8 +1756,8 @@ gfunc3_set_all_c (gfunc3 *gf, float complex val)
     }
     
   #else  /* !HAVE_SSE */
-  for (i = 0; i < gf->ntotal; i++, pfval++)
-    *pfval = val;
+  for (i = 0; i < gf->ntotal; i++)
+    *(pfval++) = val;
 
   #endif
   return;
@@ -2133,7 +2333,8 @@ gfunc3_zeropad (gfunc3 *gf, idx3 const padding)
   int i;
   size_t idx, ntotal_old, *idcs = NULL;
 
-  float *fvals_old;
+  float *fvals_old, *pfval_old;
+  float complex *pfval_c, *pfval_old_c;
   gfunc3 *gf_tmp;
   
   CAPTURE_NULL_VOID (gf);
@@ -2141,9 +2342,9 @@ gfunc3_zeropad (gfunc3 *gf, idx3 const padding)
   GFUNC_CAPTURE_UNINIT_VOID (gf);
 
   /* TODO: implement complex version */
-  if (GFUNC_IS_COMPLEX (gf))
+  if (gf->type == HALFCOMPLEX)
     {
-      EXC_THROW_CUSTOMIZED_PRINT (EXC_UNIMPL, "Complex version not implemented.");
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_GFTYPE, "Not applicable to HALFCOMPLEX type.");
       return;
     }
 
@@ -2169,12 +2370,31 @@ gfunc3_zeropad (gfunc3 *gf, idx3 const padding)
 
   fvals_old = gf->fvals;
     
-  Try { gf->fvals = (float *) ali16_malloc (gf->ntotal * sizeof (float)); }  CATCH_RETURN_VOID (_e);
+  if (gf->type == REAL)
+    {
+      Try { gf->fvals = (float *) ali16_malloc (gf->ntotal * sizeof (float)); 
+      } CATCH_RETURN_VOID (_e);
   
-  gfunc3_set_all (gf, 0.0);
-  for (idx = 0; idx < ntotal_old; idx++)
-    gf->fvals[idcs[idx]] = fvals_old[idx];
-    
+      gfunc3_set_all (gf, 0.0);
+      pfval_old = fvals_old;
+      for (idx = 0; idx < ntotal_old; idx++, pfval_old++)
+        gf->fvals[idcs[idx]] = *pfval_old;
+    }
+  else if (gf->type == COMPLEX)
+    {
+      Try { gf->fvals = (float *) ali16_malloc (2 * gf->ntotal * sizeof (float)); 
+      } CATCH_RETURN_VOID (_e);
+  
+      gfunc3_set_all (gf, 0.0);
+      
+      pfval_old_c = (float complex *) fvals_old;
+      for (idx = 0; idx < ntotal_old; idx++, pfval_old_c++)
+        {
+          pfval_c = (float complex *) &gf->fvals[2 * idcs[idx]];
+          *pfval_c = *pfval_old_c;
+        }
+    }
+
   free (idcs);
   free (fvals_old);
   return;

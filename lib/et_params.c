@@ -35,7 +35,7 @@
 #include "dictionary.h"
 #include "iniparser.h"
 
-#include "matvec3.h"
+#include "vec3.h"
 #include "misc.h"
 
 #include "gfunc3.h"

@@ -40,7 +40,7 @@ libutil_a_SOURCES = $(lib_srcdir)/vec3.c		$(lib_srcdir)/vec3.h \
 										$(lib_srcdir)/simd.h										
 
 libgfunc3_a_SOURCES = $(lib_srcdir)/gfunc3.c  		$(lib_srcdir)/gfunc3.h \
-											$(lib_srcdir)/fft.c  				$(lib_srcdir)/fft.h \
+											$(lib_srcdir)/fft.c  				$(lib_srcdir)/fft.h     $(lib_srcdir)/fft_private.h\ 
 											$(lib_srcdir)/mrc.c  				$(lib_srcdir)/mrc.h \
 											$(lib_srcdir)/operators.c 	$(lib_srcdir)/operators.h \
 											$(lib_srcdir)/vfunc.h											

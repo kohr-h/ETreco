@@ -26,6 +26,7 @@
 #endif
 
 #include <stdio.h>
+#include <complex.h>
 
 #include "ETreco.h"
 
@@ -36,40 +37,54 @@ int fft_padding = 0;
 int main(int argc, char **argv)
 {
   CEXCEPTION_T _e = EXC_NONE;
-  int i;
-  vec3 x0 = {0.1, 0, 0}, cs = {1.0, 1.0, 1.0}, cs_plane = {0.1, 0.1, 1.0}, angles = {0.0, 45.0, 45.0};
-  idx3 shp = {10, 7, 3}, padding = {2, 2, 2}, shp_plane = {25, 24, 1};
+  vec3 x0 = {0.1, 0, 0}, cs = {1.0, 1.0, 1.0}, cs_plane = {0.2, 0.2, 1.0}, angles = {0.0, 45.0, 45.0};
+  idx3 shp = {10, 7, 3}, padding = {2, 2, 2}, shp_plane = {10, 9, 1};
 
   float *freqs = NULL, wave_number = 45.0;
   
-  gfunc3 *vol = new_gfunc3 (), *perp_plane_re = new_gfunc3 (), *perp_plane_im = new_gfunc3 ();
+  gfunc3 *vol = new_gfunc3 (), *perp_plane = new_gfunc3 (), *perp_plane_re = NULL;
   
-  gfunc3_init (vol, x0, cs, shp, VOLUME);
-  gfunc3_init (perp_plane_re, NULL, cs_plane, shp_plane, REAL);
-  gfunc3_init (perp_plane_im, NULL, cs_plane, shp_plane, REAL);
+  gfunc3_init (vol, x0, cs, shp, COMPLEX);
+  gfunc3_init (perp_plane, NULL, cs_plane, shp_plane, COMPLEX);
 
-  gfunc3_set_all (vol, c_one);
-  gfunc3_zeropad (vol, padding);
-  gfunc3_to_mrc (vol, "temp/vol.mrc");
+  Try {
+    gfunc3_set_all (vol, 1.0 - 1.5 * I);
+    gfunc3_zeropad (vol, padding); 
+    gfunc3_to_mrc (vol, "temp/vol.mrc");
+  } CATCH_EXIT_FAIL (_e);
 
   gfunc3_print_grid (vol, "Volume grid:");
-  gfunc3_print_grid (perp_plane_re, "Perp plane grid:");
-
-  Try { freqs = perp_plane_freqs (perp_plane_re, angles); } CATCH_EXIT_FAIL (_e);
+  gfunc3_print_grid (perp_plane, "Perp plane reciprocal grid:");
 
   Try { 
-    nfft3_transform (vol, NULL, freqs, perp_plane_re->ntotal, perp_plane_re->fvals, 
-      perp_plane_im->fvals);
+    fft_forward (vol);
+    gfunc3_to_mrc (vol, "temp/vol_ft.mrc");
+    fft_backward (vol);
+    gfunc3_to_mrc (vol, "temp/vol_ift.mrc");
+  } CATCH_EXIT_FAIL (_e);
+
+  Try { freqs = perp_plane_freqs (perp_plane, angles); } CATCH_EXIT_FAIL (_e);
+
+  Try { 
+    nfft3_transform (vol, freqs, perp_plane->ntotal, (float complex *) perp_plane->fvals);
   } CATCH_EXIT_FAIL (_e);
   
-  gfunc3_to_mrc (perp_plane_re, "temp/plane_re.mrc");
-  gfunc3_to_mrc (perp_plane_re, "temp/plane_im.mrc");
-
+  Try { gfunc3_to_mrc (perp_plane, "temp/plane_ft.mrc"); } CATCH_EXIT_FAIL (_e);
+  
+  Try { fft_backward (perp_plane); } CATCH_EXIT_FAIL (_e);
+  gfunc3_print_grid (perp_plane, "Perp plane grid:");
+  Try { gfunc3_to_mrc (perp_plane, "temp/plane.mrc"); } CATCH_EXIT_FAIL (_e);
+  
+  Try { perp_plane_re = gfunc3_realpart (perp_plane, NULL); } CATCH_EXIT_FAIL (_e);
+  gfunc3_print_grid (perp_plane_re, "Real part plane grid:");
+  Try { gfunc3_to_mrc (perp_plane_re, "temp/plane_re.mrc"); } CATCH_EXIT_FAIL (_e);
+  Try { gfunc3_real2complex (perp_plane_re); } CATCH_EXIT_FAIL (_e);
+  Try { gfunc3_to_mrc (perp_plane_re, "temp/plane_re_ascomplex.mrc"); } CATCH_EXIT_FAIL (_e);
   
   free (freqs);
   gfunc3_free (&vol);
+  gfunc3_free (&perp_plane);
   gfunc3_free (&perp_plane_re);
-  gfunc3_free (&perp_plane_im);
   
   return 0;
 }

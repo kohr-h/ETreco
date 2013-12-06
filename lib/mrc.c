@@ -419,7 +419,6 @@ gfunc3_init_mrc (gfunc3 *gf, char const *mrc_fname, FILE **pfp_in, int *pn_img, 
   /* Test endianness and set bswap_flag accordingly. 
    * FIXME: condition for big endianness is probably wrong. Test this with true data!
    */
-  
   read_uchar (&endian, fp, 212);
   if (endian == 68)       /* Little endian */
     bswap_flag = 0;
@@ -515,7 +514,7 @@ gfunc3_init_mrc (gfunc3 *gf, char const *mrc_fname, FILE **pfp_in, int *pn_img, 
 
       free (i16_arr);
       gf->is_initialized = TRUE;
-      gf->is_halfcomplex = 0;
+      gf->type = REAL;
 
       break;
 
@@ -527,7 +526,7 @@ gfunc3_init_mrc (gfunc3 *gf, char const *mrc_fname, FILE **pfp_in, int *pn_img, 
       read_float_arr (gf->fvals, gf->ntotal, fp, MRC_HEADER_BYTES + next);
       
       gf->is_initialized = TRUE;
-      gf->is_halfcomplex = 0;
+      gf->type = REAL;
       
       break;
 
@@ -539,7 +538,7 @@ gfunc3_init_mrc (gfunc3 *gf, char const *mrc_fname, FILE **pfp_in, int *pn_img, 
       read_float_arr (gf->fvals, 2 * gf->ntotal, fp, MRC_HEADER_BYTES + next);
       
       gf->is_initialized = TRUE;
-      gf->is_halfcomplex = 1;
+      gf->type = COMPLEX;
       
       break;
     
@@ -720,7 +719,7 @@ gfunc3_to_mrc (gfunc3 const *gf, char const *mrc_fname)
       return;
     }
   
-  if (gf->is_halfcomplex)
+  if (GFUNC_IS_COMPLEX (gf))
     {
       mode = 4;
       ntotal_flt = 2 * gf->ntotal;

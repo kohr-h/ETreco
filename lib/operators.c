@@ -57,7 +57,7 @@ perp_plane_freqs (gfunc3 const *ft_proj_img_grid, vec3 const normal_angles_deg)
   float *cur_freq;
 
   Try { 
-    freqs = (float *) ali16_malloc ((ft_proj_img_grid->ntotal * 3) * sizeof (float));
+    freqs = (float *) ali16_malloc ((3 * ft_proj_img_grid->ntotal) * sizeof (float));
   } CATCH_RETURN (_e, NULL);
 
   sin_psi   = sinf (normal_angles_deg[0] * ONE_DEGREE);
@@ -154,37 +154,84 @@ ewald_sphere_freqs (gfunc3 const *ft_proj_img_grid, vec3 const normal_angles_deg
 /*-------------------------------------------------------------------------------------------------*/
 
 void
-et_scattering_projection (gfunc3 const *scatterer_re, gfunc3 const *scatterer_im, 
-                          vec3 const angles_deg, RecParams const *rec_p, 
-                          gfunc3 *proj_img_re, gfunc3 *proj_img_im, scattering_model sct_model)
+et_scattering_projection (gfunc3 const *scatterer, vec3 const angles_deg, RecParams const *rec_p, 
+                          gfunc3 *proj_img, scattering_model sct_model)
 {
   CEXCEPTION_T _e = EXC_NONE;
   
   float *freqs = NULL;
   
-  CAPTURE_NULL_VOID (scatterer_re);
-  CAPTURE_NULL_VOID (proj_img_re);
-  CAPTURE_NULL_VOID (proj_img_im);
+  CAPTURE_NULL_VOID (scatterer);
+  CAPTURE_NULL_VOID (proj_img);
   CAPTURE_NULL_VOID (angles_deg);
-  
   if (sct_model != PROJ_ASSUMPTION)
     CAPTURE_NULL_VOID (rec_p);
   
-  GFUNC_CAPTURE_UNINIT_VOID (scatterer_re);
-  if (scatterer_im)
-    GFUNC_CAPTURE_UNINIT_VOID (scatterer_im);
+  GFUNC_CAPTURE_UNINIT_VOID (scatterer);
+  GFUNC_CAPTURE_UNINIT_VOID (proj_img);
   
   if ( (sct_model == PROJ_ASSUMPTION) || ((sct_model == BORN_APPROX) && rec_p->wave_number == 0.0) )
     {
-      Try { freqs = perp_plane_freqs (proj_img_re, angles_deg); }  CATCH_RETURN_VOID (_e);
+      Try { freqs = perp_plane_freqs (proj_img, angles_deg); }  CATCH_RETURN_VOID (_e);
     }
   else if (sct_model == BORN_APPROX)
     {
       Try { 
-        freqs = ewald_sphere_freqs (proj_img_re, angles_deg, rec_p->wave_number); 
+        freqs = ewald_sphere_freqs (proj_img, angles_deg, rec_p->wave_number); 
       } CATCH_RETURN_VOID (_e);
     }
   
+  Try { 
+    nfft3_transform (scatterer, freqs, proj_img->ntotal, (float complex *) proj_img->fvals); 
+  } CATCH_RETURN_VOID (_e);
+  
+  free (freqs);
+  return;
+}
+
+/*-------------------------------------------------------------------------------------------------*/
+
+void
+xray_projection (gfunc3 const *volume, vec3 const angles_deg, gfunc3 *proj_img)
+{
+  CEXCEPTION_T _e = EXC_NONE;
+  
+  float *freqs = NULL;
+  
+  CAPTURE_NULL_VOID (volume);
+  CAPTURE_NULL_VOID (proj_img);
+  CAPTURE_NULL_VOID (angles_deg);
+  
+  GFUNC_CAPTURE_UNINIT_VOID (volume);
+  GFUNC_CAPTURE_UNINIT_VOID (proj_img);
+
+  if (proj_img->type == REAL)
+    {
+      free (proj_img->fvals);
+      proj_img->is_initialized = FALSE;
+
+      gfunc3_grid_fwd_reciprocal (proj_img);
+      Try { proj_img->fvals = (float *) ali16_malloc (2 * proj_img->ntotal * sizeof (float)); 
+        } CATCH_RETURN_VOID (_e);
+      proj_img->is_initialized = TRUE;
+    }
+  else
+    {
+      Try { gfunc3_grid_fwd_reciprocal (proj_img); }  CATCH_RETURN_VOID (_e);
+    }
+
+  Try { freqs = perp_plane_freqs (proj_img, angles_deg); }  CATCH_RETURN_VOID (_e);
+  
+  Try { 
+    nfft3_transform (volume, freqs, proj_img->ntotal, (float complex *) proj_img->fvals); 
+  } CATCH_RETURN_VOID (_e);
+  
+  Try {
+    fft_backward (proj_img);
+    gfunc3_scale (proj_img, M_SQRT2PI);
+  } CATCH_RETURN_VOID (_e);
+  
+  free (freqs);
   return;
 }
 
@@ -205,13 +252,12 @@ xray_backprojection (gfunc3 const *proj_img, vec3 const angles_deg, gfunc3 *volu
   GFUNC_CAPTURE_UNINIT_VOID (proj_img);
   GFUNC_CAPTURE_UNINIT_VOID (volume);
   
-  /* TODO: implement half-complex version */
-  if (proj_img->is_halfcomplex)
+  /* TODO: implement complex version */
+  if ((!GFUNC_IS_REAL (proj_img)) || (!GFUNC_IS_REAL (volume)))
     {
-      EXC_THROW_CUSTOMIZED_PRINT (EXC_UNIMPL, "Complex version not yet implemented.");
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_UNIMPL, "Complex version not implemented.");
       return;
     }
-
   if (!GFUNC_IS_2D(proj_img))
     {
       EXC_THROW_CUSTOMIZED_PRINT (EXC_GFDIM, "Projection image must be 2-dimensional.");
@@ -493,13 +539,12 @@ xray_backprojection_single_axis (gfunc3 const *proj_img, float const theta_deg,
   GFUNC_CAPTURE_UNINIT_VOID (proj_img);
   GFUNC_CAPTURE_UNINIT_VOID (volume);
   
-  /* TODO: implement half-complex version */
-  if (proj_img->is_halfcomplex)
+  /* TODO: implement complex version */
+  if ((!GFUNC_IS_REAL (proj_img)) || (!GFUNC_IS_REAL (volume)))
     {
-      EXC_THROW_CUSTOMIZED_PRINT (EXC_UNIMPL, "Complex version not yet implemented.");
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_UNIMPL, "Complex version not implemented.");
       return;
     }
-
   if (!GFUNC_IS_2D(proj_img))
     {
       EXC_THROW_CUSTOMIZED_PRINT (EXC_GFDIM, "Projection image must be 2-dimensional.");
@@ -519,10 +564,9 @@ xray_backprojection_single_axis (gfunc3 const *proj_img, float const theta_deg,
 /*-------------------------------------------------------------------------------------------------*/
 
 void
-fft_convolution (gfunc3 *gf1, gfunc3 *gf2)
+fft_convolution (gfunc3 *gf1, int trafo_gf1, gfunc3 *gf2, int trafo_gf2)
 {
   CEXCEPTION_T _e = EXC_NONE;
-  int gf1_was_hc, gf2_was_hc;
   float factor;
 
   CAPTURE_NULL_VOID (gf1);
@@ -531,31 +575,53 @@ fft_convolution (gfunc3 *gf1, gfunc3 *gf2)
   GFUNC_CAPTURE_UNINIT_VOID (gf2);
 
   if (GFUNC_IS_2D (gf1))
-    factor = 1.0 / (2 * M_PI);
+    {
+      if (!GFUNC_IS_2D (gf2))
+        {
+          EXC_THROW_CUSTOMIZED_PRINT (EXC_GFDIM, "Grid functions must agree in dimension.");
+          return;
+        }
+      factor = 1.0 / (2 * M_PI);
+    }
   else
-    factor = 1.0 / (2 * M_PI * M_SQRT2PI);
+    {
+      if (GFUNC_IS_2D (gf2))
+        {
+          EXC_THROW_CUSTOMIZED_PRINT (EXC_GFDIM, "Grid functions must agree in dimension.");
+          return;
+        }
+      factor = 1.0 / (2 * M_PI * M_SQRT2PI);
+    }
 
-  gf1_was_hc = gf1->is_halfcomplex;
-  gf2_was_hc = gf2->is_halfcomplex;
+  if (trafo_gf1 && (gf1->type == HALFCOMPLEX))
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_GFTYPE, "Cannot transform HALFCOMPLEX grid function 1.");
+      return;
+    }
+  if (trafo_gf2 && (gf2->type == HALFCOMPLEX))
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_GFTYPE, "Cannot transform HALFCOMPLEX grid function 2.");
+      return;
+    }
 
-  if (!gf1->is_halfcomplex)
+  if (trafo_gf1)
     {
       Try { fft_forward (gf1); }  CATCH_RETURN_VOID (_e);
     }
     
-  if (!gf2->is_halfcomplex)
+  if (trafo_gf2)
     {
       Try { fft_forward (gf2);  }  CATCH_RETURN_VOID (_e);
     }
 
   Try { gfunc3_mul (gf1, gf2);  }  CATCH_RETURN_VOID (_e);
 
-  if (!gf1_was_hc)
+  if (trafo_gf1)
     {
       Try { fft_backward (gf1); }  CATCH_RETURN_VOID (_e);
     }
 
-  if (!gf2_was_hc)
+  if (trafo_gf2)
     {
       Try { fft_backward (gf2); }  CATCH_RETURN_VOID (_e);
     }
@@ -583,13 +649,18 @@ image_rotation (gfunc3 *proj_img, float const psi_deg)
   
   CAPTURE_NULL_VOID (proj_img);
   GFUNC_CAPTURE_UNINIT_VOID (proj_img);
-  
+
+  /* TODO: implement complex version */
+  if (!GFUNC_IS_REAL (proj_img))
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_UNIMPL, "Complex version not yet implemented.");
+      return;
+    }
   if (!GFUNC_IS_2D(proj_img))
     {
       EXC_THROW_CUSTOMIZED_PRINT (EXC_GFDIM, "Only 2d functions supported.");
       return;
     }
-
   if (fabsf (psi_deg) > 180.0)
     {
       EXC_THROW_CUSTOMIZED_PRINT (EXC_BADARG, "Rotation angle must be between -180 and +180 degrees");
@@ -694,6 +765,18 @@ histogram_normalization (gfunc3 *proj_img, idx3 bg_ix0, idx3 const bg_shp)
   CAPTURE_NULL_VOID (bg_shp);
   GFUNC_CAPTURE_UNINIT_VOID (proj_img);
   
+  /* TODO: implement complex version */
+  if (!GFUNC_IS_REAL (proj_img))
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_UNIMPL, "Complex version not yet implemented.");
+      return;
+    }
+  if (!GFUNC_IS_2D(proj_img))
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_GFDIM, "Only 2d functions supported.");
+      return;
+    }
+
   count++;
   
   Try { bg_patch = new_gfunc3 (); }  CATCH_RETURN_VOID (_e);
@@ -748,6 +831,13 @@ probability_normalization (gfunc3 *gf)
   CAPTURE_NULL_VOID (gf);
   GFUNC_CAPTURE_UNINIT_VOID (gf);
  
+  /* TODO: implement complex version */
+  if (!GFUNC_IS_REAL (gf))
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_UNIMPL, "Complex version not yet implemented.");
+      return;
+    }
+
   Try { integral = lp_integral (gf, TRAPEZOIDAL);  }  CATCH_RETURN_VOID (_e);
  
   PRINT_VERBOSE ("Function integral: %f\n", integral);
@@ -769,6 +859,13 @@ lp_integral (gfunc3 const *gf, integration_rule rule)
   CAPTURE_NULL (gf, FLT_MAX);
   GFUNC_CAPTURE_UNINIT (gf, FLT_MAX);
  
+  /* TODO: implement complex version */
+  if (!GFUNC_IS_REAL (gf))
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_UNIMPL, "Complex version not yet implemented.");
+      return FLT_MAX;
+    }
+
   switch (rule)
     {
       case TRAPEZOIDAL:

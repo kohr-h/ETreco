@@ -40,7 +40,7 @@ void
 gfunc3_grid_fwd_reciprocal (gfunc3 *gf);
 
 void
-gfunc3_hc_grid_bwd_reciprocal (gfunc3 *gf_hc);
+gfunc3_grid_bwd_reciprocal (gfunc3 *gf);
 
 
 /* The forward Fourier transform of GF, stored as half-complex array.
@@ -64,13 +64,12 @@ fft_forward (gfunc3 *gf);
  * - Rethrows
  */
 void
-fft_backward (gfunc3 *gf_hc);
+fft_backward (gfunc3 *gf);
 
 
-/* The 3D forward Fourier transform of a complex function defined by F_RE (real part) and F_IM 
- * (imaginary part) for NFREQS arbitrary spatial frequencies FREQS using the NFFT library. Result
- * of the transform is stored in the arrays FT_RE (real part) and FT_IM (imaginary part), both of 
- * which are assumed to be allocated and of size NFREQS.
+/* The 3D forward Fourier transform of a complex grid function GF evaluated at NFREQS arbitrary 
+ * spatial frequencies FREQS using the NFFT library. The result of the transform is stored in the 
+ * array FT, which is assumed to be allocated with a size of at least NFREQS.
  * 
  * Thrown exceptions:
  * - EXC_NULL
@@ -82,7 +81,6 @@ fft_backward (gfunc3 *gf_hc);
  * 
  */
 void
-nfft3_transform (gfunc3 const *f_re, gfunc3 const *f_im, float const *freqs, size_t nfreqs, 
-                 float *ft_re, float *ft_im);
+nfft3_transform (gfunc3 const *gf, float const *freqs, size_t nfreqs, float complex *ft);
 
 #endif /* __FFT_H__ */

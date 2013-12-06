@@ -28,7 +28,7 @@ endif
 
 AM_CPPFLAGS += $(OPENMP_CFLAGS)
 
-bin_PROGRAMS =  nfft_test
+bin_PROGRAMS =  nfft_test forward_op_test
 # 
 # gf3_test_grid_SOURCES = $(srcdir)/gf3_test_grid.c
 # gf3_test_grid_LDFLAGS = -lm
@@ -48,3 +48,7 @@ bin_PROGRAMS =  nfft_test
 nfft_test_SOURCES = $(srcdir)/nfft_test.c
 nfft_test_LDADD = $(lib_libdir)/libgfunc3.a $(lib_libdir)/libutil.a $(lib_libdir)/libCException.a \
 									$(gnulib_libdir)/libgnu.a 
+
+forward_op_test_SOURCES = $(srcdir)/forward_op_test.c
+forward_op_test_LDADD = $(lib_libdir)/libgfunc3.a $(lib_libdir)/libutil.a $(lib_libdir)/libCException.a \
+												$(gnulib_libdir)/libgnu.a 
