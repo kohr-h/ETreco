@@ -7,6 +7,8 @@ Urgent goals are (from most to least urgent, but still urgent):
 
 - Test "Single axis y" backprojection
 
+- Re-organize complex-valued VFUNC functionality
+
 - Introduce tilt_type parameter in RecParams (single-axis-x/y, conical, unknown)
 
 - Document if a function can throw an exception
