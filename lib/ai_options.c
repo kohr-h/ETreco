@@ -33,7 +33,7 @@
 
 #include "CException.h"
 
-#include "matvec3.h"
+#include "vec3.h"
 #include "misc.h"
 
 #include "ai_options.h"
@@ -226,7 +226,7 @@ print_help (char const *progname)
 {
   mollifier_type iter_m;
   tiltscheme iter_t;
-  // TODO: write double axis and conical tilt help
+  // TODO: write conical tilt help
   
   printf ("Usage: %s [options] tiltseries_file\n", progname);
   puts ("");
