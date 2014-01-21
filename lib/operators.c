@@ -185,6 +185,7 @@ et_scattering_projection (gfunc3 const *scatterer, vec3 const angles_deg, RecPar
     nfft3_transform (scatterer, freqs, proj_img->ntotal, (float complex *) proj_img->fvals); 
   } CATCH_RETURN_VOID (_e);
   
+  // TODO: Continue here
   free (freqs);
   return;
 }

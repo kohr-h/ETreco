@@ -50,5 +50,9 @@ nfft_test_LDADD = $(lib_libdir)/libgfunc3.a $(lib_libdir)/libutil.a $(lib_libdir
 									$(gnulib_libdir)/libgnu.a 
 
 forward_op_test_SOURCES = $(srcdir)/forward_op_test.c
-forward_op_test_LDADD = $(lib_libdir)/libgfunc3.a $(lib_libdir)/libutil.a $(lib_libdir)/libCException.a \
+forward_op_test_LDADD = $(lib_libdir)/libetai.a \
+												$(lib_libdir)/libgfunc3.a \
+												$(lib_libdir)/libiniparser.a \
+												$(lib_libdir)/libutil.a \
+												$(lib_libdir)/libCException.a \
 												$(gnulib_libdir)/libgnu.a 
