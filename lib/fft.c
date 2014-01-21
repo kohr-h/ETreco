@@ -621,7 +621,7 @@ nfft3_transform (gfunc3 const *gf, float const *freqs, size_t nfreqs, float comp
       return;
     }
 
-  nfft_init_3d (&p, gf->shape[2], gf->shape[1], gf->shape[0], nfreqs);
+  nfft_init_3d (&p, gf->shape[0], gf->shape[1], gf->shape[2], nfreqs);
   
   /* Copy and cast the values to the double complex array in the plan. Swap x and z axes. */
   pfval = (float complex *) gf->fvals;
