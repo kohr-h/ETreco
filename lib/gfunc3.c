@@ -799,20 +799,14 @@ gfunc3_imag2complex (gfunc3 *gf)
 /*-------------------------------------------------------------------------------------------------*/
 
 void 
-gfunc3_swapxz (gfunc3 *gf)
+gfunc3_swapxz_r (gfunc3 *gf)
 {
   int ix, iy, iz;
   size_t idx, incx;
+  float swapval, *pfval, *pfval_new;
   
-  CAPTURE_NULL_VOID (gf);
-  GFUNC_CAPTURE_UNINIT_VOID (gf);
-  
-  if (GFUNC_IS_2D (gf))
-    {
-      EXC_THROW_CUSTOMIZED_PRINT (EXC_GFDIM, "Grid function must be 3D.");
-      return;
-    }
-    
+  pfval     = gf->fvals;
+  pfval_new = gf->fvals;
   idx = 0;
   incx = gf->shape[1] * gf->shape[2];
   for (iz = 0; iz < gf->shape[2]; iz++)
@@ -821,10 +815,69 @@ gfunc3_swapxz (gfunc3 *gf)
         {
           idx = iy * gf->shape[2] + iz;
           for (ix = 0; ix < gf->shape[0]; ix++, idx += incx)
-            *(pfhat_val++) = (double complex) pfval[idx];
+            {
+              swapval    = *pfval_new;
+              *pfval_new = pfval[idx];
+              pfval[idx] = swapval;
+            }
         }
     }
-  /* TODO: continue here */
+  return;
+}
+
+/*-------------------------------------------------------------------------------------------------*/
+
+void 
+gfunc3_swapxz_c (gfunc3 *gf)
+{
+  int ix, iy, iz;
+  size_t idx, incx;
+  float complex swapval, *pfval, *pfval_new;
+      
+  pfval     = (float complex *) gf->fvals;
+  pfval_new = (float complex *) gf->fvals;
+  idx = 0;
+  incx = gf->shape[1] * gf->shape[2];
+  for (iz = 0; iz < gf->shape[2]; iz++)
+    {
+      for (iy = 0; iy < gf->shape[1]; iy++)
+        {
+          idx = iy * gf->shape[2] + iz;
+          for (ix = 0; ix < gf->shape[0]; ix++, idx += incx)
+            {
+              swapval    = *pfval_new;
+              *pfval_new = pfval[idx];
+              pfval[idx] = swapval;
+            }
+        }
+    }
+  return;
+}
+
+/*-------------------------------------------------------------------------------------------------*/
+
+void 
+gfunc3_swapxz (gfunc3 *gf)
+{
+  CAPTURE_NULL_VOID (gf);
+  GFUNC_CAPTURE_UNINIT_VOID (gf);
+  
+  if (GFUNC_IS_2D (gf))
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_GFDIM, "Grid function must be 3D.");
+      return;
+    }
+  if (gf->type == HALFCOMPLEX)
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_GFTYPE, "Swapping not supported for HALFCOMPLEX functions.");
+      return;
+    }
+  else if (gf->type == REAL)
+    gfunc3_swapxz_r (gf);
+  else if (gf->type == COMPLEX)
+    gfunc3_swapxz_c (gf);
+    
+  return;  
 }
 
 /*-------------------------------------------------------------------------------------------------*/

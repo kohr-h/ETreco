@@ -330,6 +330,17 @@ void
 gfunc3_imag2complex (gfunc3 *gf);
 
 
+/* Swap x and z axes of GF in-place. Not supporting HALFCOMPLEX functions.
+ * 
+ * Thrown exceptions: 
+ * - EXC_NULL
+ * - EXC_GFINIT
+ * - EXC_GFTYPE
+ */ 
+void 
+gfunc3_swapxz (gfunc3 *gf);
+
+
 /* Set GF1 <- A * GF1 + GF2.  GF2 may be defined on a subgrid of GF1's grid.
  * 
  * Thrown exceptions: 
