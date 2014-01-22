@@ -169,7 +169,22 @@ et_scattering_projection (gfunc3 const *scatterer, vec3 const angles_deg, RecPar
   
   GFUNC_CAPTURE_UNINIT_VOID (scatterer);
   GFUNC_CAPTURE_UNINIT_VOID (proj_img);
-  
+
+  if (proj_img->type == REAL)
+    {
+      free (proj_img->fvals);
+      proj_img->is_initialized = FALSE;
+
+      gfunc3_grid_fwd_reciprocal (proj_img);
+      Try { proj_img->fvals = (float *) ali16_malloc (2 * proj_img->ntotal * sizeof (float)); 
+        } CATCH_RETURN_VOID (_e);
+      proj_img->is_initialized = TRUE;
+    }
+  else
+    {
+      Try { gfunc3_grid_fwd_reciprocal (proj_img); }  CATCH_RETURN_VOID (_e);
+    }
+
   if ( (sct_model == PROJ_ASSUMPTION) || ((sct_model == BORN_APPROX) && rec_p->wave_number == 0.0) )
     {
       Try { freqs = perp_plane_freqs (proj_img, angles_deg); }  CATCH_RETURN_VOID (_e);
@@ -185,7 +200,9 @@ et_scattering_projection (gfunc3 const *scatterer, vec3 const angles_deg, RecPar
     nfft3_transform (scatterer, freqs, proj_img->ntotal, (float complex *) proj_img->fvals); 
   } CATCH_RETURN_VOID (_e);
   
-  // TODO: Continue here
+  // TODO: Multiplication factors
+  Try { fft_backward (proj_img); } CATCH_RETURN_VOID (_e);
+  
   free (freqs);
   return;
 }

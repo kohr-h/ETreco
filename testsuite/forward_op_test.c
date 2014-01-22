@@ -37,10 +37,10 @@ int main(int argc, char **argv)
   char const *phantom_name = "../test_data/Balls/phantom_balls.mrc";
   vec3 cs_proj = {8.0, 8.0, 1.0}, x0_proj = {0.0, 5.0, 0.0};
   idx3 shp_proj = {210, 250, 1};
-  vec3 angles = {90.0, 45.0, -90.0};
+  vec3 angles = {90.0, 0.0, -90.0};
   gfunc3 *phantom = new_gfunc3 (), *xr_proj = new_gfunc3 (), *proj_r = new_gfunc3();
   RecParams *rec_p = new_RecParams ();
-  rec_p->wave_number = 2.0;
+  rec_p->wave_number = 20.0;
   
   Try { 
     gfunc3_init_mrc (phantom, phantom_name, NULL, NULL, VOLUME); 
@@ -48,14 +48,29 @@ int main(int argc, char **argv)
   } CATCH_EXIT_FAIL (_e);
     
   gfunc3_print_grid (phantom, "Phantom grid:");
+  
   gfunc3_print_grid (xr_proj, "Plane grid:");
   
   Try { 
     gfunc3_real2complex (phantom);
-    // xray_projection (phantom, angles, xr_proj); 
-    et_scattering_projection (phantom, angles, rec_p, xr_proj, BORN_APPROX); 
+    xray_projection (phantom, angles, xr_proj); 
+    // et_scattering_projection (phantom, angles, rec_p, xr_proj, BORN_APPROX); 
+  } CATCH_EXIT_FAIL (_e);
+
+  Try { 
+    gfunc3_swapxz (phantom);
+    gfunc3_to_mrc (phantom, "phantom_swapped.mrc");
   } CATCH_EXIT_FAIL (_e);
   
+  gfunc3_print_grid (phantom, "Phantom grid (x<->z):");
+
+  Try { 
+    gfunc3_swapxz (phantom);
+    gfunc3_to_mrc (phantom, "phantom_swapped_back.mrc");
+  } CATCH_EXIT_FAIL (_e);
+  
+  gfunc3_print_grid (phantom, "Phantom grid (swapped back):");
+
   Try { gfunc3_to_mrc (xr_proj, "xray.mrc"); }  CATCH_EXIT_FAIL (_e);
   
   Try { 
@@ -71,6 +86,7 @@ int main(int argc, char **argv)
   gfunc3_free (&phantom);
   gfunc3_free (&xr_proj);
   gfunc3_free (&proj_r);
+  RecParams_free (&rec_p);
   
   return EXIT_SUCCESS;
 }
