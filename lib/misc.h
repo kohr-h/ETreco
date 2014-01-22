@@ -51,9 +51,6 @@
 #define TRUE  1
 #define FALSE 0
 
-static float const c_zero[2] = {0.0f, 0.0f};
-static float const c_one[2]  = {1.0f, 0.0f};
-
 
 /*-------------------------------------------------------------------------------------------------*
  * Debugging 
@@ -121,6 +118,21 @@ do { \
 /*-------------------------------------------------------------------------------------------------*
  * Helper functions
  *-------------------------------------------------------------------------------------------------*/
+
+#define ISWAP(_i1, _i2) \
+do { \
+  int __iswap = _i1; \
+  _i1 = _i2; \
+  _i2 = __iswap; \
+} while (0)
+
+#define FSWAP(_f1, _f2) \
+do { \
+  float __fswap = _f1; \
+  _f1 = _f2; \
+  _f2 = __fswap; \
+} while (0)
+
 
 /* Allocate a 16-byte aligned array of size NBYTES. Returns NULL on failure. 
  * 
