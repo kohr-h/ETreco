@@ -801,12 +801,23 @@ gfunc3_imag2complex (gfunc3 *gf)
 void 
 gfunc3_swapxz_r (gfunc3 *gf)
 {
+  CEXCEPTION_T _e = EXC_NONE;
   int ix, iy, iz;
   size_t idx, incx;
-  float swapval, *pfval, *pfval_new;
+  float *pfval_sw, *fvals_swapped = NULL;
   
-  pfval     = gf->fvals;
-  pfval_new = gf->fvals;
+  Try { 
+    fvals_swapped = (float *) ali16_malloc (gf->ntotal * sizeof (float)); 
+  } CATCH_RETURN_VOID (_e);
+  
+  pfval_sw = fvals_swapped;
+
+  ISWAP (gf->shape[0], gf->shape[2]);
+  FSWAP (gf->csize[0], gf->csize[2]);
+  FSWAP (gf->x0[0], gf->x0[2]);
+  FSWAP (gf->xmin[0], gf->xmin[2]);
+  FSWAP (gf->xmax[0], gf->xmax[2]);
+  
   idx = 0;
   incx = gf->shape[1] * gf->shape[2];
   for (iz = 0; iz < gf->shape[2]; iz++)
@@ -815,13 +826,13 @@ gfunc3_swapxz_r (gfunc3 *gf)
         {
           idx = iy * gf->shape[2] + iz;
           for (ix = 0; ix < gf->shape[0]; ix++, idx += incx)
-            {
-              swapval    = *pfval_new;
-              *pfval_new = pfval[idx];
-              pfval[idx] = swapval;
-            }
+            *(pfval_sw++) = gf->fvals[idx];
         }
     }
+  
+  free (gf->fvals);
+  gf->fvals = fvals_swapped;
+
   return;
 }
 
@@ -830,12 +841,25 @@ gfunc3_swapxz_r (gfunc3 *gf)
 void 
 gfunc3_swapxz_c (gfunc3 *gf)
 {
+  CEXCEPTION_T _e = EXC_NONE;
   int ix, iy, iz;
   size_t idx, incx;
-  float complex swapval, *pfval, *pfval_new;
-      
-  pfval     = (float complex *) gf->fvals;
-  pfval_new = (float complex *) gf->fvals;
+  float *fvals_swapped = NULL;
+  float complex *pfval, *pfval_sw; 
+  
+  Try { 
+    fvals_swapped = (float *) ali16_malloc (gf->ntotal * sizeof (float complex)); 
+  } CATCH_RETURN_VOID (_e);
+  
+  pfval    = (float complex *) gf->fvals;
+  pfval_sw = (float complex *) fvals_swapped;
+
+  ISWAP (gf->shape[0], gf->shape[2]);
+  FSWAP (gf->csize[0], gf->csize[2]);
+  FSWAP (gf->x0[0], gf->x0[2]);
+  FSWAP (gf->xmin[0], gf->xmin[2]);
+  FSWAP (gf->xmax[0], gf->xmax[2]);
+  
   idx = 0;
   incx = gf->shape[1] * gf->shape[2];
   for (iz = 0; iz < gf->shape[2]; iz++)
@@ -844,13 +868,13 @@ gfunc3_swapxz_c (gfunc3 *gf)
         {
           idx = iy * gf->shape[2] + iz;
           for (ix = 0; ix < gf->shape[0]; ix++, idx += incx)
-            {
-              swapval    = *pfval_new;
-              *pfval_new = pfval[idx];
-              pfval[idx] = swapval;
-            }
+            *(pfval_sw++) = pfval[idx];
         }
     }
+  
+  free (gf->fvals);
+  gf->fvals = fvals_swapped;
+
   return;
 }
 
@@ -859,6 +883,8 @@ gfunc3_swapxz_c (gfunc3 *gf)
 void 
 gfunc3_swapxz (gfunc3 *gf)
 {
+  CEXCEPTION_T _e = EXC_NONE;
+  
   CAPTURE_NULL_VOID (gf);
   GFUNC_CAPTURE_UNINIT_VOID (gf);
   
@@ -873,10 +899,14 @@ gfunc3_swapxz (gfunc3 *gf)
       return;
     }
   else if (gf->type == REAL)
-    gfunc3_swapxz_r (gf);
+    {
+      Try { gfunc3_swapxz_r (gf); } CATCH_RETURN_VOID (_e);
+    }
   else if (gf->type == COMPLEX)
-    gfunc3_swapxz_c (gf);
-    
+    {
+      Try { gfunc3_swapxz_c (gf); } CATCH_RETURN_VOID (_e);
+    }
+
   return;  
 }
 
