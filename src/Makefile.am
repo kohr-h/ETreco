@@ -27,16 +27,27 @@ endif
 AM_CPPFLAGS += $(OPENMP_CFLAGS)
 
 
-bin_PROGRAMS =  ai_single_axis generate_tiltangles convex_comb
+bin_PROGRAMS =  ai_single_axis forward_op generate_tiltangles convex_comb
 
 # CAUTION: order of libraries matters! Order from "most dependent" to "least dependent"
 # (or list each library twice)
 
 ai_single_axis_SOURCES = $(srcdir)/ai_single_axis.c $(top_srcdir)/lib/ETreco.h
-ai_single_axis_LDADD = 	$(lib_libdir)/libetai.a $(lib_libdir)/libgfunc3.a $(lib_libdir)/libutil.a \
-												$(lib_libdir)/libiniparser.a $(lib_libdir)/libCException.a \
-												$(gnulib_libdir)/libgnu.a 
+ai_single_axis_LDADD = $(lib_libdir)/libetai.a \
+											 $(lib_libdir)/libgfunc3.a \
+											 $(lib_libdir)/libutil.a \
+											 $(lib_libdir)/libiniparser.a \
+											 $(lib_libdir)/libCException.a \
+											 $(gnulib_libdir)/libgnu.a 
 												
+
+forward_op_SOURCES = $(srcdir)/forward_op_test.c $(top_srcdir)/lib/ETreco.h
+forward_op_LDADD = $(lib_libdir)/libetai.a \
+					 				 $(lib_libdir)/libgfunc3.a \
+									 $(lib_libdir)/libutil.a \
+									 $(lib_libdir)/libiniparser.a \
+									 $(lib_libdir)/libCException.a \
+									 $(gnulib_libdir)/libgnu.a 
 
 generate_tiltangles_SOURCES = $(srcdir)/generate_tiltangles.c
 generate_tiltangles_LDADD = $(lib_libdir)/libetai.a $(lib_libdir)/libutil.a \
