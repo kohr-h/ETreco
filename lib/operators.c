@@ -158,8 +158,10 @@ et_scattering_projection (gfunc3 const *scatterer, vec3 const angles_deg, RecPar
                           gfunc3 *proj_img, scattering_model sct_model)
 {
   CEXCEPTION_T _e = EXC_NONE;
-  
+
+  int real_output = FALSE;
   float *freqs = NULL;
+  vfunc ctf;
   
   CAPTURE_NULL_VOID (scatterer);
   CAPTURE_NULL_VOID (proj_img);
@@ -172,35 +174,49 @@ et_scattering_projection (gfunc3 const *scatterer, vec3 const angles_deg, RecPar
 
   if (proj_img->type == REAL)
     {
-      free (proj_img->fvals);
-      proj_img->is_initialized = FALSE;
-
-      gfunc3_grid_fwd_reciprocal (proj_img);
-      Try { proj_img->fvals = (float *) ali16_malloc (2 * proj_img->ntotal * sizeof (float)); 
-        } CATCH_RETURN_VOID (_e);
-      proj_img->is_initialized = TRUE;
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_GFTYPE, "Projection image must be of COMPLEX type.");
+      return;
     }
-  else
+
+  if ( (sct_model == BORN_APPROX) && (rec_p->wave_number == 0.0) )
     {
-      Try { gfunc3_grid_fwd_reciprocal (proj_img); }  CATCH_RETURN_VOID (_e);
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_BADARG, "Wave number must not be 0 in BORN_APPROX model.");
+      return;
     }
 
-  if ( (sct_model == PROJ_ASSUMPTION) || ((sct_model == BORN_APPROX) && rec_p->wave_number == 0.0) )
+  /* Take the projection image to the reciprocal space */
+  Try { gfunc3_grid_fwd_reciprocal (proj_img); }  CATCH_RETURN_VOID (_e);
+
+  /* Evaluate the FT of the SCATTERER at frequencies according to the chosen model. For the
+   * PROJ_ASSUMPTION model, the frequencies lie on the 2D plane perpendicular to the unit vector 
+   * defined by ANGLES_DEG. For BORN_APPROX, they lie on the corresponding Ewald sphere.
+   */
+  if (sct_model == PROJ_ASSUMPTION)
     {
       Try { freqs = perp_plane_freqs (proj_img, angles_deg); }  CATCH_RETURN_VOID (_e);
-    }
+
+      Try { 
+        nfft3_transform (scatterer, freqs, proj_img->ntotal, (float complex *) proj_img->fvals); 
+      } CATCH_RETURN_VOID (_e);
+   }
   else if (sct_model == BORN_APPROX)
     {
       Try { 
         freqs = ewald_sphere_freqs (proj_img, angles_deg, rec_p->wave_number); 
       } CATCH_RETURN_VOID (_e);
+
+      Try { 
+        nfft3_transform (scatterer, freqs, proj_img->ntotal, (float complex *) proj_img->fvals); 
+      } CATCH_RETURN_VOID (_e);
     }
   
-  Try { 
-    nfft3_transform (scatterer, freqs, proj_img->ntotal, (float complex *) proj_img->fvals); 
+  /* Multiply with CTF and scaling factors. Finally apply inverse FT */
+  Try { vfunc_init_ctf (ctf, rec_p); } CATCH_RETURN_VOID (_e);
+  Try {
+    gfunc3_mul_vfunc (proj_img, ctf);
+    gfunc3_scale (proj_img, 2 * M_PI * M_SQRT2PI);
   } CATCH_RETURN_VOID (_e);
-  
-  // TODO: Multiplication factors
+
   Try { fft_backward (proj_img); } CATCH_RETURN_VOID (_e);
   
   free (freqs);
@@ -225,18 +241,11 @@ xray_projection (gfunc3 const *volume, vec3 const angles_deg, gfunc3 *proj_img)
 
   if (proj_img->type == REAL)
     {
-      free (proj_img->fvals);
-      proj_img->is_initialized = FALSE;
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_GFTYPE, "Projection image must be of COMPLEX type.");
+      return;
+    }
 
-      gfunc3_grid_fwd_reciprocal (proj_img);
-      Try { proj_img->fvals = (float *) ali16_malloc (2 * proj_img->ntotal * sizeof (float)); 
-        } CATCH_RETURN_VOID (_e);
-      proj_img->is_initialized = TRUE;
-    }
-  else
-    {
-      Try { gfunc3_grid_fwd_reciprocal (proj_img); }  CATCH_RETURN_VOID (_e);
-    }
+  Try { gfunc3_grid_fwd_reciprocal (proj_img); }  CATCH_RETURN_VOID (_e);
 
   Try { freqs = perp_plane_freqs (proj_img, angles_deg); }  CATCH_RETURN_VOID (_e);
   
