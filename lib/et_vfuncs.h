@@ -46,10 +46,13 @@ ft_gaussian (float const *xi, vec3 const gamma);
 
 /*-------------------------------------------------------------------------------------------------*/
 
-// without preceding 1/2pi
 /* may throw EXC_NULL */
 void
 vfunc_init_ctf (vfunc *vf, RecParams const *ctf_p);
+
+/* may throw EXC_NULL */
+void
+vfunc_init_ctf_acr (vfunc *vf, RecParams const *ctf_p);
 
 /* may throw EXC_NULL */
 void

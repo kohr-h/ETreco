@@ -93,15 +93,37 @@ envelope_source_size (float t, RecParams const *rec_p)
 float
 oscillating_part_angle_function (float t, RecParams const *rec_p)
 {
-//   float ls = rec_p->magnification / (rec_p->magnification - 1) * rec_p->focal_length;
+  double ls = rec_p->magnification / (rec_p->magnification - 1) * rec_p->focal_length;
 
-//  // The following term is probably close to zero (CAUTION: possible OVERFLOW)
-//   float b = - ls * ( t*t*t*t / (8*rec_p->wave_number*rec_p->wave_number*rec_p->wave_number) );
+  /* The following term is probably close to zero (CAUTION: possible OVERFLOW with float) */
+  double b = - ls * ( (double) t*t*t*t / 
+    (8*rec_p->wave_number*rec_p->wave_number*rec_p->wave_number) );
+    
+  printf ("b = %e\n", b);
 
   float zp = -t / (4 * rec_p->wave_number) 
     * (rec_p->cs * t / (rec_p->wave_number * rec_p->wave_number) - 2 * rec_p->defocus_nominal);
 
-  return /*b + */ zp + atan (rec_p->acr);
+  return b + zp;
+}
+
+/*-------------------------------------------------------------------------------------------------*/
+
+float
+oscillating_part_angle_function_acr (float t, RecParams const *rec_p)
+{
+  double ls = rec_p->magnification / (rec_p->magnification - 1) * rec_p->focal_length;
+
+  /* The following term is probably close to zero (CAUTION: possible OVERFLOW with float) */
+  double b = - ls * ( (double) t*t*t*t / 
+    (8*rec_p->wave_number*rec_p->wave_number*rec_p->wave_number) );
+    
+  printf ("b = %e\n", b);
+
+  float zp = -t / (4 * rec_p->wave_number) 
+    * (rec_p->cs * t / (rec_p->wave_number * rec_p->wave_number) - 2 * rec_p->defocus_nominal);
+
+  return b + zp + atan (rec_p->acr);
 }
 
 /*-------------------------------------------------------------------------------------------------*/
@@ -109,18 +131,31 @@ oscillating_part_angle_function (float t, RecParams const *rec_p)
 float
 ctf_scaling_function (float t, RecParams const *rec_p)
 {
-  // float c = rec_p->magnification * rec_p->magnification * rec_p->wave_number * rec_p->wave_number
-    // * sqrtf (1 + rec_p->acr * rec_p->acr);
-  float c = rec_p->wave_number;
+  /* Account for volume dilation factor here: sqrt(m) -> m^2 */
+  float c = rec_p->magnification * rec_p->magnification * rec_p->wave_number * rec_p->wave_number;
 
-  float a = sqrtf (rec_p->wave_number * rec_p->wave_number - t);
+  double a = sqrt ( (double) rec_p->wave_number * rec_p->wave_number - t);
 
-  return c / a;
+  return (float) (c / a);
 }
 
 /*-------------------------------------------------------------------------------------------------*/
 
 float
+ctf_acr_scaling_function (float t, RecParams const *rec_p)
+{
+  /* Account for volume dilation factor here: sqrt(m) -> m^2 */
+  float c = rec_p->magnification * rec_p->magnification * rec_p->wave_number * rec_p->wave_number
+    * sqrtf (1 + rec_p->acr * rec_p->acr);
+
+  double a = sqrt ( (double) rec_p->wave_number * rec_p->wave_number - t);
+
+  return (float) (c / a);
+}
+
+/*-------------------------------------------------------------------------------------------------*/
+
+float complex
 ctf_unscaled_radial (float t, RecParams const *rec_p)
 {
   float r = rec_p->aper_cutoff;
@@ -128,8 +163,22 @@ ctf_unscaled_radial (float t, RecParams const *rec_p)
   if (t > r * r)
     return 0.0;
 
-  return sinf (oscillating_part_angle_function (t, rec_p)) 
-    * envelope_source_size (r, rec_p) * envelope_energy_spread (t, rec_p);
+  return cexpf (I * oscillating_part_angle_function (t, rec_p)) 
+    * envelope_source_size (t, rec_p) * envelope_energy_spread (t, rec_p);
+}
+
+/*-------------------------------------------------------------------------------------------------*/
+
+float
+ctf_acr_unscaled_radial (float t, RecParams const *rec_p)
+{
+  float r = rec_p->aper_cutoff;
+
+  if (t > r * r)
+    return 0.0;
+
+  return sinf (oscillating_part_angle_function_acr (t, rec_p)) 
+    * envelope_source_size (t, rec_p) * envelope_energy_spread (t, rec_p);
 }
 
 /*-------------------------------------------------------------------------------------------------*/
@@ -198,7 +247,7 @@ vfunc_init_detector_recip_mtf (vfunc *vf, RecParams const *rec_p)
 /*-------------------------------------------------------------------------------------------------*/
 
 void
-ctf (float const *xi, float *zp, void const *params)
+ctf_acr (float const *xi, float *zp, void const *params)
 {
   RecParams *rec_p = (RecParams *) params;
   float mxi2;
@@ -206,7 +255,36 @@ ctf (float const *xi, float *zp, void const *params)
   mxi2 = xi[0] * xi[0] + xi[1] * xi[1];
   mxi2 *= rec_p->magnification * rec_p->magnification;
 
-  *zp = ctf_scaling_function (mxi2, rec_p) * ctf_unscaled_radial (mxi2, rec_p);
+  *zp = ctf_scaling_function_acr (mxi2, rec_p) * ctf_acr_unscaled_radial (mxi2, rec_p) / (2 * M_PI);
+
+  return;
+}
+
+void
+vfunc_init_ctf_acr (vfunc *vf, RecParams const *rec_p)
+{
+  CAPTURE_NULL_VOID (vf);
+  CAPTURE_NULL_VOID (rec_p);
+    
+  vf->f = ctf_acr;
+  vf->params = rec_p;
+
+  return;
+}
+
+/*-------------------------------------------------------------------------------------------------*/
+
+void
+ctf (float const *xi, float *zp, void const *params)
+{
+  RecParams *rec_p = (RecParams *) params;
+  float mxi2;
+  float complex *z = (float complex *) zp;
+
+  mxi2 = xi[0] * xi[0] + xi[1] * xi[1];
+  mxi2 *= rec_p->magnification * rec_p->magnification;
+
+  *z = ctf_scaling_function (mxi2, rec_p) * ctf_unscaled_radial (mxi2, rec_p) / (2 * M_PI);
 
   return;
 }
