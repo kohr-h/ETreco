@@ -26,23 +26,21 @@
 
 #include "ETreco.h"
 
-// int verbosity_level = VERB_LEVEL_NORMAL;
-// int autocenter_vol_flag = TRUE;
-// int fft_padding = 0;
 
 int main(int argc, char **argv)
 {
   CEXCEPTION_T _e = EXC_NONE;
   
-  char const *phantom_name = "../test_data/Balls/phantom_balls.mrc";
-  vec3 cs_proj = {8.0, 8.0, 1.0}, x0_proj = {0.0, 5.0, 0.0};
-  idx3 shp_proj = {210, 250, 1};
-  vec3 angles = {90.0, 0.0, -90.0};
-  gfunc3 *phantom = new_gfunc3 (), *xr_proj = new_gfunc3 (), *proj_r = new_gfunc3();
+  gfunc3 *phantom = new_gfunc3 (), *proj_img = new_gfunc3 (), *proj_r = new_gfunc3();
+  OptionData *opt_data = new_OptionData ();
   RecParams *rec_p = new_RecParams ();
-  rec_p->wave_number = 20.0;
   
+  /* WIP
+   * TODO: write fwd_op_options!!
+   */
+  Try { OptionData_assign_from_args (opt_data, argc, argv); }  CATCH_EXIT_FAIL (_e);
   Try { 
+    RecParams_assign_from_OptionData (rec_p, opt_data);
     gfunc3_init_mrc (phantom, phantom_name, NULL, NULL, VOLUME); 
     gfunc3_init (xr_proj, x0_proj, cs_proj, shp_proj, COMPLEX); 
   } CATCH_EXIT_FAIL (_e);
@@ -53,34 +51,20 @@ int main(int argc, char **argv)
   
   Try { 
     gfunc3_real2complex (phantom);
-    xray_projection (phantom, angles, xr_proj); 
-    // et_scattering_projection (phantom, angles, rec_p, xr_proj, BORN_APPROX); 
+    // xray_projection (phantom, angles, xr_proj); 
+    et_scattering_projection (phantom, angles, rec_p, xr_proj, PROJ_ASSUMPTION); 
   } CATCH_EXIT_FAIL (_e);
-
-  Try { 
-    gfunc3_swapxz (phantom);
-    gfunc3_to_mrc (phantom, "phantom_swapped.mrc");
-  } CATCH_EXIT_FAIL (_e);
-  
-  gfunc3_print_grid (phantom, "Phantom grid (x<->z):");
-
-  Try { 
-    gfunc3_swapxz (phantom);
-    gfunc3_to_mrc (phantom, "phantom_swapped_back.mrc");
-  } CATCH_EXIT_FAIL (_e);
-  
-  gfunc3_print_grid (phantom, "Phantom grid (swapped back):");
 
   Try { gfunc3_to_mrc (xr_proj, "xray.mrc"); }  CATCH_EXIT_FAIL (_e);
   
   Try { 
     proj_r = gfunc3_realpart (xr_proj, NULL); 
-    gfunc3_to_mrc (proj_r, "xray_re.mrc");
+    gfunc3_to_mrc (proj_r, "born_re.mrc");
   } CATCH_EXIT_FAIL (_e);
   
   Try { 
     proj_r = gfunc3_imagpart (xr_proj, proj_r); 
-    gfunc3_to_mrc (proj_r, "xray_im.mrc");
+    gfunc3_to_mrc (proj_r, "born_im.mrc");
   } CATCH_EXIT_FAIL (_e);
   
   gfunc3_free (&phantom);
