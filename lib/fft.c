@@ -47,8 +47,6 @@
 
 extern int fft_padding;
 
-// TODO: use interpolation functions
-
 /*-------------------------------------------------------------------------------------------------*/
 
 void
@@ -133,18 +131,58 @@ gfunc3_grid_bwd_reciprocal (gfunc3 *gf)
 
 /*-------------------------------------------------------------------------------------------------*/
 
+float fft_fwd_interp_kernel (float t)
+{
+  if (fabsf (t) > TAYLOR_THRESHOLD)
+    return 2.0 * (1.0 - cosf (t)) / (t * t);
+  
+  else
+    {
+      float tmp, ker_val = 1.0;
+      
+      tmp      = t * t / 12.0;
+      ker_val -= tmp;
+      tmp     *= t * t / 30.0;
+      ker_val += tmp;
+      tmp     *= t * t / 56.0;
+      ker_val -= tmp;
+      
+      return ker_val;
+    }
+}
+
+/*-------------------------------------------------------------------------------------------------*/
+
+float fft_bwd_interp_kernel (float t)
+{
+  if (fabsf (t) > TAYLOR_THRESHOLD)
+    return t * t / (2.0 * (1.0 - cosf (t)));
+  
+  else
+    {
+      float tmp, ker_val = 1.0;
+      
+      tmp      = t * t / 12.0;
+      ker_val += tmp;
+      tmp     *= t * t / 20.0;
+      ker_val += tmp;
+      tmp     *= t * t / 25.2;
+      ker_val += tmp;
+      
+      return ker_val;
+    }
+}
+
+/*-------------------------------------------------------------------------------------------------*/
+
 void
 fft_fwd_premod_r (gfunc3 *gf)
 {
   int isum, ix, iy, iz;
-  float fac, *pfval = gf->fvals;
+  float cs_fac, *pfval = gf->fvals;
 
-  // fac = (GFUNC_IS_2D (gf)) ? 1.0 : gf->csize[2] / M_SQRT2PI;
-  // fac *= gf->csize[1] * gf->csize[0] / (2 * M_PI);
-  fac = (GFUNC_IS_2D (gf)) ? 1.0 : gf->csize[2];
-  fac *= gf->csize[1] * gf->csize[0];
-  // fac = (GFUNC_IS_2D (gf)) ? 1.0 : gf->csize[2];
-  // fac *= gf->csize[1] * gf->csize[0];
+  cs_fac = (GFUNC_IS_2D (gf)) ? 1.0 : gf->csize[2];
+  cs_fac *= gf->csize[1] * gf->csize[0];
 
   for (iz = 0; iz < gf->shape[2]; iz++)
     {
@@ -153,7 +191,7 @@ fft_fwd_premod_r (gfunc3 *gf)
           isum = iz + iy;
           for (ix = 0; ix < gf->shape[0]; ix++, isum++, pfval++)
             {
-              *pfval *= fac;
+              *pfval *= cs_fac;
 
               /* Multiply by (-1)^(ix+ix+iz) */
               if (isum % 2)
@@ -171,15 +209,11 @@ void
 fft_fwd_premod_c (gfunc3 *gf)
 {
   int isum, ix, iy, iz;
-  float fac;
+  float cs_fac;
   float complex *pfval = (float complex *) gf->fvals;
 
-  // fac = (GFUNC_IS_2D (gf)) ? 1.0 : gf->csize[2] / M_SQRT2PI;
-  // fac *= gf->csize[1] * gf->csize[0] / (2 * M_PI);
-  fac = (GFUNC_IS_2D (gf)) ? 1.0 : gf->csize[2];
-  fac *= gf->csize[1] * gf->csize[0];
-  // fac = (GFUNC_IS_2D (gf)) ? 1.0 : gf->csize[2];
-  // fac *= gf->csize[1] * gf->csize[0];
+  cs_fac = (GFUNC_IS_2D (gf)) ? 1.0 : gf->csize[2];
+  cs_fac *= gf->csize[1] * gf->csize[0];
 
   for (iz = 0; iz < gf->shape[2]; iz++)
     {
@@ -188,7 +222,7 @@ fft_fwd_premod_c (gfunc3 *gf)
           isum = iz + iy;
           for (ix = 0; ix < gf->shape[0]; ix++, isum++, pfval++)
             {
-              *pfval *= fac;
+              *pfval *= cs_fac;
 
               /* Multiply by (-1)^(ix+ix+iz) */
               if (isum % 2)
@@ -218,14 +252,15 @@ fft_fwd_premod (gfunc3 *gf)
 void
 fft_fwd_postmod (gfunc3 *gf)
 {
-  int ix, iy, iz, isum, Nsum;
-  float spx, spy, spz, sp;
+  int ix, iy, iz, isum, Nx, Nsum;
+  float spx, spy, spz, sp, ker_fac;
   float complex Nfac = 1.0, *pfval = (float complex *) gf->fvals;
 
+  Nx = (gf->type == HALFCOMPLEX) ? gf->_ntmp : gf->shape[0];
+
   /* Compute (-i)^(Nx + Ny[ + Nz]) */
-  Nsum = (gf->type == HALFCOMPLEX) ? gf->_ntmp : gf->shape[0];
-  if (GFUNC_IS_2D (gf))  Nsum += gf->shape[1];
-  else                   Nsum += gf->shape[1] + gf->shape[2];
+  if (GFUNC_IS_2D (gf))  Nsum = Nx + gf->shape[1];
+  else                   Nsum = Nx + gf->shape[1] + gf->shape[2];
 
   switch (Nsum % 4)
     {
@@ -237,21 +272,27 @@ fft_fwd_postmod (gfunc3 *gf)
 
   for (iz = 0; iz < gf->shape[2]; iz++)
     {
+      ker_fac = (GFUNC_IS_2D (gf)) ? 
+        1.0 : 
+        fft_fwd_interp_kernel (-M_PI + 2 * M_PI * iz / gf->shape[2]) / M_SQRT2PI;
       spz = gf->_fbuf[2] * (gf->xmin[2] + iz * gf->csize[2]);
 
       for (iy = 0; iy < gf->shape[1]; iy++)
         {
+          ker_fac *= fft_fwd_interp_kernel (-M_PI + 2.0 * M_PI * iy / gf->shape[1]) / M_SQRT2PI;
           spy = gf->_fbuf[1] * (gf->xmin[1] + iy * gf->csize[1]);
           isum = iz + iy;
 
           for (ix = 0; ix < gf->shape[0]; ix++, isum++, pfval++)
             {
-              /* Multiply by (-1)^(Nx+Ny[+Nz]) * (-1)^(ix+iy+iz) * exp(-i<x0,xi_j>) */
+              /* Multiply by (-1)^(Nx+Ny[+Nz]) * (-1)^(ix+iy+iz) * exp(-i<x0,xi_j>) * kernel_fac */
+              ker_fac *= fft_fwd_interp_kernel (-M_PI + 2.0 * M_PI * ix / Nx) / M_SQRT2PI;
               spx = gf->_fbuf[0] * (gf->xmin[0] + ix * gf->csize[0]);
               sp = spx + spy + spz;
+              
               *pfval *=  cexpf (-sp * I);
               if (isum % 2) *pfval = -(*pfval);
-              *pfval *= Nfac;
+              *pfval *= ker_fac * Nfac;
             }
         }
     }
@@ -350,20 +391,15 @@ fft_forward (gfunc3 *gf)
 void
 fft_bwd_premod (gfunc3 *gf)
 {
-  int ix, iy, iz, isum, Nsum;
-  float fac, spx, spy, spz, sp;
+  int ix, iy, iz, isum, Nx, Nsum;
+  float spx, spy, spz, sp, ker_fac_z, ker_fac_y, ker_fac;
   float complex Nfac = 1.0, *pfval = (float complex *) gf->fvals;
 
-  fac = (GFUNC_IS_2D (gf)) ? 1.0 : gf->csize[2] / (2 * M_PI);
-  fac *= gf->csize[1] * gf->csize[0] / (4 * M_PI * M_PI);
-  // fac  = (GFUNC_IS_2D (gf)) ? 1.0 : 1.0 / (gf->shape[2] * gf->csize[2]);
-  // fac /= gf->shape[1] * gf->csize[1];
-  // fac /= (gf->type == HALFCOMPLEX) ? gf->_ntmp * gf->csize[0] : gf->shape[0] * gf->csize[0];
+  Nx = (gf->type == HALFCOMPLEX) ? gf->_ntmp : gf->shape[0];
 
   /* Compute (i)^(Nx + Ny[ + Nz]) */
-  Nsum = (gf->type == HALFCOMPLEX) ? gf->_ntmp : gf->shape[0];
-  if (GFUNC_IS_2D (gf))    Nsum += gf->shape[1];
-  else                     Nsum += gf->shape[1] + gf->shape[2];
+  if (GFUNC_IS_2D (gf))    Nsum = Nx + gf->shape[1];
+  else                     Nsum = Nx + gf->shape[1] + gf->shape[2];
 
   switch (Nsum % 4)
     {
@@ -375,21 +411,27 @@ fft_bwd_premod (gfunc3 *gf)
 
   for (iz = 0; iz < gf->shape[2]; iz++)
     {
+      ker_fac_z = (GFUNC_IS_2D (gf)) ? 
+        1.0 : 
+        fft_bwd_interp_kernel (-M_PI + 2 * M_PI * iz / gf->shape[2]) * M_SQRT2PI;
       spz = gf->_fbuf[2] * (gf->xmin[2] + iz * gf->csize[2]);
 
       for (iy = 0; iy < gf->shape[1]; iy++)
         {
+          ker_fac_y = fft_bwd_interp_kernel (-M_PI + 2 * M_PI * iy / gf->shape[1]) * M_SQRT2PI;
           spy = gf->_fbuf[1] * (gf->xmin[1] + iy * gf->csize[1]);
           isum = iz + iy;
 
           for (ix = 0; ix < gf->shape[0]; ix++, isum++, pfval++)
             {
-              /* Multiply by (-1)^(Nx+Ny[+Nz]) * (-1)^(ix+iy+iz) * exp(i<x0,xi_j>) */
+              /* Multiply by (-1)^(Nx+Ny[+Nz]) * (-1)^(ix+iy+iz) * exp(i<x0,xi_j>) * interp_kernel */
+              ker_fac = ker_fac_z * ker_fac_y * 
+                fft_bwd_interp_kernel (-M_PI + 2 * M_PI * ix / Nx) * M_SQRT2PI;
               spx = gf->_fbuf[0] * (gf->xmin[0] + ix * gf->csize[0]);
               sp = spx + spy + spz;
               *pfval *= cexpf (sp * I);
               if (isum % 2) *pfval = -(*pfval);
-              *pfval *= fac * Nfac;
+              *pfval *= ker_fac * Nfac;
             }
         }
     }
@@ -403,7 +445,10 @@ void
 fft_bwd_postmod_r (gfunc3 *gf)
 {
   int isum, ix, iy, iz;
-  float *pfval = gf->fvals;
+  float *pfval = gf->fvals, cs_fac;
+
+  cs_fac = (GFUNC_IS_2D (gf)) ? 1.0 : gf->csize[2] * gf->shape[2];
+  cs_fac *= gf->csize[1] * gf->shape[1] * gf->csize[0] * gf->shape[0];
 
   for (iz = 0; iz < gf->shape[2]; iz++)
     {
@@ -412,6 +457,8 @@ fft_bwd_postmod_r (gfunc3 *gf)
           isum = iz + iy;
           for (ix = 0; ix < gf->shape[0]; ix++, isum++, pfval++)
             {
+              *pfval /= cs_fac;
+              
               if (isum % 2)
                 *pfval = -(*pfval);
             }
@@ -427,7 +474,11 @@ void
 fft_bwd_postmod_c (gfunc3 *gf)
 {
   int isum, ix, iy, iz;
+  float cs_fac;
   float complex *pfval = (float complex *) gf->fvals;
+
+  cs_fac = (GFUNC_IS_2D (gf)) ? 1.0 : gf->csize[2] * gf->shape[2];
+  cs_fac *= gf->csize[1] * gf->shape[1] * gf->csize[0] * gf->shape[0];
 
   for (iz = 0; iz < gf->shape[2]; iz++)
     {
@@ -436,6 +487,8 @@ fft_bwd_postmod_c (gfunc3 *gf)
           isum = iz + iy;
           for (ix = 0; ix < gf->shape[0]; ix++, isum++, pfval++)
             {
+              *pfval /= cs_fac;
+              
               if (isum % 2)
                 *pfval = -(*pfval);
             }
@@ -572,18 +625,22 @@ nfft3_postmod (float complex *ftvals, vec3 const x0, vec3 const csize,
                float const *freqs, size_t nfreqs)
 {
   size_t j;
-  float sp, cs_prod;
+  float sp, cs_fac, ker_fac;
   float const *cur_freq = freqs;
   float complex *pfval = ftvals;
   
-  cs_prod = vec3_product (csize);
+  cs_fac = vec3_product (csize);
   
-  // TODO: interpolation function!
   for (j = 0; j < nfreqs; j++, cur_freq += 3, pfval++)
     {
-      /* Multiply complex ft with exp(-i*<x0, freq_j>) * [product of csize] */
+      /* Multiply complex ft with exp(-i*<x0, freq_j>) * [product of csize] * interp_kernel */
+      ker_fac = fft_fwd_interp_kernel (csize[0] * cur_freq[0]) *
+                fft_fwd_interp_kernel (csize[1] * cur_freq[1]) *
+                fft_fwd_interp_kernel (csize[2] * cur_freq[2]) /
+                (2 * M_PI * M_SQRT2PI);
+      
       sp = x0[0] * cur_freq[0] + x0[1] * cur_freq[1] + x0[2] * cur_freq[2];
-      *pfval *= cs_prod * cexpf (- I * sp);
+      *pfval *= cs_fac * ker_fac * cexpf (- I * sp);
     }
     
   return;
@@ -623,18 +680,17 @@ nfft3_transform (gfunc3 const *gf, float const *freqs, size_t nfreqs, float comp
 
   nfft_init_3d (&p, gf->shape[0], gf->shape[1], gf->shape[2], nfreqs);
   
-  // FIXXME: paste correct swap code!!
   /* Copy and cast the values to the double complex array in the plan. Swap x and z axes. */
   pfval = (float complex *) gf->fvals;
   pfhat_val = p.f_hat;
   idx = 0;
-  incx = gf->shape[1] * gf->shape[2];
-  for (iz = 0; iz < gf->shape[2]; iz++)
+  incx = gf->shape[1] * gf->shape[0];
+  for (iz = 0; iz < gf->shape[0]; iz++)
     {
       for (iy = 0; iy < gf->shape[1]; iy++)
         {
-          idx = iy * gf->shape[2] + iz;
-          for (ix = 0; ix < gf->shape[0]; ix++, idx += incx)
+          idx = iy * gf->shape[0] + iz;
+          for (ix = 0; ix < gf->shape[2]; ix++, idx += incx)
             *(pfhat_val++) = (double complex) pfval[idx];
         }
     }
