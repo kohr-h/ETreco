@@ -410,15 +410,15 @@ void
 gfunc3_div_vfunc (gfunc3 *gf, const vfunc *vf);
 
 
-/* Set GF <- A * GF.  Currently implemented only for REAL function.
+/* Set GF <- A * GF. If GF is of REAL type and A has nonzero imaginary part, GF is converted to 
+ * a COMPLEX function.
  * 
  * Thrown exceptions: 
  * - EXC_NULL
  * - EXC_GFINIT
- * - EXC_UNIMPL
  */
 void
-gfunc3_scale (gfunc3 *gf, float a);
+gfunc3_scale (gfunc3 *gf, float complex a);
 
 
 /* Set GF <- GF + C.  Currently implemented only for REAL function.

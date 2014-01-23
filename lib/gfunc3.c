@@ -1609,14 +1609,10 @@ gfunc3_div_vfunc (gfunc3 *gf, const vfunc *vf)
 
 /*-------------------------------------------------------------------------------------------------*/
 
-/* TODO: implement version with complex A; This may change gf->type. */
 void
-gfunc3_scale (gfunc3 *gf, float a)
+gfunc3_scale_realfac (gfunc3 *gf, float a)
 {
   size_t ntotal_flt = 0;
-  
-  CAPTURE_NULL_VOID (gf);
-  GFUNC_CAPTURE_UNINIT_VOID (gf);
   
   if (GFUNC_IS_REAL (gf))
     ntotal_flt = gf->ntotal;
@@ -1643,6 +1639,77 @@ gfunc3_scale (gfunc3 *gf, float a)
     gf->fvals[i] *= a;
 
   #endif  
+  return;
+}
+
+/*-------------------------------------------------------------------------------------------------*/
+
+void
+gfunc3_scale_complfac (gfunc3 *gf, float complex a)
+{
+  #if HAVE_CBLAS
+  cblas_cscal (gf->ntotal, &a, gf->fvals, 1);
+  
+  #elif HAVE_SSE
+  size_t i;
+  size_t N2 = gf->ntotal / 2, N2rem = gf->ntotal % 2;
+  __m128 *p = (__m128 *) gf->fvals;
+  __m128 ma = _mm_set_ps (cimagf (a), crealf (a), cimagf (a), crealf (a));
+  __m128 ma_across = _mm_set_ps (crealf (a), cimagf (a), crealf (a), cimagf (a));
+  __m128 prod_eq, prod_across;
+
+  float *pf, *pprod_eq = (float *) &prod_eq, *pprod_across = (float *) &prod_across;
+  float complex *pfval;
+  
+  for (i = 0; i < N2; i++, p++)
+    {
+      prod_eq = _mm_mul_ps (*p, ma);
+      prod_across = _mm_mul_ps (*p, ma_across);
+
+      pf = (float *) p;
+      pf[0] = pprod_eq[0] - pprod_eq[1];
+      pf[1] = pprod_across[0] + pprod_across[1];
+      pf[2] = pprod_eq[2] - pprod_eq[3];
+      pf[3] = pprod_across[2] + pprod_across[3];
+    }
+  if (N2rem != 0)
+    {
+      pfval = (float complex *) &gf->fvals[2 * (gf->ntotal - N2rem)];
+      *pfval *= a;
+    }
+
+  #else  /* !(HAVE_CBLAS || HAVE_SSE) */
+  size_t i;
+  float complex *pfval = (float complex *) gf->fvals;
+  
+  for (i = 0; i < gf->ntotal; i++)
+    *(pfval++) *= a;
+
+  #endif  
+  return;
+}
+
+/*-------------------------------------------------------------------------------------------------*/
+
+void
+gfunc3_scale (gfunc3 *gf, float complex a)
+{
+  CEXCEPTION_T _e = EXC_NONE;
+  
+  CAPTURE_NULL_VOID (gf);
+  GFUNC_CAPTURE_UNINIT_VOID (gf);
+  
+  if (cimagf (a) == 0.0)
+    gfunc3_scale_realfac (gf, crealf (a));
+  else
+    {
+      if (gf->type == REAL)
+        {
+          Try { gfunc3_real2complex (gf); } CATCH_RETURN_VOID (_e);
+        }
+      
+      gfunc3_scale_complfac (gf, a);
+    }
   return;
 }
 
@@ -2425,7 +2492,7 @@ gfunc3_zeropad (gfunc3 *gf, idx3 const padding)
   GFUNC_CAPTURE_UNINIT_VOID (gf);
 
   /* TODO: implement complex version */
-  if (gf->type == HALFCOMPLEX)
+  if (GFUNC_IS_COMPLEX (gf))
     {
       EXC_THROW_CUSTOMIZED_PRINT (EXC_GFTYPE, "Not applicable to HALFCOMPLEX type.");
       return;
