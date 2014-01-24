@@ -1,7 +1,7 @@
 /*
- * operators.h -- operations on grid functions - private header
+ * operators_private.h -- operations on grid functions - private header
  * 
- * Copyright 2013 Holger Kohr <kohr@num.uni-sb.de>
+ * Copyright 2014 Holger Kohr <kohr@num.uni-sb.de>
  * 
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
