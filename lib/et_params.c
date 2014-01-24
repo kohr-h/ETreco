@@ -111,18 +111,17 @@ EtParams_free (EtParams **pparams)
 /*-------------------------------------------------------------------------------------------------*/
 
 void
-EtParams_assign_from_file (EtParams *params, const char *fname_et_params)
+EtParams_assign_from_file (EtParams *params, const char *fname_params)
 {
   double dtmp;
   dictionary *dict;
 
   CAPTURE_NULL_VOID (params);
-  CAPTURE_NULL_VOID (fname_et_params);
+  CAPTURE_NULL_VOID (fname_params);
 
-  if ((dict = iniparser_load (fname_et_params)) == NULL)
+  if ((dict = iniparser_load (fname_params)) == NULL)
     {
-      EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Unable to read reco parameters from %s.", 
-        fname_et_params);
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Unable to read parameters from %s.", fname_params);
       return;
     }
 
@@ -131,8 +130,7 @@ EtParams_assign_from_file (EtParams *params, const char *fname_et_params)
 
   if ((dtmp = iniparser_getdouble (dict, "optics:magnification", -1.0)) == -1.0)
     {
-      EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Key 'magnification' not found in %s.", 
-        fname_et_params);
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Key 'magnification' not found in %s.", fname_params);
       return;
     }
 
@@ -155,7 +153,7 @@ EtParams_assign_from_file (EtParams *params, const char *fname_et_params)
   if ((dtmp = iniparser_getdouble (dict, "electronbeam:energy_spread", -1.0)) == -1.0)
     {
       EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Key 'energy_spread' not found in %s.", 
-        fname_et_params);
+        fname_params);
       return;
     }
 
@@ -163,7 +161,7 @@ EtParams_assign_from_file (EtParams *params, const char *fname_et_params)
 
   if ((dtmp = iniparser_getdouble (dict, "optics:cs", -1.0)) == -1.0)
     {
-      EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Key 'cs' not found in %s.", fname_et_params);
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Key 'cs' not found in %s.", fname_params);
       return;
     }
 
@@ -171,7 +169,7 @@ EtParams_assign_from_file (EtParams *params, const char *fname_et_params)
 
   if ((dtmp = iniparser_getdouble (dict, "optics:cc", -1.0)) == -1.0)
     {
-      EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Key 'cc' not found in %s.", fname_et_params);
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Key 'cc' not found in %s.", fname_params);
       return;
     }
 
@@ -179,7 +177,7 @@ EtParams_assign_from_file (EtParams *params, const char *fname_et_params)
 
   if ((dtmp = iniparser_getdouble (dict, "optics:aperture", -1.0)) == -1.0)
     {
-      EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Key 'aperture' not found in %s.", fname_et_params);
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Key 'aperture' not found in %s.", fname_params);
       return;
     }
 
@@ -187,8 +185,7 @@ EtParams_assign_from_file (EtParams *params, const char *fname_et_params)
 
   if ((dtmp = iniparser_getdouble (dict, "optics:focal_length", -1.0)) == -1.0)
     {
-      EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Key 'focal_length' not found in %s.", 
-        fname_et_params);
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Key 'focal_length' not found in %s.", fname_params);
       return;
     }
 
@@ -196,8 +193,7 @@ EtParams_assign_from_file (EtParams *params, const char *fname_et_params)
 
   if ((dtmp = iniparser_getdouble (dict, "optics:cond_ap_angle", -1.0)) == -1.0)
     {
-      EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Key 'cond_ap_angle' not found in %s.", 
-        fname_et_params);
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Key 'cond_ap_angle' not found in %s.", fname_params);
       return;
     }
 
@@ -205,8 +201,7 @@ EtParams_assign_from_file (EtParams *params, const char *fname_et_params)
 
   if ((dtmp = iniparser_getdouble (dict, "optics:defocus_nominal", -1.0)) == -1.0)
     {
-      EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Key 'defocus_nominal' not found in %s.", 
-        fname_et_params);
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Key 'defocus_nominal' not found in %s.", fname_params);
       return;
     }
 
@@ -263,7 +258,6 @@ EtParams_print (EtParams const *params)
 {
   CAPTURE_NULL_VOID (params);
 
-  /* TODO: fix alignment of printout */
   /* TODO: make dependent on verbosity */
   printf ("\n");
   puts ("ET parameters:");
