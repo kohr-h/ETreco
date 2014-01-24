@@ -695,7 +695,7 @@ gfunc3_read_from_stack (gfunc3 *gf, FILE *fp, int stackpos)
 /*-------------------------------------------------------------------------------------------------*/
 
 void
-gfunc3_to_mrc (gfunc3 const *gf, char const *mrc_fname)
+gfunc3_to_mrc (gfunc3 const *gf, char const *mrc_fname, FILE **pfp_out)
 {
   CEXCEPTION_T _e = EXC_NONE;
   
@@ -703,7 +703,8 @@ gfunc3_to_mrc (gfunc3 const *gf, char const *mrc_fname)
   const int32_t next = 0, nlabl = 1;
   int32_t mode, nx_ny_nz[3];
   float amin = 0.0, amax = 0.0, amean = 0.0;
-  char labl[81];
+  char labl[81] = "                                                                      " 
+                  "          ";
   
   size_t ntotal_flt;
   float fbuf[3];
@@ -834,8 +835,128 @@ gfunc3_to_mrc (gfunc3 const *gf, char const *mrc_fname)
   Try { write_float_arr (gf->fvals, ntotal_flt, fp, MRC_HEADER_BYTES); }  
   Catch (_e) { EXC_RETHROW_REPRINT (_e);  fclose (fp);  return; }
   
-  fclose (fp);
+  /* If PFP_OUT is a valid pointer, the file pointer is handed there for further writing. 
+   * Otherwise, it is closed.
+   */
+  if (pfp_out != NULL)
+    *pfp_out = fp;
+  else
+    fclose (fp);
 
+  return;
+}
+
+/*-------------------------------------------------------------------------------------------------*/
+
+void
+gfunc3_write_to_stack (gfunc3 *gf, FILE *fp, int stackpos)
+{
+  CEXCEPTION_T _e = EXC_NONE;
+
+  int32_t nz, gf_mode, stk_mode, next;
+  size_t fpos = MRC_HEADER_BYTES;
+  idx3 stk_shp;
+  vec3 stk_x0, stk_cs;
+  
+  CAPTURE_NULL_VOID (gf);
+  CAPTURE_NULL_VOID (fp);
+  GFUNC_CAPTURE_UNINIT_VOID (gf);
+    
+  if (stackpos < 0)
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_BADARG, "stackpos must be nonnegative.");
+      return;
+    }
+
+  if (!GFUNC_IS_2D(gf))
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_GFDIM, "Only stacks of 2d functions supported.");
+      return;
+    }
+
+
+  /* Re-read some necessary MRC header parameters and re-compute min and max */
+  Try {
+    read_int32_arr (stk_shp, 3, fp,  0);
+    stk_shp[2] = 1;
+    
+    read_int32     (&nz,          fp,  8);
+    read_int32     (&stk_mode,    fp,  12);
+    read_float_arr (stk_cs,    3, fp,  40);
+    read_int32     (&next,        fp , 92);
+    read_float_arr (stk_x0,    3, fp, 196);
+  }
+  Catch (_e) {
+    EXC_THROW_CUSTOMIZED_PRINT (_e, "Unable to read parameters from MRC header in stack.");
+    return;
+  }
+
+  /* Check input for consistency with stack */
+  if (stackpos >= nz)
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_BADARG, "stackpos (%d) must be smaller than number of images"
+        " in stack (%d).", stackpos, nz);
+      return;
+    }
+
+  gf_mode = (GFUNC_IS_COMPLEX(gf)) ? 4 : 2;
+  if (gf_mode != stk_mode)
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_BADARG, "MRC stack mode (%d) differs from grid function "
+        "mode (%d).", stk_mode, gf_mode);
+      return;
+    }
+  
+  if (!idx3_eq (gf->shape, stk_shp))
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_BADARG, "Grid function shape not equal to stack shape.");
+      return;
+    }
+  
+  vec3_div_int (stk_cs, stk_shp);
+  if (!vec3_about_eq (gf->csize, stk_cs, EPS_GRID))
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_BADARG, "Grid function cell size not equal to stack cell "
+        "size.");
+      return;
+    }
+    
+  vec3_mul (stk_x0, stk_cs);
+  if (!vec3_about_eq (gf->x0, stk_x0, EPS_GRID))
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_BADARG, "Grid function origin not equal to stack origin.");
+      return;
+    }
+
+ 
+  switch (stk_mode)
+    {
+      case 2:  /* Write float values directly */
+      fpos += next + stackpos * gf->ntotal * sizeof (float);
+      
+      Try { write_float_arr (gf->fvals, gf->ntotal, fp, fpos); }  CATCH_RETURN_VOID (_e);
+      
+      break;
+
+
+      case 4:  /* Write complex float values directly */
+      fpos += next + stackpos * gf->ntotal * sizeof (float complex);
+      
+      Try { write_float_arr (gf->fvals, 2 * gf->ntotal, fp, fpos); }  CATCH_RETURN_VOID (_e);
+      
+      break;
+
+
+      default: /* This should never happen */
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Data mode %d not supported.", stk_mode);
+      return;
+
+    }
+
+    /* Update nz */
+    nz++;
+    write_int32 (&nz, fp, 8);
+    
   return;
 }
 
@@ -883,7 +1004,7 @@ temp_mrc_out (gfunc3 const *gf, char const *mrc_fbasename, int count)
   strncat (mrc_fname, ".mrc", extlen);
 
   printf ("Writing %s\n", mrc_fname);
-  Try { gfunc3_to_mrc (gf, mrc_fname); }  CATCH_RETURN_VOID (_e);
+  Try { gfunc3_to_mrc (gf, mrc_fname, NULL); }  CATCH_RETURN_VOID (_e);
   
   free (mrc_fname);
   

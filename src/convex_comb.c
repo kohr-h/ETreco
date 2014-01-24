@@ -83,7 +83,7 @@ main (int argc, char **argv)
     gfunc3_scale (gf2, lambda);
     gfunc3_axpy (1.0 - lambda, gf1, gf2);
     
-    gfunc3_to_mrc (gf1, fname_out);
+    gfunc3_to_mrc (gf1, fname_out, NULL);
 
     gfunc3_free (&gf1);
     gfunc3_free (&gf2);

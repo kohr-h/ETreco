@@ -153,7 +153,7 @@ main (int argc, char *argv[])
             {
               Try { temp_mrc_out (proj_image, "normalized_", i + 1); }  CATCH_EXIT_FAIL (_e);
           // probability_normalization (proj_image);
-          // gfunc3_to_mrc (proj_image, "normalized2_.mrc");
+          // temp_mrc_out (proj_image, "normalized2_", i + 1);
             }
         }
 
@@ -283,7 +283,7 @@ main (int argc, char *argv[])
       theta_cur  = theta_next;
     }
 
-  Try { gfunc3_to_mrc (volume, opts->fname_out); }  CATCH_EXIT_FAIL (_e);
+  Try { gfunc3_to_mrc (volume, opts->fname_out, NULL); }  CATCH_EXIT_FAIL (_e);
   printf ("Reconstructed volume written to %s\n", opts->fname_out);
 
   if (fp)
