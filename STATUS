@@ -17,9 +17,9 @@ What works in typical use cases:
 
 What might work (not properly tested):
 
-- Shifted Fourier transform
+ 
 
 
 What probably doesn't work:
 
-- Reconstruction with shifted images or shifted volume
+ 
