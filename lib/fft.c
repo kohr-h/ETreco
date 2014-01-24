@@ -1,7 +1,7 @@
 /*
  * fft.c -- fast Fourier transform related routines
  * 
- * Copyright 2013 Holger Kohr <kohr@num.uni-sb.de>
+ * Copyright 2014 Holger Kohr <kohr@num.uni-sb.de>
  * 
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -39,6 +39,7 @@
 
 #include "fft.h"
 #include "gfunc3.h"
+#include "mrc.h"
 #include "vfunc.h"
 
 
@@ -253,7 +254,7 @@ void
 fft_fwd_postmod (gfunc3 *gf)
 {
   int ix, iy, iz, isum, Nx, Nsum;
-  float spx, spy, spz, sp, ker_fac;
+  float spx, spy, spz, sp, ker_fac_z, ker_fac_y, ker_fac;
   float complex Nfac = 1.0, *pfval = (float complex *) gf->fvals;
 
   Nx = (gf->type == HALFCOMPLEX) ? gf->_ntmp : gf->shape[0];
@@ -272,21 +273,22 @@ fft_fwd_postmod (gfunc3 *gf)
 
   for (iz = 0; iz < gf->shape[2]; iz++)
     {
-      ker_fac = (GFUNC_IS_2D (gf)) ? 
+      ker_fac_z = (GFUNC_IS_2D (gf)) ? 
         1.0 : 
         fft_fwd_interp_kernel (-M_PI + 2 * M_PI * iz / gf->shape[2]) / M_SQRT2PI;
       spz = gf->_fbuf[2] * (gf->xmin[2] + iz * gf->csize[2]);
 
       for (iy = 0; iy < gf->shape[1]; iy++)
         {
-          ker_fac *= fft_fwd_interp_kernel (-M_PI + 2.0 * M_PI * iy / gf->shape[1]) / M_SQRT2PI;
+          ker_fac_y = fft_fwd_interp_kernel (-M_PI + 2.0 * M_PI * iy / gf->shape[1]) / M_SQRT2PI;
           spy = gf->_fbuf[1] * (gf->xmin[1] + iy * gf->csize[1]);
           isum = iz + iy;
 
           for (ix = 0; ix < gf->shape[0]; ix++, isum++, pfval++)
             {
               /* Multiply by (-1)^(Nx+Ny[+Nz]) * (-1)^(ix+iy+iz) * exp(-i<x0,xi_j>) * kernel_fac */
-              ker_fac *= fft_fwd_interp_kernel (-M_PI + 2.0 * M_PI * ix / Nx) / M_SQRT2PI;
+              ker_fac = fft_fwd_interp_kernel (-M_PI + 2.0 * M_PI * ix / Nx) / M_SQRT2PI 
+                * ker_fac_y * ker_fac_z;
               spx = gf->_fbuf[0] * (gf->xmin[0] + ix * gf->csize[0]);
               sp = spx + spy + spz;
               
@@ -331,7 +333,13 @@ fft_forward (gfunc3 *gf)
       Try { gfunc3_zeropad (gf, padding); } CATCH_RETURN_VOID (_e);
     }
 
+  if (DEBUGGING)
+    temp_mrc_out (gf, "zero-padded", 0);
+
   fft_fwd_premod (gf);
+
+  if (DEBUGGING)
+    temp_mrc_out (gf, "fwd_premod", 0);
 
   if (GFUNC_IS_REAL (gf))
     {
@@ -359,6 +367,8 @@ fft_forward (gfunc3 *gf)
 
       gf->fvals = (float *) d_ft;
       gf->is_initialized = TRUE;
+      if (DEBUGGING)
+        temp_mrc_out (gf, "fwd_transformed", 0);
     }
   else if (GFUNC_IS_COMPLEX (gf))
     {
@@ -376,12 +386,12 @@ fft_forward (gfunc3 *gf)
       fftwf_execute (p);
       fftwf_destroy_plan (p);
 
-      gf->is_initialized = FALSE;
       gfunc3_grid_fwd_reciprocal (gf);
-      gf->is_initialized = TRUE;
     }
 
   fft_fwd_postmod (gf);
+  if (DEBUGGING)
+    temp_mrc_out (gf, "fwd_postmod", 0);
   
   return;
 }
@@ -532,7 +542,10 @@ fft_backward (gfunc3 *gf)
 
   fft_bwd_premod (gf);
 
-  if (gf->type == REAL)
+  if (DEBUGGING)
+    temp_mrc_out (gf, "bwd_premod", 0);
+
+  if (gf->type == HALFCOMPLEX)
     {
       /* Allocate an array with the size of the (original) real-valued function. Store the 
        * inverse half-complex FFT there.
