@@ -1,7 +1,7 @@
 /*
  * ETreco.h -- includes all headers from lib
  * 
- * Copyright 2013 Holger Kohr <kohr@num.uni-sb.de>
+ * Copyright 2014 Holger Kohr <kohr@num.uni-sb.de>
  * 
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -36,7 +36,9 @@
 #include "operators.h"
 #include "vfunc.h"
 
-#include "ai_options.h"
+#include "ai_opts.h"
+#include "ai_params.h"
 #include "et_params.h"
 #include "et_vfuncs.h"
+#include "fwd_op_opts.h"
 #include "tiltangles.h"

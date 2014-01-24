@@ -1,7 +1,7 @@
 /*
  * operators.h -- operations on grid functions
  * 
- * Copyright 2013 Holger Kohr <kohr@num.uni-sb.de>
+ * Copyright 2014 Holger Kohr <kohr@num.uni-sb.de>
  * 
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -33,27 +33,7 @@
 
 #include "gfunc3.h"
 
-#include "et_params.h"
-
-typedef enum { PROJ_ASSUMPTION, BORN_APPROX } scattering_model;
 typedef enum { TRAPEZOIDAL } integration_rule; /* TODO: consider other rules */
-
-/*-------------------------------------------------------------------------------------------------
- * ET Forward operator 
- *-------------------------------------------------------------------------------------------------*/
-
-/* Just for testing */
-float *
-perp_plane_freqs (gfunc3 const *ft_proj_img_grid, vec3 const normal_angles_deg);
-
-float *
-ewald_sphere_freqs (gfunc3 const *ft_proj_img_grid, vec3 const normal_angles_deg, float wave_number);
-
-
-void
-et_scattering_projection (gfunc3 const *scatterer, vec3 const angles_deg, RecParams const *rec_p, 
-                          gfunc3 *proj_img, scattering_model sct_model);
-
 
 /*-------------------------------------------------------------------------------------------------
  * X-ray transform operators
@@ -66,8 +46,8 @@ void
 xray_backprojection (gfunc3 const *proj_img, vec3 const angles_deg, gfunc3 *volume);
 
 void
-xray_backprojection_single_axis (gfunc3 const *proj_img, float const theta_deg, 
-                                 RecParams const *rec_p, gfunc3 *volume);
+xray_backprojection_single_axis (gfunc3 const *proj_img, float const theta_deg, int axis,
+                                 float tilt_axis_par_shift_px, gfunc3 *volume);
 
 
 /*-------------------------------------------------------------------------------------------------

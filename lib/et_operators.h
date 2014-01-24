@@ -28,7 +28,7 @@ typedef enum { PROJ_ASSUMPTION, BORN_APPROX } scattering_model;
  *-------------------------------------------------------------------------------------------------*/
 
 void
-et_scattering_projection (gfunc3 const *scatterer, vec3 const angles_deg, RecParams const *rec_p, 
+et_scattering_projection (gfunc3 const *scatterer, vec3 const angles_deg, EtParams const *params, 
                           gfunc3 *proj_img, scattering_model sct_model);
 
 

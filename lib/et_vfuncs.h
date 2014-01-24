@@ -1,7 +1,7 @@
 /*
  * et_vfuncs.h -- vector functions related to ET
  * 
- * Copyright 2013 Holger Kohr <kohr@num.uni-sb.de>
+ * Copyright 2014 Holger Kohr <kohr@num.uni-sb.de>
  * 
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -32,9 +32,21 @@
 
 #include "vfunc.h"
 
+#include "ai_params.h"
 #include "et_params.h"
 
 /* TODO: write descriptions, esp. if function is real or complex */
+
+/*-------------------------------------------------------------------------------------------------*/
+
+/* Wrapper for several Params structures. Needed to be able to pass a single pointer to vfuncs. */
+typedef struct
+{
+  
+  AiParams *ai_params;
+  EtParams *et_params;
+  
+} ParamsWrapper;
 
 /*-------------------------------------------------------------------------------------------------*/
 
@@ -46,57 +58,49 @@ ft_gaussian (float const *xi, vec3 const gamma);
 
 /*-------------------------------------------------------------------------------------------------*/
 
-/* may throw EXC_NULL */
-void
-vfunc_init_ctf (vfunc *vf, RecParams const *ctf_p);
 
-/* may throw EXC_NULL */
 void
-vfunc_init_ctf_acr (vfunc *vf, RecParams const *ctf_p);
+vfunc_init_ctf (vfunc *vf, EtParams const *params);
 
-/* may throw EXC_NULL */
-void
-vfunc_init_detector_mtf (vfunc *vf, RecParams const *rec_p);
 
-/* may throw EXC_NULL */
 void
-vfunc_init_detector_recip_mtf (vfunc *vf, RecParams const *rec_p);
+vfunc_init_ctf_acr (vfunc *vf, EtParams const *params);
+
+
+void
+vfunc_init_detector_mtf (vfunc *vf, EtParams const *params);
+
+
+void
+vfunc_init_detector_recip_mtf (vfunc *vf, EtParams const *params);
 
 /*-------------------------------------------------------------------------------------------------*/
 
-
-// without preceding 1/2pi
-/* may throw EXC_NULL */
 void
-vfunc_init_ft_rk_single_axis (vfunc *vf, RecParams const *rec_p);
+vfunc_init_ft_rk_single_axis (vfunc *vf, ParamsWrapper const *pwrapper);
 
 /*-------------------------------------------------------------------------------------------------*/
 
-/* may throw EXC_NULL */
 void
 vfunc_init_ft_charfun_ball3 (vfunc *vf, float const *pradius);
 
 /*-------------------------------------------------------------------------------------------------*/
 
-/* may throw EXC_NULL */
 void
 vfunc_init_ft_charfun_cyl3 (vfunc *vf, float const *length_radius);
 
 /*-------------------------------------------------------------------------------------------------*/
 
-/* may throw EXC_NULL */
 void
 vfunc_init_ft_laplacian (vfunc *vf);
 
 /*-------------------------------------------------------------------------------------------------*/
 
-/* may throw EXC_NULL */
 void
 vfunc_init_ft_lambda (vfunc *vf, float const *pa);
 
 /*-------------------------------------------------------------------------------------------------*/
 
-/* may throw EXC_NULL */
 void
 vfunc_init_ft_lambda_v (vfunc *vf, float const *pa);
 

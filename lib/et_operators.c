@@ -39,10 +39,11 @@
 #include "fft.h"
 #include "gfunc3.h"
 #include "mrc.h"
-#include "operators.h"
 #include "operators_private.h"
 
 #include "et_params.h"
+#include "et_vfuncs.h"
+#include "et_operators.h"
 
 /*-------------------------------------------------------------------------------------------------*/
 
@@ -106,12 +107,11 @@ ewald_sphere_freqs (gfunc3 const *ft_proj_img_grid, vec3 const normal_angles_deg
 /*-------------------------------------------------------------------------------------------------*/
 
 void
-et_scattering_projection (gfunc3 const *scatterer, vec3 const angles_deg, RecParams const *rec_p, 
+et_scattering_projection (gfunc3 const *scatterer, vec3 const angles_deg, EtParams const *params, 
                           gfunc3 *proj_img, scattering_model sct_model)
 {
   CEXCEPTION_T _e = EXC_NONE;
 
-  int real_output = FALSE;
   float *freqs = NULL;
   vfunc ctf;
   
@@ -119,7 +119,7 @@ et_scattering_projection (gfunc3 const *scatterer, vec3 const angles_deg, RecPar
   CAPTURE_NULL_VOID (proj_img);
   CAPTURE_NULL_VOID (angles_deg);
   if (sct_model != PROJ_ASSUMPTION)
-    CAPTURE_NULL_VOID (rec_p);
+    CAPTURE_NULL_VOID (params);
   
   GFUNC_CAPTURE_UNINIT_VOID (scatterer);
   GFUNC_CAPTURE_UNINIT_VOID (proj_img);
@@ -130,7 +130,7 @@ et_scattering_projection (gfunc3 const *scatterer, vec3 const angles_deg, RecPar
       return;
     }
 
-  if ( (sct_model == BORN_APPROX) && (rec_p->wave_number == 0.0) )
+  if ( (sct_model == BORN_APPROX) && (params->wave_number == 0.0) )
     {
       EXC_THROW_CUSTOMIZED_PRINT (EXC_BADARG, "Wave number must not be 0 in BORN_APPROX model.");
       return;
@@ -154,7 +154,7 @@ et_scattering_projection (gfunc3 const *scatterer, vec3 const angles_deg, RecPar
   else if (sct_model == BORN_APPROX)
     {
       Try { 
-        freqs = ewald_sphere_freqs (proj_img, angles_deg, rec_p->wave_number); 
+        freqs = ewald_sphere_freqs (proj_img, angles_deg, params->wave_number); 
       } CATCH_RETURN_VOID (_e);
 
       Try { 
@@ -163,9 +163,9 @@ et_scattering_projection (gfunc3 const *scatterer, vec3 const angles_deg, RecPar
     }
   
   /* Multiply with CTF and scaling factors. Finally apply inverse FT */
-  Try { vfunc_init_ctf (ctf, rec_p); } CATCH_RETURN_VOID (_e);
+  Try { vfunc_init_ctf (&ctf, params); } CATCH_RETURN_VOID (_e);
   Try {
-    gfunc3_mul_vfunc (proj_img, ctf);
+    gfunc3_mul_vfunc (proj_img, &ctf);
     gfunc3_scale (proj_img, 2 * M_PI * M_SQRT2PI);
   } CATCH_RETURN_VOID (_e);
 

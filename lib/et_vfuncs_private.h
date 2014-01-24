@@ -1,7 +1,7 @@
 /*
  * et_vfuncs_private.h -- additional private vector functions related to ET
  * 
- * Copyright 2013 Holger Kohr <kohr@num.uni-sb.de>
+ * Copyright 2014 Holger Kohr <kohr@num.uni-sb.de>
  * 
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -33,7 +33,7 @@
 /*-------------------------------------------------------------------------------------------------*/
 
 float
-ctf_unscaled_radial (const float t, const RecParams *ctf_p);
+ctf_acr_unscaled_radial (const float t, const EtParams *params);
 
 /*-------------------------------------------------------------------------------------------------*/
 
