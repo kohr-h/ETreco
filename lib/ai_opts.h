@@ -1,7 +1,7 @@
 /*
- * ai_options.h -- dispatch options for ai_* programs via getopt
+ * opts.h -- dispatch options for ai_* programs via getopt
  * 
- * Copyright 2013 Holger Kohr <kohr@num.uni-sb.de>
+ * Copyright 2014 Holger Kohr <kohr@num.uni-sb.de>
  * 
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,8 +21,8 @@
  * 
  */
 
-#ifndef __OPTIONS_H__
-#define __OPTIONS_H__
+#ifndef __AI_OPTS_H__
+#define __AI_OPTS_H__
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>
@@ -48,24 +48,15 @@ extern int fft_padding;
 
 
 /* START and END are dummy names to mark the beginning and end of the enumerated types */
-typedef enum { M_START, DELTA, GAUSSIAN, M_END } mollifier_type; 
-typedef enum { T_START, SINGLE_AXIS, DOUBLE_AXIS, CONICAL, T_END } tiltscheme;
+typedef enum { MO_START, DELTA, GAUSSIAN, MO_END } mollifier_type; 
 
 typedef struct {
   
   /* File names */
   char *fname_in;
   char *fname_out;
-  char *fname_reco_params;
+  char *fname_params;
   char *fname_tiltangles;
-  
-  /* Tilt scheme */
-  tiltscheme tilting_scheme;
-  
-  /* Additional files for double axis */
-  char *fname_in_axis2;
-  char *fname_reco_params_axis2;
-  char *fname_tiltangles_axis2;
   
   /* Regularization parameters */
   float gamma;
@@ -84,36 +75,31 @@ typedef struct {
   float neg_lapl_param;
   float lambda_pow;
   
-} OptionData;
+} AiOpts;
 
 /*-------------------------------------------------------------------------------------------------*/
 
-/* Create a new OptionData structure and return a pointer to it.
+/* Create a new AiOpts structure and return a pointer to it.
  * 
  * Thrown exceptions:  
  * - Rethrows
  */
-OptionData *
-new_OptionData (void);
-
-/*-------------------------------------------------------------------------------------------------*/
-
-void 
-print_version_etc (char const *progname);
+AiOpts *
+new_AiOpts (void);
 
 /*-------------------------------------------------------------------------------------------------*/
 
 void
-OptionData_print (OptionData *od);
+AiOpts_print (AiOpts *opts);
 
 
 void
-OptionData_free (OptionData **pod);
+AiOpts_free (AiOpts **popts);
 
 
 void
-OptionData_assign_from_args (OptionData *od, int argc, char **argv);
+AiOpts_assign_from_args (AiOpts *opts, int argc, char **argv);
 
 /*-------------------------------------------------------------------------------------------------*/
 
-#endif  /* __OPTIONS_H__ */
+#endif  /* __AI_OPTS_H__ */

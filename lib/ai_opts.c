@@ -1,7 +1,7 @@
 /*
- * ai_options.c -- dispatch options for ai_* programs via getopt
+ * ai_opts.c -- dispatch options for ai_* programs via getopt
  * 
- * Copyright 2013 Holger Kohr <kohr@num.uni-sb.de>
+ * Copyright 2014 Holger Kohr <kohr@num.uni-sb.de>
  * 
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -36,7 +36,7 @@
 #include "vec3.h"
 #include "misc.h"
 
-#include "ai_options.h"
+#include "ai_opts.h"
 
 
 #define BG_PATCH_SIZE  50 /* Default size of patch to compute background stats */
@@ -44,7 +44,7 @@
 
 /*-------------------------------------------------------------------------------------------------*/
 
-#define SHORT_OPTS "o:g:c:f:p:n:m:s:t:T:ANILhvq"
+#define SHORT_OPTS "o:g:c:f:p:n:m:s:t:ANILhvq"
 #define LONG_OPTS \
          /* These options set a flag. */                    \
          {"verbose",          no_argument, &verbosity_level, VERB_LEVEL_VERBOSE},  \
@@ -53,13 +53,12 @@
          {"invert-contrast",  no_argument, &invert_contrast_flag, 1}, \
          {"autocenter-volume",no_argument, &autocenter_vol_flag, 1}, \
          /* These options don't set a flag. We distinguish them by their indices. */\
-         {"tilt-scheme",      required_argument, 0, 'T'}, \
          {"help",             no_argument, 0, 'h'}, \
          {"version",          no_argument, 0, 'V'}, \
          {"output-file",      required_argument, 0, 'o'}, \
          {"gamma",            required_argument, 0, 'g'}, \
          {"ctf-cutoff",       required_argument, 0, 'c'}, \
-         {"reco-params-file", required_argument, 0, 'p'}, \
+         {"params-file",      required_argument, 0, 'p'}, \
          {"num-images",       required_argument, 0, 'n'}, \
          {"start-index",      required_argument, 0, 's'}, \
          {"tiltangles-file",  required_argument, 0, 't'}, \
@@ -74,76 +73,68 @@
 
 int verbosity_level      = VERB_LEVEL_NORMAL;
 int truncate_ctf_flag    = 0;
-int normalize_flag       = 0;
-int autocenter_vol_flag  = 0;
-int invert_contrast_flag = 0;
+int normalize_flag       = 1;
+int autocenter_vol_flag  = 1;
+int invert_contrast_flag = 1;
 int use_lambda_flag      = 0;
-int fft_padding          = 0;
+int fft_padding          = FFT_PADDING;
 
-char const *mollifiers[]      = {"", "delta", "gaussian", ""};
-char const *tilting_schemes[] = {"", "single-axis", "double-axis", "conical", ""};
+char const *mollifiers[] = {"", "delta", "gaussian", ""};
 
 /*-------------------------------------------------------------------------------------------------*/
 
-OptionData *
-new_OptionData (void)
+AiOpts *
+new_AiOpts (void)
 {
   CEXCEPTION_T e = EXC_NONE;
-  OptionData *od = NULL;
+  AiOpts *opts = NULL;
   
-  Try { od = (OptionData *) ali16_malloc (sizeof (OptionData)); } CATCH_RETURN (e, NULL);
+  Try { opts = (AiOpts *) ali16_malloc (sizeof (AiOpts)); } CATCH_RETURN (e, NULL);
   
-  od->fname_in                = NULL;
-  od->fname_out               = NULL;
-  od->fname_reco_params       = NULL;
-  od->fname_tiltangles        = NULL;
-  od->tilting_scheme          = SINGLE_AXIS;
-  od->fname_in_axis2          = NULL;
-  od->fname_reco_params_axis2 = NULL;
-  od->fname_tiltangles_axis2  = NULL;
-  od->gamma                   = 0.0;
-  od->ctf_trunc               = 0.0;
-  od->moll_type               = DELTA;
-  od->num_images              = 0;
-  od->start_index             = 0;
-  od->lambda_pow              = 0.0;
-  od->bg_patch_ix0[2]         = -1;
-  od->bg_patch_shape[0]       = BG_PATCH_SIZE;
-  od->bg_patch_shape[1]       = BG_PATCH_SIZE;
-  od->bg_patch_shape[2]       = 1;
+  opts->fname_in                = NULL;
+  opts->fname_out               = NULL;
+  opts->fname_params       = NULL;
+  opts->fname_tiltangles        = NULL;
+  opts->gamma                   = 0.0;
+  opts->ctf_trunc               = 0.0;
+  opts->moll_type               = GAUSSIAN;
+  opts->num_images              = 0;
+  opts->start_index             = 0;
+  opts->lambda_pow              = 0.0;
+  opts->bg_patch_ix0[2]         = -1;
+  opts->bg_patch_shape[0]       = BG_PATCH_SIZE;
+  opts->bg_patch_shape[1]       = BG_PATCH_SIZE;
+  opts->bg_patch_shape[2]       = 1;
   
-  return od;
+  return opts;
 }
 
 /*-------------------------------------------------------------------------------------------------*/
 
 void
-OptionData_free (OptionData **pod)
+AiOpts_free (AiOpts **popts)
 {
-  if (pod == NULL)
+  if (popts == NULL)
     return;
   
-  if ((*pod) == NULL)
+  if ((*popts) == NULL)
     return;
     
-  free ((*pod)->fname_in);
-  free ((*pod)->fname_out);
-  free ((*pod)->fname_reco_params);
-  free ((*pod)->fname_tiltangles);
-  free ((*pod)->fname_in_axis2);
-  free ((*pod)->fname_reco_params_axis2);
-  free ((*pod)->fname_tiltangles_axis2);
+  free ((*popts)->fname_in);
+  free ((*popts)->fname_out);
+  free ((*popts)->fname_params);
+  free ((*popts)->fname_tiltangles);
 
-  free (*pod);
+  free (*popts);
   return;
 }
 
 /*-------------------------------------------------------------------------------------------------*/
 
 void
-OptionData_print (OptionData *od)
+AiOpts_print (AiOpts *opts)
 {
-  CAPTURE_NULL_VOID (od);
+  CAPTURE_NULL_VOID (opts);
   
   if (verbosity_level == VERB_LEVEL_QUIET)
     return;
@@ -153,34 +144,21 @@ OptionData_print (OptionData *od)
   puts ("Options from command line:");
   puts ("==========================\n");
 
-  printf ("Input file            : %s\n", od->fname_in);
-  printf ("Output file           : %s\n", od->fname_out);
-  printf ("Reco parameter file   : %s\n", od->fname_reco_params);
-  printf ("Tiltangles file       : %s\n", od->fname_tiltangles);
-
-  printf ("Tilting scheme        : ");
-  if      (od->tilting_scheme == SINGLE_AXIS)  printf ("single axis\n");
-  else if (od->tilting_scheme == DOUBLE_AXIS)  printf ("double axis\n");
-  else if (od->tilting_scheme == CONICAL)      printf ("conical\n");
-
-  if (od->tilting_scheme == DOUBLE_AXIS)
-    {
-      printf ("Input file 2          : %s\n", od->fname_in_axis2);
-      printf ("Reco parameter file 2 : %s\n", od->fname_reco_params_axis2);
-      printf ("Tiltangles file 2     : %s\n", od->fname_tiltangles_axis2);
-    }
-  
-  printf ("gamma                 : %e\n", od->gamma);
+  printf ("Input file            : %s\n", opts->fname_in);
+  printf ("Output file           : %s\n", opts->fname_out);
+  printf ("Reco parameter file   : %s\n", opts->fname_params);
+  printf ("Tiltangles file       : %s\n", opts->fname_tiltangles);
+  printf ("gamma                 : %e\n", opts->gamma);
 
   printf ("1/CTF cutoff          : ");
   if (truncate_ctf_flag)
-    printf ("%e\n", od->ctf_trunc);
+    printf ("%e\n", opts->ctf_trunc);
   else
     printf ("(ignored)\n");
     
-  printf ("Mollifier             : %s\n", mollifiers[od->moll_type]); 
+  printf ("Mollifier             : %s\n", mollifiers[opts->moll_type]); 
 
-  printf ("Autocenter volume     :" );
+  printf ("Autocenter volume     : " );
   if (autocenter_vol_flag)
     printf ("yes\n");
   else
@@ -197,20 +175,20 @@ OptionData_print (OptionData *od)
     printf ("(unused, no normalization)\n");
 
   else
-    printf ("size %dx%d at (%d,%d)\n", od->bg_patch_shape[0], od->bg_patch_shape[1], 
-    od->bg_patch_ix0[0], od->bg_patch_ix0[1]);
+    printf ("size %dx%d at (%d,%d)\n", opts->bg_patch_shape[0], opts->bg_patch_shape[1], 
+    opts->bg_patch_ix0[0], opts->bg_patch_ix0[1]);
 
   printf ("Number of images      : ");
-  if (od->num_images == -1)
+  if (opts->num_images == -1)
     printf ("(determined from data)\n");
   else
-    printf ("%d\n", od->num_images);
+    printf ("%d\n", opts->num_images);
 
-  printf ("Start index           : %d\n", od->start_index);
+  printf ("Start index           : %d\n", opts->start_index);
 
   printf ("Lambda                : ");
   if (use_lambda_flag)
-    printf ("Lambda^a with a=%f\n", od->lambda_pow);
+    printf ("Lambda^a with a=%f\n", opts->lambda_pow);
   else  
     printf ("(not used)\n");
   
@@ -225,7 +203,6 @@ void
 print_help (char const *progname)
 {
   mollifier_type iter_m;
-  tiltscheme iter_t;
   // TODO: write conical tilt help
   
   printf ("Usage: %s [options] tiltseries_file\n", progname);
@@ -237,24 +214,11 @@ print_help (char const *progname)
   puts ("  -g value, --gamma=value");
   puts ("                 set regularization parameter gamma to VALUE; magnitude");
   puts ("                 should be in the order of detector pixel size [microns].");
-  puts ("  -p file, --reco-params-file=file");
+  puts ("  -p file, --params-file=file");
   puts ("                 read CTF and reconstruction parameters from FILE (INI-style).");
   puts ("");
   puts ("Options:");
   puts ("");
-  puts ("  -T scheme, --tilting-scheme=scheme");
-  puts ("                 interpret data according to SCHEME. Possible values are:");
-  printf ("               ");
-  for (iter_t = T_START + 1; iter_t < T_END; iter_t++)
-    printf ("  %s", tilting_schemes[iter_t]);
-  printf ("\n");
-  puts ("                 Default: single-axis");
-  puts ("                 NOTE: if double-axis is selected, the programm automatically");
-  puts ("                 looks for tiltseries, reco params and tiltangles files ");
-  puts ("                 corresponding to axis 2. The naming scheme is");
-  puts ("                 file[a/A/0/1/(none)].extension -> file[b/B/1/2/2].extension.");
-  puts ("                 Example: par1.cfg -> par2.cfg, seriesA.mrc -> seriesB.mrc,");
-  puts ("                          tiltangles.txt -> tiltangles2.txt");
   puts ("  -o file, --output-file=file");
   puts ("                 write reconstruction to FILE; if no parameter is given, the");
   puts ("                 output file is determined from tiltseries_file by appending");
@@ -264,23 +228,25 @@ print_help (char const *progname)
   puts ("                 1/CTF exceeds VALUE, it is replaced by a differentiable");
   puts ("                 transition spline; must be > 1.0 and should not exceed ~10.0.");
   puts ("  -m name, --mollifier=name");
-  puts ("                 use the specified mollifier instead of delta; Supported values");
-  printf ("                 for NAME are:");
-  for (iter_m = M_START + 1; iter_m < M_END; iter_m++)
+  puts ("                 use the specified mollifier; Possible values:");
+  for (iter_m = MO_START + 1; iter_m < MO_END; iter_m++)
     printf ("  %s", mollifiers[iter_m]);
   printf ("\n");
+  puts ("                 (default: gaussian)");
   puts ("  -A, --autocenter-volume");
-  puts ("                 automatically center the volume over the tilt-axis.");
+  puts ("                 automatically center the volume over the tilt-axis (enabled by");
+  puts ("                 default).");
   puts ("  -N, --normalize");
-  puts ("                 normalize the projection images based on their histograms.");
+  puts ("                 normalize the projection images based on their histograms (enabled");
+  puts ("                 by default).");
   puts ("  --background=index_x,index_y,size_x,size_y");
   puts ("                 compute background statistics using a patch of SIZE_X x SIZE_Y");
   puts ("                 pixels with lower-left indices INDEX_X, INDEX_Y.");
   printf ("                 Default: 0,0,%d,%d\n", 
     BG_PATCH_SIZE, BG_PATCH_SIZE);
   puts ("  -I, --invert-contrast");
-  puts ("                 invert the contrast of the images; use this option if");
-  puts ("                 objects are darker than the background.");
+  puts ("                 invert the contrast of the images; use this option if dense regions");
+  puts ("                 are darker than the background (enabled by default).");
   puts ("  -L value, --lambda-pow=value");
   puts ("                 feature reconstruction: compute Lambda^a(f) instead of f,");
   puts ("                 where Lambda = sqrt(-Laplacian) and a = VALUE.");
@@ -343,13 +309,13 @@ fname_rsplit_at_dot (char const *fname, char **pbase_str, char **pext_str)
 /*-------------------------------------------------------------------------------------------------*/
 
 void
-OptionData_set_fname_in (OptionData *od, char const *fname)
+AiOpts_set_fname_in (AiOpts *opts, char const *fname)
 {
   CEXCEPTION_T e = EXC_NONE;
   int len = strlen (fname);
   
-  Try { od->fname_in = (char *) ali16_malloc (len + 1); } CATCH_RETURN_VOID (e);
-  strncpy (od->fname_in, fname, len);
+  Try { opts->fname_in = (char *) ali16_malloc (len + 1); } CATCH_RETURN_VOID (e);
+  strncpy (opts->fname_in, fname, len);
   return;
 }
 
@@ -358,7 +324,7 @@ OptionData_set_fname_in (OptionData *od, char const *fname)
 #define REC_STR   "_rec"  /* append this before the file extension for the reco */
 
 void
-OptionData_assemble_fname_out (OptionData *od,  char const *base, char const *ext)
+AiOpts_assemble_fname_out (AiOpts *opts,  char const *base, char const *ext)
 {
   CEXCEPTION_T e = EXC_NONE;
   int base_len, rec_len, ext_len;
@@ -368,10 +334,10 @@ OptionData_assemble_fname_out (OptionData *od,  char const *base, char const *ex
   rec_len  = strlen (REC_STR);
   ext_len  = strlen (ext);
   
-  Try { od->fname_out = (char *) ali16_malloc (base_len + rec_len + ext_len + 1); }
+  Try { opts->fname_out = (char *) ali16_malloc (base_len + rec_len + ext_len + 1); }
   CATCH_RETURN_VOID (e);
     
-  p_tmp = od->fname_out;
+  p_tmp = opts->fname_out;
   strncpy (p_tmp, base, base_len);
   
   p_tmp += base_len;
@@ -386,13 +352,13 @@ OptionData_assemble_fname_out (OptionData *od,  char const *base, char const *ex
 /*-------------------------------------------------------------------------------------------------*/
 
 void
-OptionData_determine_fname_out (OptionData *od, char *fname_in)
+AiOpts_determine_fname_out (AiOpts *opts, char *fname_in)
 {
   CEXCEPTION_T e = EXC_NONE;
   char *bs, *ex;
   
   Try { fname_rsplit_at_dot (fname_in, &bs, &ex); } CATCH_RETURN_VOID (e);
-  Try { OptionData_assemble_fname_out (od, bs, ex); } CATCH_RETURN_VOID (e);
+  Try { AiOpts_assemble_fname_out (opts, bs, ex); } CATCH_RETURN_VOID (e);
     
   free (bs);
   free (ex);
@@ -402,127 +368,46 @@ OptionData_determine_fname_out (OptionData *od, char *fname_in)
 /*-------------------------------------------------------------------------------------------------*/
 
 void
-OptionData_set_fname_out (OptionData *od, char const *fname)
+AiOpts_set_fname_out (AiOpts *opts, char const *fname)
 {
   CEXCEPTION_T e = EXC_NONE;
   int len = strlen (fname);
  
-  Try { od->fname_out = (char *) ali16_malloc (len + 1); } CATCH_RETURN_VOID (e);
-  strncpy (od->fname_out, fname, len);
+  Try { opts->fname_out = (char *) ali16_malloc (len + 1); } CATCH_RETURN_VOID (e);
+  strncpy (opts->fname_out, fname, len);
   return;
 }
 
 /*-------------------------------------------------------------------------------------------------*/
 
 void
-OptionData_set_fname_reco_params (OptionData *od, char const *fname)
+AiOpts_set_fname_params (AiOpts *opts, char const *fname)
 {
   CEXCEPTION_T e = EXC_NONE;
   int len = strlen (fname);
 
-  Try { od->fname_reco_params = (char *) ali16_malloc (len + 1); } CATCH_RETURN_VOID (e);
-  strncpy (od->fname_reco_params, fname, len);
+  Try { opts->fname_params = (char *) ali16_malloc (len + 1); } CATCH_RETURN_VOID (e);
+  strncpy (opts->fname_params, fname, len);
   return;
 }
 
 /*-------------------------------------------------------------------------------------------------*/
 
 void
-OptionData_set_fname_tiltangles (OptionData *od, char const *fname)
+AiOpts_set_fname_tiltangles (AiOpts *opts, char const *fname)
 {
   CEXCEPTION_T e = EXC_NONE;
   int len = strlen (fname);
   
-  Try { od->fname_tiltangles = (char *) ali16_malloc (len + 1); } CATCH_RETURN_VOID (e);
-  strncpy (od->fname_tiltangles, fname, len);
+  Try { opts->fname_tiltangles = (char *) ali16_malloc (len + 1); } CATCH_RETURN_VOID (e);
+  strncpy (opts->fname_tiltangles, fname, len);
   return;
 }
 
-// /*-------------------------------------------------------------------------------------------------*
-// void
-// assemble_fname_axis2 (char **pfname_axis2, char const *fname_axis1)
-// {
-  // CEXCEPTION_T e = EXC_NONE;
-  // 
-  // int len;
-  // char indicator, *base, *ext;
-// 
-  // Try { fname_rsplit_at_dot (fname_axis1, &base, &ext); } CATCH_RETURN_VOID (e);
-  // 
-  // len = strlen (base);
-  // indicator = base[len - 1];
-  // 
-  // Try { *pfname_axis2 = (char *) ali16_malloc (strlen (fname_axis1) + 2); }
-  // Catch (e) 
-  // {
-    // EXC_RETHROW_REPRINT (e);
-    // free (base);
-    // free (ext);
-    // return;
-  // }
-  // 
-  // strcpy (*pfname_axis2, base);
-  // 
-  // switch (indicator)
-    // {
-      // case '0': (*pfname_axis2)[len - 1] = '1'; break;
-      // case '1': (*pfname_axis2)[len - 1] = '2'; break;
-      // case 'a': (*pfname_axis2)[len - 1] = 'b'; break;
-      // case 'A': (*pfname_axis2)[len - 1] = 'B'; break;
-      // 
-      // default: 
-        // (*pfname_axis2)[len]      = '2';
-        // (*pfname_axis2)[len + 1]  = '\0';
-    // }
-    // 
-  // strcat (*pfname_axis2, ext);
-  // 
-  // free (base);
-  // free (ext);
-  // 
-  // return;
-// }
-// 
-// /*-------------------------------------------------------------------------------------------------*
-// void
-// OptionData_assemble_fname_in_axis2 (OptionData *od)
-// {
-  // CEXCEPTION_T e = EXC_NONE;
-  // 
-  // Try { assemble_fname_axis2 (&od->fname_in_axis2, od->fname_in); }
-  // Catch (e) { EXC_RETHROW_REPRINT (e); }
-  // 
-  // return;
-// }
-// 
-// /*-------------------------------------------------------------------------------------------------*
-// void
-// OptionData_assemble_fname_reco_params_axis2 (OptionData *od)
-// {
-  // CEXCEPTION_T e = EXC_NONE;
-  // 
-  // Try { assemble_fname_axis2 (&od->fname_reco_params_axis2, od->fname_reco_params); }
-  // Catch (e) { EXC_RETHROW_REPRINT (e); }
-  // 
-  // return;
-// }
-// 
-// /*-------------------------------------------------------------------------------------------------*
-// void
-// OptionData_assemble_fname_tiltangles_axis2 (OptionData *od)
-// {
-  // CEXCEPTION_T e = EXC_NONE;
-  // 
-  // Try { assemble_fname_axis2 (&od->fname_tiltangles_axis2, od->fname_tiltangles); }
-  // Catch (e) { EXC_RETHROW_REPRINT (e); }
-  // 
-  // return;
-// }
-// 
 /*-------------------------------------------------------------------------------------------------*/
 
 void
-OptionData_set_gamma (OptionData *od, float gamma)
+AiOpts_set_gamma (AiOpts *opts, float gamma)
 {
   if (gamma <= 0.0)
     {
@@ -530,14 +415,14 @@ OptionData_set_gamma (OptionData *od, float gamma)
       return;
     }
     
-  od->gamma = gamma;
+  opts->gamma = gamma;
   return;
 }
 
 /*-------------------------------------------------------------------------------------------------*/
 
 void
-OptionData_set_ctf_trunc (OptionData *od, float ctf_cut)
+AiOpts_set_ctf_trunc (AiOpts *opts, float ctf_cut)
 {
   if (ctf_cut <= 0.0)
     {
@@ -545,14 +430,14 @@ OptionData_set_ctf_trunc (OptionData *od, float ctf_cut)
       return;
     }
     
-  od->ctf_trunc = ctf_cut;
+  opts->ctf_trunc = ctf_cut;
   return;
 }
 
 /*-------------------------------------------------------------------------------------------------*/
 
 void
-OptionData_set_num_images (OptionData *od, int n_images)
+AiOpts_set_num_images (AiOpts *opts, int n_images)
 {
   if (n_images <= 0)
     {
@@ -560,14 +445,14 @@ OptionData_set_num_images (OptionData *od, int n_images)
       return;
     }
   
-  od->num_images = n_images;
+  opts->num_images = n_images;
   return;
 }
 
 /*-------------------------------------------------------------------------------------------------*/
 
 void
-OptionData_set_start_index (OptionData *od, int nstart)
+AiOpts_set_start_index (AiOpts *opts, int nstart)
 {
   if (nstart < 0)
     {
@@ -576,14 +461,14 @@ OptionData_set_start_index (OptionData *od, int nstart)
       return;
     }
   
-  od->start_index = nstart;
+  opts->start_index = nstart;
   return;
 }
 
 /*-------------------------------------------------------------------------------------------------*/
 
 void
-OptionData_set_moll_type (OptionData *od, char *moll_str)
+AiOpts_set_moll_type (AiOpts *opts, char *moll_str)
 {
   char *p;
   mollifier_type iter;
@@ -591,11 +476,11 @@ OptionData_set_moll_type (OptionData *od, char *moll_str)
   for (p = moll_str; *p; p++) 
     *p = tolower (*p);
   
-  for (iter = M_START + 1; iter < M_END; iter++)
+  for (iter = MO_START + 1; iter < MO_END; iter++)
     {
       if (strcmp (moll_str, mollifiers[iter]) == 0)
         {
-          od->moll_type = iter;
+          opts->moll_type = iter;
           return;
         }
     }
@@ -607,7 +492,7 @@ OptionData_set_moll_type (OptionData *od, char *moll_str)
 /*-------------------------------------------------------------------------------------------------*/
 
 void
-OptionData_set_bg_params (OptionData *od, char const *params_str)
+AiOpts_set_bg_params (AiOpts *opts, char const *params_str)
 {
   int ix, iy, iz = 0, sx, sy;
   int n = sscanf (params_str, "%d,%d,%d,%d", &ix, &iy, &sx, &sy);
@@ -621,12 +506,12 @@ OptionData_set_bg_params (OptionData *od, char const *params_str)
       sy = BG_PATCH_SIZE;
     }
   
-  od->bg_patch_ix0[0]   = ix;
-  od->bg_patch_ix0[1]   = iy;
-  od->bg_patch_ix0[2]   = iz;
-  od->bg_patch_shape[0] = sx;
-  od->bg_patch_shape[1] = sy;
-  od->bg_patch_shape[2] = 1;
+  opts->bg_patch_ix0[0]   = ix;
+  opts->bg_patch_ix0[1]   = iy;
+  opts->bg_patch_ix0[2]   = iz;
+  opts->bg_patch_shape[0] = sx;
+  opts->bg_patch_shape[1] = sy;
+  opts->bg_patch_shape[2] = 1;
   
   return;
 }
@@ -634,9 +519,9 @@ OptionData_set_bg_params (OptionData *od, char const *params_str)
 /*-------------------------------------------------------------------------------------------------*/
 
 void
-OptionData_set_lambda_pow (OptionData *od, float l_a)
+AiOpts_set_lambda_pow (AiOpts *opts, float l_a)
 {
-  od->lambda_pow = l_a;
+  opts->lambda_pow = l_a;
   
   return;
 }
@@ -644,9 +529,9 @@ OptionData_set_lambda_pow (OptionData *od, float l_a)
 /*-------------------------------------------------------------------------------------------------*/
 
 void
-OptionData_assign_from_args (OptionData *od, int argc, char **argv)
+AiOpts_assign_from_args (AiOpts *opts, int argc, char **argv)
 {
-  CAPTURE_NULL_VOID (od);
+  CAPTURE_NULL_VOID (opts);
 
   /* Aux variables */
   int c;
@@ -720,7 +605,7 @@ OptionData_assign_from_args (OptionData *od, int argc, char **argv)
             }
 
           ctf_cut = atof (optarg);
-          OptionData_set_ctf_trunc (od, ctf_cut);
+          AiOpts_set_ctf_trunc (opts, ctf_cut);
           truncate_ctf_flag = 1;
           break;
 
@@ -754,7 +639,7 @@ OptionData_assign_from_args (OptionData *od, int argc, char **argv)
             }
 
           gamma = atof (optarg);
-          OptionData_set_gamma (od, gamma);
+          AiOpts_set_gamma (opts, gamma);
           g_flag = 1;
           break;
  
@@ -770,7 +655,7 @@ OptionData_assign_from_args (OptionData *od, int argc, char **argv)
             }
 
           l_a = atof (optarg);
-          OptionData_set_lambda_pow (od, l_a);
+          AiOpts_set_lambda_pow (opts, l_a);
           use_lambda_flag = 1;
           break;
  
@@ -781,7 +666,7 @@ OptionData_assign_from_args (OptionData *od, int argc, char **argv)
               exit (EXIT_FAILURE);
             }
 
-          OptionData_set_moll_type (od, optarg);
+          AiOpts_set_moll_type (opts, optarg);
           m_flag = 1;
           break;
  
@@ -793,12 +678,12 @@ OptionData_assign_from_args (OptionData *od, int argc, char **argv)
             }
 
           n_images = atoi (optarg);
-          OptionData_set_num_images (od, n_images);
+          AiOpts_set_num_images (opts, n_images);
           n_flag = 1;
           break;
 
         case 'N':
-          /* normalize_flag = 1; */
+          normalize_flag = 1;
           break;
  
         case 'o':
@@ -808,18 +693,18 @@ OptionData_assign_from_args (OptionData *od, int argc, char **argv)
               exit (EXIT_FAILURE);
             }
 
-          OptionData_set_fname_out (od, optarg);
+          AiOpts_set_fname_out (opts, optarg);
           o_flag = 1;
           break;
  
         case 'p':
           if (p_flag != 0)
             {
-              fputs ("Invalid multiple use of `-p' (`--reco-params-file') option.", stderr);
+              fputs ("Invalid multiple use of `-p' (`--params-file') option.", stderr);
               exit (EXIT_FAILURE);
             }
 
-          OptionData_set_fname_reco_params (od, optarg);
+          AiOpts_set_fname_params (opts, optarg);
           p_flag = 1;
           break;
  
@@ -830,7 +715,7 @@ OptionData_assign_from_args (OptionData *od, int argc, char **argv)
               exit (EXIT_FAILURE);
             }
 
-          OptionData_set_bg_params (od, optarg);
+          AiOpts_set_bg_params (opts, optarg);
           P_flag = 1;
           break;
  
@@ -853,7 +738,7 @@ OptionData_assign_from_args (OptionData *od, int argc, char **argv)
             }
 
           nstart = atoi (optarg);
-          OptionData_set_start_index (od, nstart);
+          AiOpts_set_start_index (opts, nstart);
           s_flag = 1;
           break;
  
@@ -864,7 +749,7 @@ OptionData_assign_from_args (OptionData *od, int argc, char **argv)
               exit (EXIT_FAILURE);
             }
 
-          OptionData_set_fname_tiltangles (od, optarg);
+          AiOpts_set_fname_tiltangles (opts, optarg);
           t_flag = 1;
           break;
  
@@ -915,7 +800,7 @@ OptionData_assign_from_args (OptionData *od, int argc, char **argv)
 
   if (!p_flag)
     {
-      fprintf (stderr, "Error: `--reco-params-file` option missing.\n\n" 
+      fprintf (stderr, "Error: `--params-file` option missing.\n\n" 
         "`%s --help' provides further information.\n\n", progname);
       exit (EXIT_FAILURE);
     }
@@ -936,11 +821,11 @@ OptionData_assign_from_args (OptionData *od, int argc, char **argv)
       exit (EXIT_FAILURE);
     }
 
-  OptionData_set_fname_in (od, argv[optind]);
+  AiOpts_set_fname_in (opts, argv[optind]);
 
   
   if (!o_flag)
-    OptionData_determine_fname_out (od, argv[optind]);
+    AiOpts_determine_fname_out (opts, argv[optind]);
   
   return;
 }

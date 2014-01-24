@@ -1,7 +1,7 @@
 /*
  * ai_single_axis.c -- approximate inverse for single-axis ET data
  * 
- * Copyright 2013 Holger Kohr <kohr@num.uni-sb.de>
+ * Copyright 2014 Holger Kohr <kohr@num.uni-sb.de>
  * 
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -43,7 +43,7 @@ int
 main (int argc, char *argv[])
 {
   CEXCEPTION_T _e = EXC_NONE;
-  OptionData *opt_data;
+  AiOpts *ai_opts;
 
   int i, nz, last_index;
   float weight, theta_last = 0.0, theta_cur = 0.0, theta_next = 0.0;
@@ -51,15 +51,18 @@ main (int argc, char *argv[])
   FILE *fp = NULL;
   
   vfunc vf_rk, vf_lambda, vf_recip_mtf;
-  RecParams *rec_p;
+  EtParams *et_params;
+  AiParams *ai_params;
+  ParamsWrapper pwrapper;
   gfunc3 *proj_image, *rk, *recip_mtf, *volume;
   tiltangles *tilts;
 
   /* Create structures */
   Try 
   { 
-    opt_data = new_OptionData (); 
-    rec_p = new_RecParams ();
+    ai_opts = new_AiOpts (); 
+    ai_params = new_AiParams ();
+    et_params = new_EtParams ();
     proj_image = new_gfunc3 ();
     tilts = new_tiltangles ();
     volume = new_gfunc3 ();
@@ -70,27 +73,38 @@ main (int argc, char *argv[])
   /* Initialize command-line options, reconstruction parameters, first projection image, 
    * tilt angles and volume
    */
-  Try { OptionData_assign_from_args (opt_data, argc, argv); }  CATCH_EXIT_FAIL (_e);
+  Try { AiOpts_assign_from_args (ai_opts, argc, argv); }  CATCH_EXIT_FAIL (_e);
   Try { 
-    RecParams_assign_from_OptionData (rec_p, opt_data);
-    gfunc3_init_mrc (proj_image, opt_data->fname_in, &fp, &nz, STACK);
-    tiltangles_assign_from_file (tilts, opt_data->fname_tiltangles);
+    EtParams_assign_from_file (et_params, ai_opts->fname_params); 
+    AiParams_assign_from_AiOpts (ai_params, ai_opts);
+    }  CATCH_EXIT_FAIL (_e);
+  Try { 
+    AiParams_assign_ctftrunc_from_EtParams (ai_params, et_params);
+    gfunc3_init_mrc (proj_image, ai_opts->fname_in, &fp, &nz, STACK);
+    tiltangles_assign_from_file (tilts, ai_opts->fname_tiltangles);
   } CATCH_EXIT_FAIL (_e);
-  
-  Try { gfunc3_init (volume, NULL, rec_p->vol_csize, rec_p->vol_shape, REAL); }  CATCH_EXIT_FAIL (_e);
 
-  /* Scale and shift volume according to the reco parameters */
+  /* Wrap the parameters */
+  pwrapper.et_params = et_params;
+  pwrapper.ai_params = ai_params;
+  
   Try { 
-    gfunc3_scale_grid (volume, rec_p->magnification); 
-    RecParams_apply_to_volume (rec_p, volume); 
+    gfunc3_init (volume, NULL, ai_params->vol_csize, ai_params->vol_shape, REAL); 
+  }  CATCH_EXIT_FAIL (_e);
+
+
+  /* Scale and shift volume according to the parameters */
+  Try { 
+    gfunc3_scale_grid (volume, et_params->magnification); 
+    AiParams_apply_to_volume (ai_params, volume); 
   } CATCH_EXIT_FAIL (_e);
 
 
   /* Set some parameters and resolve conflicts */
-  if (opt_data->num_images == 0)  /* Not specified by option, thus taken from data */
-    opt_data->num_images = nz - opt_data->start_index;
+  if (ai_opts->num_images == 0)  /* Not specified by option, thus taken from data */
+    ai_opts->num_images = nz - ai_opts->start_index;
 
-  last_index = opt_data->start_index + opt_data->num_images - 1;
+  last_index = ai_opts->start_index + ai_opts->num_images - 1;
 
   Try {
     if (last_index >= tilts->ntilts)
@@ -105,35 +119,35 @@ main (int argc, char *argv[])
 
 
   /* Print summary of everything before the real work starts */
-  OptionData_print (opt_data);
-  RecParams_print (rec_p);
+  AiOpts_print (ai_opts);
+  EtParams_print (et_params);
+  AiParams_print (ai_params);
   if (verbosity_level >= VERB_LEVEL_NORMAL)
     gfunc3_print_grid (volume, "Volume grid:");
-
 
   /* Initialize current theta for the loop */
   Try { tiltangles_get_angles (tilts, angles, 0); }  CATCH_EXIT_FAIL (_e);
   theta_cur = angles[1];
 
   
-  for (i = opt_data->start_index; i <= last_index; i++)
+  for (i = ai_opts->start_index; i <= last_index; i++)
     {
       /* Initialize image and normalize if desired */
       Try { 
         gfunc3_read_from_stack (proj_image, fp, i);
-        RecParams_apply_to_proj_image (rec_p, proj_image); 
+        AiParams_apply_to_proj_image (ai_params, proj_image); 
       } CATCH_EXIT_FAIL (_e);
 
-      if ((verbosity_level >= VERB_LEVEL_VERBOSE) && (i == opt_data->start_index))
+      if ((verbosity_level >= VERB_LEVEL_VERBOSE) && (i == ai_opts->start_index))
         gfunc3_print_grid (proj_image, "Data grid:");
 
       if (verbosity_level >= VERB_LEVEL_NORMAL)
-        printf ("Image %3d of %3d\n", i - opt_data->start_index + 1, opt_data->num_images);
+        printf ("Image %3d of %3d\n", i - ai_opts->start_index + 1, ai_opts->num_images);
      
       if (normalize_flag)
         {
           Try {
-            histogram_normalization (proj_image, opt_data->bg_patch_ix0, opt_data->bg_patch_shape);
+            histogram_normalization (proj_image, ai_opts->bg_patch_ix0, ai_opts->bg_patch_shape);
           } CATCH_EXIT_FAIL (_e);
           if (DEBUGGING)
             {
@@ -150,7 +164,7 @@ main (int argc, char *argv[])
           theta_next = angles[1];
         }
 
-      if (i == opt_data->start_index)
+      if (i == ai_opts->start_index)
         weight = (theta_next - theta_cur) / 2.0;
       else if (i == last_index)
         weight = (theta_cur - theta_last) / 2.0;
@@ -170,7 +184,7 @@ main (int argc, char *argv[])
 
       
       /* Rotate image to align tilt axis with x or y axis */
-      Try { image_rotation (proj_image, -rec_p->tilt_axis_rotation); }  CATCH_EXIT_FAIL (_e);
+      Try { image_rotation (proj_image, -ai_params->tilt_axis_rotation); }  CATCH_EXIT_FAIL (_e);
 
       if (DEBUGGING)
         {
@@ -179,7 +193,7 @@ main (int argc, char *argv[])
 
       /* Fourier transform the image */
       Try { fft_forward (proj_image); }   CATCH_EXIT_FAIL (_e);
-      if ((verbosity_level >= VERB_LEVEL_VERBOSE) && (i == opt_data->start_index))
+      if ((verbosity_level >= VERB_LEVEL_VERBOSE) && (i == ai_opts->start_index))
         gfunc3_print_grid (proj_image, "Image FT grid");
       if (DEBUGGING)
         {
@@ -187,12 +201,12 @@ main (int argc, char *argv[])
         }
 
       /* Compute reco kernel (only if necessary) */
-      if ((i == opt_data->start_index) || kernel_varies_with_tilt )
+      if ((i == ai_opts->start_index) || kernel_varies_with_tilt )
         {
           Try { gfunc3_init_from_foreign_grid (rk, proj_image); }  CATCH_EXIT_FAIL (_e);
           gfunc3_set_all (rk, 0.0);
 
-          Try { vfunc_init_ft_rk_single_axis (&vf_rk, rec_p); }  CATCH_EXIT_FAIL (_e);
+          Try { vfunc_init_ft_rk_single_axis (&vf_rk, &pwrapper); }  CATCH_EXIT_FAIL (_e);
           Try { gfunc3_assign_fvals_from_vfunc (rk, &vf_rk); }  CATCH_EXIT_FAIL (_e);
 
           if (DEBUGGING)
@@ -209,14 +223,14 @@ main (int argc, char *argv[])
         }
 
       /* Initialize reciprocal detector MTF (only once) */
-      if ((i == opt_data->start_index) && use_mtf_flag)
+      if ((i == ai_opts->start_index) && use_mtf_flag)
         {
           Try { gfunc3_init_from_foreign_grid (recip_mtf, proj_image); }  CATCH_EXIT_FAIL (_e);
           gfunc3_set_csize (recip_mtf, ones);
           gfunc3_compute_xmin_xmax (recip_mtf);
           gfunc3_set_all (recip_mtf, 0.0);
 
-          Try { vfunc_init_detector_recip_mtf (&vf_recip_mtf, rec_p); }  CATCH_EXIT_FAIL (_e);
+          Try { vfunc_init_detector_recip_mtf (&vf_recip_mtf, et_params); }  CATCH_EXIT_FAIL (_e);
           Try { gfunc3_assign_fvals_from_vfunc (recip_mtf, &vf_recip_mtf); }  CATCH_EXIT_FAIL (_e);
           gfunc3_set_csize (recip_mtf, proj_image->csize);
 
@@ -240,7 +254,7 @@ main (int argc, char *argv[])
       /* Apply lambda if desired */
       if (use_lambda_flag)
         {
-          Try { vfunc_init_ft_lambda (&vf_lambda, &opt_data->lambda_pow); }  CATCH_EXIT_FAIL (_e);
+          Try { vfunc_init_ft_lambda (&vf_lambda, &ai_opts->lambda_pow); }  CATCH_EXIT_FAIL (_e);
           Try { gfunc3_mul_vfunc (proj_image, &vf_lambda); }  CATCH_EXIT_FAIL (_e);
         }
 
@@ -251,10 +265,11 @@ main (int argc, char *argv[])
         {
           Try { temp_mrc_out (proj_image, "filtered_", i + 1); }  CATCH_EXIT_FAIL (_e);
         }
-      
+
       /* Compute backprojection */
       Try { 
-        xray_backprojection_single_axis (proj_image, theta_cur, rec_p, volume); 
+        xray_backprojection_single_axis (proj_image, theta_cur, ai_params->tilt_axis,
+          ai_params->tilt_axis_par_shift_px, volume); 
       } CATCH_EXIT_FAIL (_e);
       // Try { tiltangles_get_angles (tilts, angles, i); }  CATCH_EXIT_FAIL (_e);
       // Try 
@@ -268,13 +283,14 @@ main (int argc, char *argv[])
       theta_cur  = theta_next;
     }
 
-  Try { gfunc3_to_mrc (volume, opt_data->fname_out); }  CATCH_EXIT_FAIL (_e);
-  printf ("Reconstructed volume written to %s\n", opt_data->fname_out);
+  Try { gfunc3_to_mrc (volume, ai_opts->fname_out); }  CATCH_EXIT_FAIL (_e);
+  printf ("Reconstructed volume written to %s\n", ai_opts->fname_out);
 
   if (fp)
     fclose (fp);
-  OptionData_free (&opt_data);
-  RecParams_free (&rec_p);
+  AiOpts_free (&ai_opts);
+  EtParams_free (&et_params);
+  AiParams_free (&ai_params);
   tiltangles_free (&tilts);
   gfunc3_free (&proj_image);
   gfunc3_free (&rk);
