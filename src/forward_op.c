@@ -1,7 +1,7 @@
 /*
  * forward_op_test.c
  * 
- * Copyright 2013 Holger Kohr <kohr@num.uni-sb.de>
+ * Copyright 2014 Holger Kohr <kohr@num.uni-sb.de>
  * 
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -30,14 +30,14 @@
 int main(int argc, char **argv)
 {
   CEXCEPTION_T _e = EXC_NONE;
+
   
+  
+  /*
   gfunc3 *phantom = new_gfunc3 (), *proj_img = new_gfunc3 (), *proj_r = new_gfunc3();
   OptionData *opt_data = new_OptionData ();
   RecParams *rec_p = new_RecParams ();
   
-  /* WIP
-   * TODO: write fwd_op_options!!
-   */
   Try { OptionData_assign_from_args (opt_data, argc, argv); }  CATCH_EXIT_FAIL (_e);
   Try { 
     RecParams_assign_from_OptionData (rec_p, opt_data);
@@ -72,6 +72,7 @@ int main(int argc, char **argv)
   gfunc3_free (&proj_r);
   RecParams_free (&rec_p);
   
-  return EXIT_SUCCESS;
+  return EXIT_SUCCESS; 
+  */
 }
 
