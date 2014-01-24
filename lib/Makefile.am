@@ -27,6 +27,8 @@ endif
 
 AM_CPPFLAGS += $(OPENMP_CFLAGS)
 
+# TODO: split libs!!
+
 noinst_LIBRARIES = libCException.a libiniparser.a libutil.a libgfunc3.a libetai.a
 
 libCException_a_SOURCES = $(lib_srcdir)/CException.c $(lib_srcdir)/CException.h \

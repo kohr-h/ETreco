@@ -31,6 +31,8 @@
 #include "vec3.h"
 #include "misc.h"
 
+#include "et_operators.h"
+
 // TODO: write descriptions
 
 /*-------------------------------------------------------------------------------------------------*/
@@ -39,9 +41,6 @@ extern int verbosity_level;
 extern int invert_contrast_flag;
 extern int fft_padding;
 
-
-/* START and END are dummy names to mark the beginning and end of the enumerated types */
-typedef enum { MD_START, PROJ_ASSUMPTION, BORN_APPROX, MD_END } fwd_model; 
 
 typedef struct {
   
@@ -52,7 +51,7 @@ typedef struct {
   char *fname_tiltangles;
   
   /* Model parameter */
-  fwd_model model;
+  scattering_model model;
   
   /* Data subset parameters */
   int num_images;
