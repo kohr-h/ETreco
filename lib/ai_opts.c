@@ -351,6 +351,9 @@ AiOpts_assemble_fname_out (AiOpts *opts,  char const *base, char const *ext)
   
   p_tmp += rec_len;
   strncpy (p_tmp, ext, ext_len);
+  
+  p_tmp += ext_len;
+  *p_tmp = '\0';
     
   return;
 }

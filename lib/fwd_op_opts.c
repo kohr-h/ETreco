@@ -31,6 +31,8 @@
 #include <string.h>
 #include <ctype.h>
 
+#include "dirname.h"
+
 #include "CException.h"
 
 #include "vec3.h"
@@ -156,7 +158,7 @@ FwdOpts_print (FwdOpts *opts)
 void 
 print_help (char const *progname)
 {
-  fwd_model iter_m;
+  scattering_model iter_m;
   
   printf ("Usage: %s [options] volume_file\n", progname);
   puts ("");
@@ -226,19 +228,31 @@ void
 FwdOpts_determine_fname_out (FwdOpts *opts, char const *fname_in)
 {
   CEXCEPTION_T e = EXC_NONE;
-  int fname_in_len, ts_len;
-  char *p_tmp;
+  int dir_len, base_len, ts_len;
+  char *dirname, *basename, *p_tmp;
   
-  fname_in_len = strlen (fname_in);
-  ts_len       = strlen (TSERIES_STR);
+  dirname  = dir_name (fname_in);
+  dir_len  = strlen (dirname);
+  basename = base_name (fname_in);
+  base_len = strlen (basename);
+  ts_len   = strlen (TSERIES_STR);
   
-  Try { opts->fname_out = (char *) ali16_malloc (fname_in_len + ts_len + 1); }  CATCH_RETURN_VOID (e);
+  Try { 
+    opts->fname_out = (char *) ali16_malloc (dir_len + base_len + ts_len + 2); 
+  } CATCH_RETURN_VOID (e);
     
   p_tmp = opts->fname_out;
+  strncpy (p_tmp, dirname, dir_len);
+  
+  p_tmp += dir_len;
+  *(p_tmp++) = '/';
   strncpy (p_tmp, TSERIES_STR, ts_len);
   
   p_tmp += ts_len;
-  strncpy (p_tmp, fname_in, fname_in_len);
+  strncpy (p_tmp, basename, base_len);
+  
+  p_tmp += base_len;
+  *p_tmp = '\0';
     
   return;
 }
@@ -319,7 +333,7 @@ void
 FwdOpts_set_model (FwdOpts *opts, char *model_str)
 {
   char *p;
-  fwd_model iter;
+  scattering_model iter;
   
   for (p = model_str; *p; p++) 
     *p = tolower (*p);
