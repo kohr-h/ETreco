@@ -50,6 +50,7 @@ libetai_a_SOURCES = $(lib_srcdir)/ai_opts.c 			$(lib_srcdir)/ai_opts.h \
 										$(lib_srcdir)/et_operators.c 	$(lib_srcdir)/et_operators.h  $(lib_srcdir)/et_operators_private.h\
 										$(lib_srcdir)/et_params.c  		$(lib_srcdir)/et_params.h \
 										$(lib_srcdir)/et_vfuncs.c  		$(lib_srcdir)/et_vfuncs.h  $(lib_srcdir)/et_vfuncs_private.h \
+										$(lib_srcdir)/fwd_op_params.c $(lib_srcdir)/fwd_op_params.h \
 										$(lib_srcdir)/fwd_op_opts.c 	$(lib_srcdir)/fwd_op_opts.h \
 										$(lib_srcdir)/tiltangles.c  	$(lib_srcdir)/tiltangles.h \
 										$(lib_srcdir)/vfunc.h

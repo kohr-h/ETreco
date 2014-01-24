@@ -41,4 +41,5 @@
 #include "et_params.h"
 #include "et_vfuncs.h"
 #include "fwd_op_opts.h"
+#include "fwd_op_params.h"
 #include "tiltangles.h"
