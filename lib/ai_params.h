@@ -80,7 +80,7 @@ AiParams_free (AiParams **pparams);
 /*-------------------------------------------------------------------------------------------------*/
 
 void
-AiParams_assign_from_AiOpts (AiParams *params, const AiOpts *od);
+AiParams_assign_from_AiOpts (AiParams *params, const AiOpts *opts);
 
 void
 AiParams_assign_ctftrunc_from_EtParams (AiParams *ai_params, EtParams const *et_params);

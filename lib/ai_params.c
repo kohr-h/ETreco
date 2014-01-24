@@ -107,8 +107,7 @@ AiParams_assign_from_AiOpts (AiParams *params, const AiOpts *opts)
 
   if ((dict = iniparser_load (opts->fname_params)) == NULL)
     {
-      EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Unable to read reco parameters from %s.", 
-        opts->fname_params);
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Unable to read parameters from %s.", opts->fname_params);
       return;
     }
 
@@ -145,7 +144,7 @@ AiParams_assign_from_AiOpts (AiParams *params, const AiOpts *opts)
 
   params->vol_shape[2] = itmp;
 
-  if ((dtmp = iniparser_getdouble (dict, "volume:voxel_size", -1.0)) == -1.0)
+  if ((dtmp = iniparser_getdouble (dict, "volume:voxel_size", FLT_MAX)) == FLT_MAX)
     {
       EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Key 'voxel_size' not found in %s.", opts->fname_params);
       return;
