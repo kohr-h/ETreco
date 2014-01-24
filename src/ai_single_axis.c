@@ -43,7 +43,7 @@ int
 main (int argc, char *argv[])
 {
   CEXCEPTION_T _e = EXC_NONE;
-  AiOpts *ai_opts;
+  AiOpts *opts;
 
   int i, nz, last_index;
   float weight, theta_last = 0.0, theta_cur = 0.0, theta_next = 0.0;
@@ -60,7 +60,7 @@ main (int argc, char *argv[])
   /* Create structures */
   Try 
   { 
-    ai_opts = new_AiOpts (); 
+    opts = new_AiOpts (); 
     ai_params = new_AiParams ();
     et_params = new_EtParams ();
     proj_image = new_gfunc3 ();
@@ -73,15 +73,15 @@ main (int argc, char *argv[])
   /* Initialize command-line options, reconstruction parameters, first projection image, 
    * tilt angles and volume
    */
-  Try { AiOpts_assign_from_args (ai_opts, argc, argv); }  CATCH_EXIT_FAIL (_e);
+  Try { AiOpts_assign_from_args (opts, argc, argv); }  CATCH_EXIT_FAIL (_e);
   Try { 
-    EtParams_assign_from_file (et_params, ai_opts->fname_params); 
-    AiParams_assign_from_AiOpts (ai_params, ai_opts);
+    EtParams_assign_from_file (et_params, opts->fname_params); 
+    AiParams_assign_from_AiOpts (ai_params, opts);
     }  CATCH_EXIT_FAIL (_e);
   Try { 
     AiParams_assign_ctftrunc_from_EtParams (ai_params, et_params);
-    gfunc3_init_mrc (proj_image, ai_opts->fname_in, &fp, &nz, STACK);
-    tiltangles_assign_from_file (tilts, ai_opts->fname_tiltangles);
+    gfunc3_init_mrc (proj_image, opts->fname_in, &fp, &nz, STACK);
+    tiltangles_assign_from_file (tilts, opts->fname_tiltangles);
   } CATCH_EXIT_FAIL (_e);
 
   /* Wrap the parameters */
@@ -95,16 +95,16 @@ main (int argc, char *argv[])
 
   /* Scale and shift volume according to the parameters */
   Try { 
-    gfunc3_scale_grid (volume, et_params->magnification); 
     AiParams_apply_to_volume (ai_params, volume); 
+    gfunc3_scale_grid (volume, et_params->magnification); 
   } CATCH_EXIT_FAIL (_e);
 
 
   /* Set some parameters and resolve conflicts */
-  if (ai_opts->num_images == 0)  /* Not specified by option, thus taken from data */
-    ai_opts->num_images = nz - ai_opts->start_index;
+  if (opts->num_images == 0)  /* Not specified by option, thus taken from data */
+    opts->num_images = nz - opts->start_index;
 
-  last_index = ai_opts->start_index + ai_opts->num_images - 1;
+  last_index = opts->start_index + opts->num_images - 1;
 
   Try {
     if (last_index >= tilts->ntilts)
@@ -119,7 +119,7 @@ main (int argc, char *argv[])
 
 
   /* Print summary of everything before the real work starts */
-  AiOpts_print (ai_opts);
+  AiOpts_print (opts);
   EtParams_print (et_params);
   AiParams_print (ai_params);
   if (verbosity_level >= VERB_LEVEL_NORMAL)
@@ -130,7 +130,7 @@ main (int argc, char *argv[])
   theta_cur = angles[1];
 
   
-  for (i = ai_opts->start_index; i <= last_index; i++)
+  for (i = opts->start_index; i <= last_index; i++)
     {
       /* Initialize image and normalize if desired */
       Try { 
@@ -138,16 +138,16 @@ main (int argc, char *argv[])
         AiParams_apply_to_proj_image (ai_params, proj_image); 
       } CATCH_EXIT_FAIL (_e);
 
-      if ((verbosity_level >= VERB_LEVEL_VERBOSE) && (i == ai_opts->start_index))
+      if ((verbosity_level >= VERB_LEVEL_VERBOSE) && (i == opts->start_index))
         gfunc3_print_grid (proj_image, "Data grid:");
 
       if (verbosity_level >= VERB_LEVEL_NORMAL)
-        printf ("Image %3d of %3d\n", i - ai_opts->start_index + 1, ai_opts->num_images);
+        printf ("Image %3d of %3d\n", i - opts->start_index + 1, opts->num_images);
      
       if (normalize_flag)
         {
           Try {
-            histogram_normalization (proj_image, ai_opts->bg_patch_ix0, ai_opts->bg_patch_shape);
+            histogram_normalization (proj_image, opts->bg_patch_ix0, opts->bg_patch_shape);
           } CATCH_EXIT_FAIL (_e);
           if (DEBUGGING)
             {
@@ -164,7 +164,7 @@ main (int argc, char *argv[])
           theta_next = angles[1];
         }
 
-      if (i == ai_opts->start_index)
+      if (i == opts->start_index)
         weight = (theta_next - theta_cur) / 2.0;
       else if (i == last_index)
         weight = (theta_cur - theta_last) / 2.0;
@@ -193,7 +193,7 @@ main (int argc, char *argv[])
 
       /* Fourier transform the image */
       Try { fft_forward (proj_image); }   CATCH_EXIT_FAIL (_e);
-      if ((verbosity_level >= VERB_LEVEL_VERBOSE) && (i == ai_opts->start_index))
+      if ((verbosity_level >= VERB_LEVEL_VERBOSE) && (i == opts->start_index))
         gfunc3_print_grid (proj_image, "Image FT grid");
       if (DEBUGGING)
         {
@@ -201,7 +201,7 @@ main (int argc, char *argv[])
         }
 
       /* Compute reco kernel (only if necessary) */
-      if ((i == ai_opts->start_index) || kernel_varies_with_tilt )
+      if ((i == opts->start_index) || kernel_varies_with_tilt )
         {
           Try { gfunc3_init_from_foreign_grid (rk, proj_image); }  CATCH_EXIT_FAIL (_e);
           gfunc3_set_all (rk, 0.0);
@@ -223,7 +223,7 @@ main (int argc, char *argv[])
         }
 
       /* Initialize reciprocal detector MTF (only once) */
-      if ((i == ai_opts->start_index) && use_mtf_flag)
+      if ((i == opts->start_index) && use_mtf_flag)
         {
           Try { gfunc3_init_from_foreign_grid (recip_mtf, proj_image); }  CATCH_EXIT_FAIL (_e);
           gfunc3_set_csize (recip_mtf, ones);
@@ -254,7 +254,7 @@ main (int argc, char *argv[])
       /* Apply lambda if desired */
       if (use_lambda_flag)
         {
-          Try { vfunc_init_ft_lambda (&vf_lambda, &ai_opts->lambda_pow); }  CATCH_EXIT_FAIL (_e);
+          Try { vfunc_init_ft_lambda (&vf_lambda, &opts->lambda_pow); }  CATCH_EXIT_FAIL (_e);
           Try { gfunc3_mul_vfunc (proj_image, &vf_lambda); }  CATCH_EXIT_FAIL (_e);
         }
 
@@ -283,12 +283,12 @@ main (int argc, char *argv[])
       theta_cur  = theta_next;
     }
 
-  Try { gfunc3_to_mrc (volume, ai_opts->fname_out); }  CATCH_EXIT_FAIL (_e);
-  printf ("Reconstructed volume written to %s\n", ai_opts->fname_out);
+  Try { gfunc3_to_mrc (volume, opts->fname_out); }  CATCH_EXIT_FAIL (_e);
+  printf ("Reconstructed volume written to %s\n", opts->fname_out);
 
   if (fp)
     fclose (fp);
-  AiOpts_free (&ai_opts);
+  AiOpts_free (&opts);
   EtParams_free (&et_params);
   AiParams_free (&ai_params);
   tiltangles_free (&tilts);
