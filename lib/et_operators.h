@@ -21,7 +21,16 @@
  * 
  */
 
-typedef enum { PROJ_ASSUMPTION, BORN_APPROX } scattering_model;
+#ifndef __ET_OPERATORS_H__
+#define __ET_OPERATORS_H__
+
+#include "vec3.h"
+
+#include "gfunc3.h"
+
+#include "et_params.h"
+
+typedef enum { MD_START, PROJ_ASSUMPTION, BORN_APPROX, MD_END } scattering_model;
 
 /*-------------------------------------------------------------------------------------------------
  * ET Forward operator 
@@ -33,3 +42,5 @@ et_scattering_projection (gfunc3 const *scatterer, vec3 const angles_deg, EtPara
 
 
 /*-------------------------------------------------------------------------------------------------*/
+
+#endif  /* __ET_OPERATORS_H__ */
