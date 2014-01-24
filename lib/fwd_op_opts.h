@@ -48,7 +48,7 @@ typedef struct {
   /* File names */
   char *fname_in;
   char *fname_out;
-  char *fname_et_params;
+  char *fname_params;
   char *fname_tiltangles;
   
   /* Model parameter */

@@ -53,7 +53,7 @@
          {"help",             no_argument, 0, 'h'}, \
          {"version",          no_argument, 0, 'V'}, \
          {"output-file",      required_argument, 0, 'o'}, \
-         {"et-params-file",   required_argument, 0, 'p'}, \
+         {"params-file",      required_argument, 0, 'p'}, \
          {"model",            required_argument, 0, 'm'}, \
          {"num-images",       required_argument, 0, 'n'}, \
          {"start-index",      required_argument, 0, 's'}, \
@@ -65,8 +65,8 @@
 /*-------------------------------------------------------------------------------------------------*/
 
 int verbosity_level      = VERB_LEVEL_NORMAL;
-int invert_contrast_flag = 0;
-int fft_padding          = 0;
+int invert_contrast_flag = 1;
+int fft_padding          = FFT_PADDING;
 
 char const *models[]      = {"", "proj-assumption", "born-approx", ""};
 
@@ -82,7 +82,7 @@ new_FwdOpts (void)
   
   opts->fname_in                = NULL;
   opts->fname_out               = NULL;
-  opts->fname_et_params         = NULL;
+  opts->fname_params            = NULL;
   opts->fname_tiltangles        = NULL;
   opts->model                   = PROJ_ASSUMPTION;
   opts->num_images              = 0;
@@ -104,7 +104,7 @@ FwdOpts_free (FwdOpts **popts)
     
   free ((*popts)->fname_in);
   free ((*popts)->fname_out);
-  free ((*popts)->fname_et_params);
+  free ((*popts)->fname_params);
   free ((*popts)->fname_tiltangles);
 
   free (*popts);
@@ -128,9 +128,15 @@ FwdOpts_print (FwdOpts *opts)
 
   printf ("Input file            : %s\n", opts->fname_in);
   printf ("Output file           : %s\n", opts->fname_out);
-  printf ("ET parameter file     : %s\n", opts->fname_et_params);
+  printf ("ET parameter file     : %s\n", opts->fname_params);
   printf ("Tiltangles file       : %s\n", opts->fname_tiltangles);
   printf ("Model                 : %s\n", models[opts->model]); 
+
+  printf ("Contrast inversion    : " );
+  if (invert_contrast_flag)
+    printf ("yes\n");
+  else
+    printf ("no\n");
 
   printf ("Number of images      : ");
   if (opts->num_images == -1)
@@ -140,6 +146,7 @@ FwdOpts_print (FwdOpts *opts)
 
   printf ("Start index           : %d\n", opts->start_index);
   printf ("FFT zero-padding      : %d\n", fft_padding);
+  printf ("\n\n");
   
   return;
 }
@@ -163,9 +170,9 @@ print_help (char const *progname)
   for (iter_m = MD_START + 1; iter_m < MD_END; iter_m++)
     printf ("  %s", models[iter_m]);
   printf ("\n");
-  puts ("                 Default: proj-assumption");
-  puts ("  -p file, --reco-params-file=file");
-  puts ("                 read CTF and reconstruction parameters from FILE (INI-style).");
+  puts ("                 (Default: proj-assumption)");
+  puts ("  -p file, --params-file=file");
+  puts ("                 read CTF parameters from FILE (INI-style).");
   puts ("");
   puts ("Options:");
   puts ("");
@@ -174,18 +181,18 @@ print_help (char const *progname)
   puts ("                 output file is determined from VOLUME_FILE by prepending");
   puts ("                 `tiltseries_'.");
   puts ("  -I, --invert-contrast");
-  puts ("                 invert the contrast of the images; use this option if");
-  puts ("                 objects are darker than the background.");
+  puts ("                 invert the contrast of the images; use this option if projections of");
+  puts ("                 dense regions are brighter than the background (enabled by default).");
   puts ("  -n N, --num-images=N");
   puts ("                 override image number determined from input file by N; useful");
-  puts ("                 for recostruction with only a subset of the data.");
+  puts ("                 for data generation with only a subset of the tilt angles.");
   puts ("  -s N, --start-index=N");
-  puts ("                 start with N'th image instead of 0; useful for");
-  puts ("                 recostruction with only a subset of the data.");
+  puts ("                 start with N'th image instead of 0; useful for data generation");
+  puts ("                 with only a subset of the tilt angles.");
   puts ("  --fft-padding[=N]");
-  puts ("                 continue grid functions by N zero pixels in each direction");
-  puts ("                 to compute Fourier transforms ('zero-padding').");
-  printf ("                 Default: N=%d\n", FFT_PADDING);
+  puts ("                 continue grid functions by N zero pixels in each direction prior");
+  puts ("                 to computing Fourier transforms ('zero-padding').");
+  printf ("                 (Default: N=%d)\n", FFT_PADDING);
   puts ("  -v, --verbose");
   puts ("                 display more information during execution");
   puts ("  -q, --quiet");
@@ -195,40 +202,6 @@ print_help (char const *progname)
   puts ("      --version");
   puts ("                 output version information and exit");
   
-  return;
-}
-
-/*-------------------------------------------------------------------------------------------------*/
-
-void 
-fname_rsplit_at_dot (char const *fname, char **pbase_str, char **pext_str)
-{
-  CEXCEPTION_T e = EXC_NONE;
-  int fname_len, base_len, ext_len;
-  char const *pext = NULL;
-  
-  fname_len = strlen (fname);
-
-  /* pext points to the first dot from the right or one char beyond the string */
-  if ((pext = strrchr (fname, '.')) == NULL)
-    pext = &fname[fname_len];
-    
-  base_len = pext - fname;
-  ext_len  = fname_len - base_len;
-  
-  Try {
-    *pbase_str = (char *) ali16_malloc (base_len + 1);
-    *pext_str = (char *) ali16_malloc (ext_len + 1);
-  } Catch (e)
-  {
-    EXC_RETHROW_REPRINT (e);
-    free (*pbase_str); *pbase_str = NULL;
-    free (*pext_str);  *pext_str  = NULL;
-    return;
-  }
-
-  strncpy (*pbase_str, fname, base_len);  (*pbase_str)[base_len] = '\0';
-  strncpy (*pext_str, pext, ext_len);  (*pext_str)[ext_len] = '\0';
   return;
 }
 
@@ -286,13 +259,13 @@ FwdOpts_set_fname_out (FwdOpts *od, char const *fname)
 /*-------------------------------------------------------------------------------------------------*/
 
 void
-FwdOpts_set_fname_et_params (FwdOpts *opts, char const *fname)
+FwdOpts_set_fname_params (FwdOpts *opts, char const *fname)
 {
   CEXCEPTION_T e = EXC_NONE;
   int len = strlen (fname);
 
-  Try { opts->fname_et_params = (char *) ali16_malloc (len + 1); } CATCH_RETURN_VOID (e);
-  strncpy (opts->fname_et_params, fname, len);
+  Try { opts->fname_params = (char *) ali16_malloc (len + 1); } CATCH_RETURN_VOID (e);
+  strncpy (opts->fname_params, fname, len);
   return;
 }
 
@@ -443,7 +416,7 @@ FwdOpts_assign_from_args (FwdOpts *opts, int argc, char **argv)
           break;
  
         case 'I':
-          invert_contrast_flag = 1;  // Long option already sets the flag, but short one doesn't
+          invert_contrast_flag = 1;  /* Long option already sets the flag, but short one doesn't */
           break;
 
         case 'm':
@@ -487,7 +460,7 @@ FwdOpts_assign_from_args (FwdOpts *opts, int argc, char **argv)
               exit (EXIT_FAILURE);
             }
 
-          FwdOpts_set_fname_et_params (opts, optarg);
+          FwdOpts_set_fname_params (opts, optarg);
           p_flag = 1;
           break;
  
