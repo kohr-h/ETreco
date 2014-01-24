@@ -79,6 +79,7 @@ FwdParams_free (FwdParams **pparams)
 void
 FwdParams_assign_from_file (FwdParams *params, const char *fname_params)
 {
+  int itmp;
   float ta_sx, ta_sy;
   double dtmp;
   dictionary *dict;
@@ -133,6 +134,23 @@ FwdParams_assign_from_file (FwdParams *params, const char *fname_params)
 
   
   /* DETECTOR */
+
+  if ( (itmp = iniparser_getint (dict, "detector:det_pix_x", -1)) == -1 )
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Key 'detector:det_pix_x' not found in %s.", fname_params);
+      return;
+    }
+  
+  params->detector_shape[0] = itmp;
+  
+  if ( (itmp = iniparser_getint (dict, "detector:det_pix_y", -1)) == -1 )
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Key 'detector:det_pix_y' not found in %s.", fname_params);
+      return;
+    }
+  
+  params->detector_shape[1] = itmp;
+  params->detector_shape[2] = 1;
   
   if ( (dtmp = iniparser_getdouble (dict, "detector:pixel_size", FLT_MAX)) == FLT_MAX )
     {
@@ -192,6 +210,7 @@ FwdParams_print (FwdParams const *params)
     }
   printf (")\n\n");
 
+  printf ("detector shape       : (%d, %d)\n", params->detector_shape[0], params->detector_shape[1]);
   printf ("detector_px_size     : % 9.2f [nm]\n", params->detector_px_size[0]);
   printf ("tilt_axis            : % 9.2f [degrees]\n", params->tilt_axis_rotation);
   printf ("\n\n");

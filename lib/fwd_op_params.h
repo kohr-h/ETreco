@@ -49,6 +49,7 @@ typedef struct
   float tilt_axis_par_shift_px;
 
   /* Detector parameters */
+  idx3 detector_shape;
   vec3 detector_px_size;
 
 } FwdParams;
