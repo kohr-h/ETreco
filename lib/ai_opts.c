@@ -164,6 +164,12 @@ AiOpts_print (AiOpts *opts)
   else
     printf ("no\n");
 
+  printf ("Contrast inversion    : " );
+  if (invert_contrast_flag)
+    printf ("yes\n");
+  else
+    printf ("no\n");
+
   printf ("Normalization         : " );
   if (normalize_flag)
     printf ("yes\n");
@@ -252,14 +258,14 @@ print_help (char const *progname)
   puts ("                 where Lambda = sqrt(-Laplacian) and a = VALUE.");
   puts ("  -n N, --num-images=N");
   puts ("                 override image number determined from input file by N; useful");
-  puts ("                 for recostruction with only a subset of the data.");
+  puts ("                 for reconstruction with only a subset of the data.");
   puts ("  -s N, --start-index=N");
   puts ("                 start with N'th image instead of 0; useful for");
-  puts ("                 recostruction with only a subset of the data.");
+  puts ("                 reconstruction with only a subset of the data.");
   puts ("  --fft-padding[=N]");
-  puts ("                 continue grid functions by N zero pixels in each direction");
-  puts ("                 to compute Fourier transforms ('zero-padding').");
-  printf ("                 Default: N=%d\n", FFT_PADDING);
+  puts ("                 continue grid functions by N zero pixels in each direction prior");
+  puts ("                 to computing Fourier transforms ('zero-padding').");
+  printf ("                 (Default: N=%d)\n", FFT_PADDING);
   puts ("  -v, --verbose");
   puts ("                 display more information during execution");
   puts ("  -q, --quiet");
@@ -644,7 +650,7 @@ AiOpts_assign_from_args (AiOpts *opts, int argc, char **argv)
           break;
  
         case 'I':
-          invert_contrast_flag = 1;  // Long option already sets the flag, but short one doesn't
+          invert_contrast_flag = 1;  /* Long option already sets the flag, but short one doesn't */
           break;
 
         case 'L':
@@ -683,7 +689,7 @@ AiOpts_assign_from_args (AiOpts *opts, int argc, char **argv)
           break;
 
         case 'N':
-          normalize_flag = 1;
+          normalize_flag = 1;  /* Long option already sets the flag, but short one doesn't */
           break;
  
         case 'o':
