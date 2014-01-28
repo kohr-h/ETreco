@@ -81,11 +81,11 @@ idx3_ispos (idx3 const n)
   for (i = 0; i < 3; i++)
     {
       if (n[i] <= 0)
-        return 0;
+        return FALSE;
     }
   
   #endif
-  return 1;
+  return TRUE;
 }
 
 /*-------------------------------------------------------------------------------------------------*/
@@ -98,10 +98,10 @@ vec3_about_eq (vec3 const v1, vec3 const v2, float rel_tol)
   for (i = 0; i < 3; i++)
     {
       if (gsl_fcmp (v1[i], v2[i], rel_tol))
-        return 0;
+        return FALSE;
     }
   
-  return 1;
+  return TRUE;
 }
 
 /*-------------------------------------------------------------------------------------------------*/
@@ -120,11 +120,11 @@ idx3_eq (idx3 const n1, idx3 const n2)
   for (i = 0; i < 3; i++)
     {
       if (n1[i] != n2[i])
-        return 0;
+        return FALSE;
     }
   
   #endif
-  return 1;
+  return TRUE;
 }
 
 /*-------------------------------------------------------------------------------------------------*/
@@ -143,11 +143,11 @@ vec3_ge (vec3 const v1, vec3 const v2)
   for (i = 0; i < 3; i++)
     {
       if (v1[i] < v2[i])
-        return 0;
+        return FALSE;
     }
 
   #endif
-  return 1;
+  return TRUE;
 }
 
 /*-------------------------------------------------------------------------------------------------*/
@@ -166,11 +166,11 @@ vec3_gt (vec3 const v1, vec3 const v2)
   for (i = 0; i < 3; i++)
     {
       if (v1[i] <= v2[i])
-        return 0;
+        return FALSE;
     }
 
   #endif
-  return 1;
+  return TRUE;
 }
 
 /*-------------------------------------------------------------------------------------------------*/
@@ -189,11 +189,11 @@ vec3_le (vec3 const v1, vec3 const v2)
   for (i = 0; i < 3; i++)
     {
       if (v1[i] > v2[i])
-        return 0;
+        return FALSE;
     }
 
   #endif
-  return 1;
+  return TRUE;
 }
 
 /*-------------------------------------------------------------------------------------------------*/
@@ -212,11 +212,11 @@ vec3_lt (vec3 const v1, vec3 const v2)
   for (i = 0; i < 3; i++)
     {
       if (v1[i] >= v2[i])
-        return 0;
+        return FALSE;
     }
 
   #endif
-  return 1;
+  return TRUE;
 }
 
 /*-------------------------------------------------------------------------------------------------*/
@@ -235,11 +235,11 @@ idx3_lt (idx3 const n1, idx3 const n2)
   for (i = 0; i < 3; i++)
     {
       if (n1[i] >= n2[i])
-        return 0;
+        return FALSE;
     }
   
   #endif
-  return 1;
+  return TRUE;
 }
 
 /*-------------------------------------------------------------------------------------------------*/
@@ -258,11 +258,11 @@ idx3_le (idx3 const n1, idx3 const n2)
   for (i = 0; i < 3; i++)
     {
       if (n1[i] > n2[i])
-        return 0;
+        return FALSE;
     }
   
   #endif
-  return 1;
+  return TRUE;
 }
 
 /*-------------------------------------------------------------------------------------------------*/
@@ -277,24 +277,24 @@ vec3_between_ints (vec3 const v, idx3 const lb, idx3 const ub)
   __m128 gtlb = _mm_cmpgt_ps (*p1, lbf);
   float *pgtlb = (float *) &gtlb;
   if (pgtlb[0] && pgtlb[1] && pgtlb[2])
-    return 1;
+    return TRUE;
   
   __m128 ubf = _mm_cvtepi32_ps (*p3);
   __m128 ltub = _mm_cmplt_ps (*p1, ubf);
   float *pltub = (float *) &ltub;
   if (pltub[0] && pltub[1] && pltub[2])
-    return 1;
+    return TRUE;
 
   #else
   int i;
   for (i = 0; i < 3; i++)
     {
       if ( (v[i] <= lb[i]) || (v[i] >= ub[i]) )
-        return 0;
+        return FALSE;
     }
   
   #endif
-  return 1;
+  return TRUE;
 }
 
 /*-------------------------------------------------------------------------------------------------*
