@@ -177,8 +177,6 @@ FwdParams_print (FwdParams const *params)
   
   CAPTURE_NULL_VOID (params);
 
-  /* TODO: fix alignment of printout */
-  /* TODO: make dependent on verbosity */
   printf ("\n");
   puts ("Forward Op parameters:");
   puts ("======================\n");

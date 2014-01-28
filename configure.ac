@@ -1,6 +1,6 @@
 # Preliminaries
-AC_INIT([ETreco], [20140124], [kohr(at)num.uni-sb.de], [], [https://github.com/kohr-h/ETreco])
-AC_CONFIG_SRCDIR([src/ai_single_axis.c])
+AC_INIT([ETreco], [20140125], [kohr(at)num.uni-sb.de], [], [https://github.com/kohr-h/ETreco])
+AC_CONFIG_SRCDIR([lib/ETreco.h])
 AC_CONFIG_AUX_DIR([build-aux])
 AM_INIT_AUTOMAKE([-Wall -Werror])
 
@@ -319,7 +319,7 @@ AC_CHECK_HEADERS([fftw3.h], [], \
                 [AC_MSG_ERROR([FFTW3 header not found.])])
 
 # NFFT related checks
-AC_CHECK_LIB([nfft3], [nfft_init], [], \
+AC_CHECK_LIB([nfft3], [nfftf_init], [], \
                 [AC_MSG_ERROR([NFFT3 library not found.])])
 AC_CHECK_HEADERS([nfft3.h], [], \
                 [AC_MSG_ERROR([FFTW3 header not found.])])

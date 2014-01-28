@@ -1,5 +1,5 @@
 /*
- * forward_op_test.c
+ * forward_op.c -- Implementation of the ET forward operator
  * 
  * Copyright 2014 Holger Kohr <kohr@num.uni-sb.de>
  * 
@@ -23,6 +23,7 @@
 
 
 #include <stdio.h>
+#include <complex.h>
 
 #include "ETreco.h"
 
@@ -40,7 +41,7 @@ int main(int argc, char **argv)
   EtParams *et_params = NULL;
   FwdParams *fwd_params = NULL;
   tiltangles *tilts = NULL;
-  gfunc3 *volume = NULL, *proj_img = NULL, *proj_img_re = NULL;
+  gfunc3 *volume = NULL, *proj_img = NULL, *proj_img_imag = NULL;
   
   Try { 
     opts = new_FwdOpts (); 
@@ -49,7 +50,7 @@ int main(int argc, char **argv)
     tilts = new_tiltangles ();
     volume = new_gfunc3 ();
     proj_img = new_gfunc3 ();
-    proj_img_re = new_gfunc3 ();
+    proj_img_imag = new_gfunc3 ();
   } CATCH_EXIT_FAIL (_e);
 
 
@@ -59,7 +60,7 @@ int main(int argc, char **argv)
     EtParams_assign_from_file (et_params, opts->fname_params); 
     FwdParams_assign_from_file (fwd_params, opts->fname_params); 
     tiltangles_assign_from_file (tilts, opts->fname_tiltangles);
-    gfunc3_init_mrc (volume, opts->fname_in, NULL, NULL, VOLUME);
+    gfunc3_init_mrc (volume, opts->fname_in, NULL, NULL);
     gfunc3_init (proj_img, NULL, fwd_params->detector_px_size, fwd_params->detector_shape, 
       COMPLEX);
   }  CATCH_EXIT_FAIL (_e);
@@ -87,9 +88,13 @@ int main(int argc, char **argv)
 
 
   /* Initialize the stack on the disk */
-  Try { proj_img_re = gfunc3_realpart (proj_img, NULL); }  CATCH_EXIT_FAIL (_e);
-  Try { gfunc3_to_mrc (proj_img_re, opts->fname_out, &fp); } CATCH_EXIT_FAIL (_e);
-  
+  Try { proj_img_imag = gfunc3_imagpart (proj_img, NULL); }  CATCH_EXIT_FAIL (_e);
+  Try { gfunc3_to_mrc (proj_img_imag, opts->fname_out, &fp); } CATCH_EXIT_FAIL (_e);
+
+
+  /* Swap x and z axes of volume due to different ordering in NFFT */
+  // Try { gfunc3_swapxz (volume); }  CATCH_EXIT_FAIL (_e);
+
 
   /* Print a summary of everything before starting */
   FwdOpts_print (opts);
@@ -99,7 +104,7 @@ int main(int argc, char **argv)
   gfunc3_print_grid (proj_img, "Projection image grid:");
 
 
-  for (i = opts->start_index; i < last_index; i++)
+  for (i = opts->start_index; i <= last_index; i++)
     {
       if (verbosity_level >= VERB_LEVEL_NORMAL)
         printf ("Image %3d of %3d\n", i - opts->start_index + 1, opts->num_images);
@@ -109,12 +114,12 @@ int main(int argc, char **argv)
         et_scattering_projection (volume, angles_deg, et_params, proj_img, opts->model);
       } CATCH_EXIT_FAIL (_e);
       
-      Try { proj_img_re = gfunc3_realpart (proj_img, proj_img_re); }  CATCH_EXIT_FAIL (_e);
+      Try { proj_img_imag = gfunc3_imagpart (proj_img, proj_img_imag); }  CATCH_EXIT_FAIL (_e);
       
-      Try { gfunc3_write_to_stack (proj_img_re, fp, i - opts->start_index); }  CATCH_EXIT_FAIL (_e);
+      Try { gfunc3_write_to_stack (proj_img_imag, fp, i - opts->start_index); }  CATCH_EXIT_FAIL (_e);
     }
 
-  printf ("Projections written to %s.\n\n", opts->fname_out);
+  printf ("\n\nProjections written to %s.\n\n", opts->fname_out);
   
   /* Delete all objects before exiting */
   FwdOpts_free (&opts);
@@ -126,47 +131,4 @@ int main(int argc, char **argv)
   fclose (fp);
   
   return EXIT_SUCCESS;
-  
-  /*
-  gfunc3 *phantom = new_gfunc3 (), *proj_img = new_gfunc3 (), *proj_r = new_gfunc3();
-  OptionData *opt_data = new_OptionData ();
-  RecParams *rec_p = new_RecParams ();
-  
-  Try { OptionData_assign_from_args (opt_data, argc, argv); }  CATCH_EXIT_FAIL (_e);
-  Try { 
-    RecParams_assign_from_OptionData (rec_p, opt_data);
-    gfunc3_init_mrc (phantom, phantom_name, NULL, NULL, VOLUME); 
-    gfunc3_init (xr_proj, x0_proj, cs_proj, shp_proj, COMPLEX); 
-  } CATCH_EXIT_FAIL (_e);
-    
-  gfunc3_print_grid (phantom, "Phantom grid:");
-  
-  gfunc3_print_grid (xr_proj, "Plane grid:");
-  
-  Try { 
-    gfunc3_real2complex (phantom);
-    // xray_projection (phantom, angles, xr_proj); 
-    et_scattering_projection (phantom, angles, rec_p, xr_proj, PROJ_ASSUMPTION); 
-  } CATCH_EXIT_FAIL (_e);
-
-  Try { gfunc3_to_mrc (xr_proj, "xray.mrc"); }  CATCH_EXIT_FAIL (_e);
-  
-  Try { 
-    proj_r = gfunc3_realpart (xr_proj, NULL); 
-    gfunc3_to_mrc (proj_r, "born_re.mrc");
-  } CATCH_EXIT_FAIL (_e);
-  
-  Try { 
-    proj_r = gfunc3_imagpart (xr_proj, proj_r); 
-    gfunc3_to_mrc (proj_r, "born_im.mrc");
-  } CATCH_EXIT_FAIL (_e);
-  
-  gfunc3_free (&phantom);
-  gfunc3_free (&xr_proj);
-  gfunc3_free (&proj_r);
-  RecParams_free (&rec_p);
-  
-  return EXIT_SUCCESS; 
-  */
 }
-

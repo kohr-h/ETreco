@@ -40,7 +40,6 @@ void
 et_scattering_projection (gfunc3 const *scatterer, vec3 const angles_deg, EtParams const *params, 
                           gfunc3 *proj_img, scattering_model sct_model);
 
-
 /*-------------------------------------------------------------------------------------------------*/
 
 #endif  /* __ET_OPERATORS_H__ */

@@ -42,8 +42,8 @@
 #include "operators_private.h"
 
 #include "et_params.h"
-#include "et_vfuncs.h"
 #include "et_operators.h"
+#include "et_vfuncs.h"
 
 /*-------------------------------------------------------------------------------------------------*/
 
@@ -148,7 +148,7 @@ et_scattering_projection (gfunc3 const *scatterer, vec3 const angles_deg, EtPara
       Try { freqs = perp_plane_freqs (proj_img, angles_deg); }  CATCH_RETURN_VOID (_e);
 
       Try { 
-        nfft3_transform (scatterer, freqs, proj_img->ntotal, (float complex *) proj_img->fvals); 
+        nfft_transform (scatterer, freqs, proj_img->ntotal, (float complex **) (&proj_img->fvals)); 
       } CATCH_RETURN_VOID (_e);
    }
   else if (sct_model == BORN_APPROX)
@@ -158,10 +158,11 @@ et_scattering_projection (gfunc3 const *scatterer, vec3 const angles_deg, EtPara
       } CATCH_RETURN_VOID (_e);
 
       Try { 
-        nfft3_transform (scatterer, freqs, proj_img->ntotal, (float complex *) proj_img->fvals); 
+        nfft_transform (scatterer, freqs, proj_img->ntotal, (float complex **) (&proj_img->fvals)); 
       } CATCH_RETURN_VOID (_e);
     }
   
+  /* FIXXME: there is something wrong with the factors. Check with math! */
   /* Multiply with CTF and scaling factors. Finally apply inverse FT */
   Try { vfunc_init_ctf (&ctf, params); } CATCH_RETURN_VOID (_e);
   Try {

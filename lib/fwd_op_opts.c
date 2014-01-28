@@ -38,10 +38,12 @@
 #include "vec3.h"
 #include "misc.h"
 
+#include "et_operators.h"
+
 #include "fwd_op_opts.h"
 
 
-#define FFT_PADDING    64 /* Default padding of functions before FFT */
+#define FFT_PADDING    0 /* Default padding of functions before FFT */
 
 /*-------------------------------------------------------------------------------------------------*/
 

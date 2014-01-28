@@ -70,6 +70,8 @@ fft_backward (gfunc3 *gf);
 /* The 3D forward Fourier transform of a complex grid function GF evaluated at NFREQS arbitrary 
  * spatial frequencies FREQS using the NFFT library. The result of the transform is stored in the 
  * array FT, which is assumed to be allocated with a size of at least NFREQS.
+ * CAUTION: before calling this function for the first time, the x and z axes of GF must be 
+ * swapped due to NFFT internals!
  * 
  * Thrown exceptions:
  * - EXC_NULL
@@ -81,6 +83,6 @@ fft_backward (gfunc3 *gf);
  * 
  */
 void
-nfft3_transform (gfunc3 const *gf, float const *freqs, size_t nfreqs, float complex *ft);
+nfft_transform (gfunc3 const *gf, float const *freqs, size_t nfreqs, float complex **pftvals);
 
 #endif /* __FFT_H__ */
