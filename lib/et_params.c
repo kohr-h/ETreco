@@ -35,12 +35,10 @@
 #include "dictionary.h"
 #include "iniparser.h"
 
-#include "vec3.h"
 #include "misc.h"
 
 #include "gfunc3.h"
 
-#include "ai_opts.h"
 #include "et_params.h"
 
 // Physical constants and conversion factors
@@ -258,7 +256,6 @@ EtParams_print (EtParams const *params)
 {
   CAPTURE_NULL_VOID (params);
 
-  /* TODO: make dependent on verbosity */
   printf ("\n");
   puts ("ET parameters:");
   puts ("==============\n");

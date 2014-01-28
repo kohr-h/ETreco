@@ -28,11 +28,7 @@
 #include <config.h>
 #endif
 
-#include "vec3.h"
-
 #include "gfunc3.h"
-
-#include "ai_opts.h"
 
 // TODO: write descriptions
 

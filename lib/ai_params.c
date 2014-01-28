@@ -40,23 +40,17 @@
 
 #include "gfunc3.h"
 
-#include "ai_opts.h"
-#include "ai_params.h"
 #include "et_params.h"
-#include "et_vfuncs.h"
 #include "et_vfuncs_private.h"
 
-// Physical constants and conversion factors
-#define EL_REST_ENERGY  510998.928  // [eV]
-#define HC              1239.84193  // [eV*nm]
+#include "ai_opts.h"
+#include "ai_params.h"
+#include "ai_vfuncs.h"
 
-#define ONE_MILLIMETER  1E6   // [nm]
+
+/*-------------------------------------------------------------------------------------------------*/
+
 #define ONE_MICROMETER  1E3   // [nm]
-#define ONE_KILOVOLT    1E3   // [V]
-#define ONE_MILLIRADIAN 1E-3  // [1]
-
-// Amplitude contrast ratio, fixed value seems to be suitable for organic specimens
-#define ACR             0.2
 
 mollifier_ft_function moll_types[] = {NULL, ft_delta, ft_gaussian, NULL};
 

@@ -35,6 +35,9 @@
 float
 ctf_acr_unscaled_radial (const float t, const EtParams *params);
 
+float
+ctf_acr_scaling_function (float t, EtParams const *params);
+
 /*-------------------------------------------------------------------------------------------------*/
 
 

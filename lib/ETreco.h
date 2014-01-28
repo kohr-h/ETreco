@@ -36,11 +36,14 @@
 #include "operators.h"
 #include "vfunc.h"
 
-#include "ai_opts.h"
-#include "ai_params.h"
 #include "et_params.h"
 #include "et_operators.h"
 #include "et_vfuncs.h"
+#include "tiltangles.h"
+
+#include "ai_opts.h"
+#include "ai_params.h"
+#include "ai_vfuncs.h"
+
 #include "fwd_op_opts.h"
 #include "fwd_op_params.h"
-#include "tiltangles.h"

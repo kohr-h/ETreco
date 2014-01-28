@@ -32,16 +32,19 @@
 
 #include "gfunc3.h"
 
-#include "ai_opts.h"
 #include "et_params.h"
+
+#include "ai_opts.h"
 
 // TODO: write descriptions
 
-#define NUM_CTF_LOBES   8
-
 /*-------------------------------------------------------------------------------------------------*/
 
+#define NUM_CTF_LOBES   8
+
 typedef float (*mollifier_ft_function) (float const *, float const *);
+
+/*-------------------------------------------------------------------------------------------------*/
 
 typedef struct
 {
