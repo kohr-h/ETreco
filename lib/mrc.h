@@ -28,14 +28,12 @@
 
 #include "gfunc3.h"
 
-typedef enum { VOLUME, STACK } mrc_ftype;
-
 // TODO: descriptions
 
 /*-------------------------------------------------------------------------------------------------*/
 
 void
-gfunc3_init_mrc (gfunc3 *gf, char const *mrc_fname, FILE **pfp_in, int *pn_img, mrc_ftype type);
+gfunc3_init_mrc (gfunc3 *gf, char const *mrc_fname, FILE **pfp_in, int *pnz);
 
 void
 gfunc3_read_from_stack (gfunc3 *gf, FILE *fp, int stackpos);

@@ -62,8 +62,8 @@ main (int argc, char **argv)
     gf1 = new_gfunc3 ();
     gf2 = new_gfunc3 ();
     
-    gfunc3_init_mrc (gf1, fname1, NULL, NULL, VOLUME);
-    gfunc3_init_mrc (gf2, fname2, NULL, NULL, VOLUME);
+    gfunc3_init_mrc (gf1, fname1, NULL, NULL);
+    gfunc3_init_mrc (gf2, fname2, NULL, NULL);
 
     /* Shift and scale both to [0,1] and add (1-lambda)*f1 + lambda*f2 */
     min1 = gfunc3_min (gf1);

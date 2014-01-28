@@ -119,7 +119,7 @@ xray_projection (gfunc3 const *volume, vec3 const angles_deg, gfunc3 *proj_img)
   Try { freqs = perp_plane_freqs (proj_img, angles_deg); }  CATCH_RETURN_VOID (_e);
   
   Try { 
-    nfft3_transform (volume, freqs, proj_img->ntotal, (float complex *) proj_img->fvals); 
+    nfft_transform (volume, freqs, proj_img->ntotal, (float complex **) (&proj_img->fvals)); 
   } CATCH_RETURN_VOID (_e);
   
   Try {
@@ -213,7 +213,7 @@ xray_backprojection (gfunc3 const *proj_img, vec3 const angles_deg, gfunc3 *volu
 
 /*-------------------------------------------------------------------------------------------------*/
 
-extern int autocenter_vol_flag;
+// extern int autocenter_vol_flag;
 
 void
 xray_backprojection_sax (gfunc3 const *proj_img, float const theta_deg, float const axis_shift_y_px, 
@@ -233,12 +233,13 @@ xray_backprojection_sax (gfunc3 const *proj_img, float const theta_deg, float co
   cos_theta = cosf (theta_deg * ONE_DEGREE);
   sin_theta = sinf (theta_deg * ONE_DEGREE);
 
-  if (autocenter_vol_flag)
-    {
-      volume->x0[0] = proj_img->x0[0];
-      volume->x0[1] = proj_img->x0[1] + axis_shift_y_px * proj_img->csize[1];
-      gfunc3_compute_xmin_xmax (volume);
-    }
+  /* TODO: find a solution to handle this (undefined reference now) */
+  // if (autocenter_vol_flag)
+    // {
+      // volume->x0[0] = proj_img->x0[0];
+      // volume->x0[1] = proj_img->x0[1] + axis_shift_y_px * proj_img->csize[1];
+      // gfunc3_compute_xmin_xmax (volume);
+    // }
 
   Pxmin_y = cos_theta * (volume->xmin[1] - axis_shift_y_px * proj_img->csize[1]) 
     + sin_theta * volume->xmin[2];
@@ -338,12 +339,12 @@ xray_backprojection_say (gfunc3 const *proj_img, float const theta_deg, float co
   cos_theta = cosf (theta_deg * ONE_DEGREE);
   sin_theta = sinf (theta_deg * ONE_DEGREE);
 
-  if (autocenter_vol_flag)
-    {
-      volume->x0[0] = proj_img->x0[0] - axis_shift_x_px * proj_img->csize[0];
-      volume->x0[1] = proj_img->x0[1];
-      gfunc3_compute_xmin_xmax (volume);
-    }
+  // if (autocenter_vol_flag)
+    // {
+      // volume->x0[0] = proj_img->x0[0] - axis_shift_x_px * proj_img->csize[0];
+      // volume->x0[1] = proj_img->x0[1];
+      // gfunc3_compute_xmin_xmax (volume);
+    // }
 
   Pxmin_x = cos_theta * (volume->xmin[0] - axis_shift_x_px * proj_img->csize[0]) 
     + sin_theta * volume->xmin[2];

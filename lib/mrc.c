@@ -377,7 +377,7 @@ write_zero_bytes (size_t num, FILE *fp, size_t pos)
 /*-------------------------------------------------------------------------------------------------*/
 
 void
-gfunc3_init_mrc (gfunc3 *gf, char const *mrc_fname, FILE **pfp_in, int *pn_img, mrc_ftype type)
+gfunc3_init_mrc (gfunc3 *gf, char const *mrc_fname, FILE **pfp_in, int *pnz)
 {
   CEXCEPTION_T _e = EXC_NONE;
   
@@ -474,15 +474,16 @@ gfunc3_init_mrc (gfunc3 *gf, char const *mrc_fname, FILE **pfp_in, int *pn_img, 
     free (gf->fvals);
 
   read_int32_arr (gf->shape, 3, fp,  0);  // Bytes    0 -- 12: shape
-  
-  if (type == STACK)
+
+  /* If PNZ is not NULL, the number of sections (nz) is stored behind that pointer, 
+   * and the MRC file is treated as a stack, meaning that no values are read now. Instead, 
+   * the read_from_stack function can be used to read image by image. */
+  if (pnz != NULL)
     {
-      if (pn_img != NULL)
-        *pn_img = gf->shape[2];
-        
+      *pnz = gf->shape[2];
       gf->shape[2] = 1;
-    }
-  gf->ntotal = idx3_product (gf->shape);
+      gf->ntotal = idx3_product (gf->shape);
+    }    
 
   read_float_arr (gf->csize, 3, fp, 40);  // Bytes   40 -- 52: total grid size
   vec3_div_int (gf->csize, gf->shape);
@@ -496,25 +497,28 @@ gfunc3_init_mrc (gfunc3 *gf, char const *mrc_fname, FILE **pfp_in, int *pn_img, 
   // vec3_mul (gf->x0, gf->csize);
   vec3_set_all (gf->x0, 0.0);
   
-  
+
   /* Initialize values from data section in the MRC file */
   switch (mode)
     {
       case 1: /* Read 16-bit integers and copy to float */
-      Try { i16_arr = (int16_t *) ali16_malloc (gf->ntotal * sizeof (int16_t)); }
-      Catch (_e) { EXC_RETHROW_REPRINT (_e);  fclose (fp);  return; }
-      
-      read_int16_arr (i16_arr, gf->ntotal, fp, MRC_HEADER_BYTES + next);
-      
       Try { gf->fvals = (float *) ali16_malloc (gf->ntotal * sizeof (float)); }
       Catch (_e) { EXC_RETHROW_REPRINT (_e);  fclose (fp);  return; }
 
+      gf->is_initialized = TRUE;
+      gf->type = REAL;
+
+      if (pnz != NULL)  break;
+
+      Try { i16_arr = (int16_t *) ali16_malloc (gf->ntotal * sizeof (int16_t)); }
+      Catch (_e) { EXC_RETHROW_REPRINT (_e);  fclose (fp);  return; }
+
+      read_int16_arr (i16_arr, gf->ntotal, fp, MRC_HEADER_BYTES + next);
+      
       for (i = 0; i < gf->ntotal; i++)
         gf->fvals[i] = i16_arr[i];
 
       free (i16_arr);
-      gf->is_initialized = TRUE;
-      gf->type = REAL;
 
       break;
 
@@ -523,10 +527,12 @@ gfunc3_init_mrc (gfunc3 *gf, char const *mrc_fname, FILE **pfp_in, int *pn_img, 
       Try { gf->fvals = (float *) ali16_malloc (gf->ntotal * sizeof (float)); }
       Catch (_e) { EXC_RETHROW_REPRINT (_e);  fclose (fp);  return; }
       
-      read_float_arr (gf->fvals, gf->ntotal, fp, MRC_HEADER_BYTES + next);
-      
       gf->is_initialized = TRUE;
       gf->type = REAL;
+      
+      if (pnz != NULL)  break;
+
+      read_float_arr (gf->fvals, gf->ntotal, fp, MRC_HEADER_BYTES + next);
       
       break;
 
@@ -535,10 +541,12 @@ gfunc3_init_mrc (gfunc3 *gf, char const *mrc_fname, FILE **pfp_in, int *pn_img, 
       Try { gf->fvals = (float *) ali16_malloc (2 * gf->ntotal * sizeof (float)); }
       Catch (_e) { EXC_RETHROW_REPRINT (_e);  fclose (fp);  return; }
       
-      read_float_arr (gf->fvals, 2 * gf->ntotal, fp, MRC_HEADER_BYTES + next);
-      
       gf->is_initialized = TRUE;
       gf->type = COMPLEX;
+
+      if (pnz != NULL)  break;
+
+      read_float_arr (gf->fvals, 2 * gf->ntotal, fp, MRC_HEADER_BYTES + next);
       
       break;
     
@@ -555,10 +563,9 @@ gfunc3_init_mrc (gfunc3 *gf, char const *mrc_fname, FILE **pfp_in, int *pn_img, 
   else
     fclose (fp);
 
-
   gfunc3_compute_xmin_xmax (gf);
 
-  if (mode != 4)
+  if ((mode != 4) && (pnz == NULL))
     {
       dmin = gfunc3_min (gf);
       dmax = gfunc3_max (gf);
@@ -835,11 +842,18 @@ gfunc3_to_mrc (gfunc3 const *gf, char const *mrc_fname, FILE **pfp_out)
   Try { write_float_arr (gf->fvals, ntotal_flt, fp, MRC_HEADER_BYTES); }  
   Catch (_e) { EXC_RETHROW_REPRINT (_e);  fclose (fp);  return; }
   
-  /* If PFP_OUT is a valid pointer, the file pointer is handed there for further writing. 
+  /* If PFP_OUT is a valid pointer, the file pointer FP is re-opened as read&write and  handed over 
+   * to PFP_OUT. 
    * Otherwise, it is closed.
    */
   if (pfp_out != NULL)
-    *pfp_out = fp;
+    {
+      if ((*pfp_out = freopen (mrc_fname, "r+", fp)) == NULL)
+        {
+          EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Unable to read/write  re-open %s.", mrc_fname);
+          return;
+        }
+    }
   else
     fclose (fp);
 
@@ -877,10 +891,10 @@ gfunc3_write_to_stack (gfunc3 *gf, FILE *fp, int stackpos)
 
   /* Re-read some necessary MRC header parameters and re-compute min and max */
   Try {
-    read_int32_arr (stk_shp, 3, fp,  0);
+    read_int32_arr (stk_shp,   3, fp,   0);
     stk_shp[2] = 1;
     
-    read_int32     (&nz,          fp,  8);
+    read_int32     (&nz,          fp,   8);
     read_int32     (&stk_mode,    fp,  12);
     read_float_arr (stk_cs,    3, fp,  40);
     read_int32     (&next,        fp , 92);
@@ -892,9 +906,9 @@ gfunc3_write_to_stack (gfunc3 *gf, FILE *fp, int stackpos)
   }
 
   /* Check input for consistency with stack */
-  if (stackpos >= nz)
+  if (stackpos > nz)
     {
-      EXC_THROW_CUSTOMIZED_PRINT (EXC_BADARG, "stackpos (%d) must be smaller than number of images"
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_BADARG, "stackpos (%d) may not be larger than number of images"
         " in stack (%d).", stackpos, nz);
       return;
     }
@@ -916,6 +930,8 @@ gfunc3_write_to_stack (gfunc3 *gf, FILE *fp, int stackpos)
   vec3_div_int (stk_cs, stk_shp);
   if (!vec3_about_eq (gf->csize, stk_cs, EPS_GRID))
     {
+      vec3_print (stk_cs);
+      vec3_print (gf->csize);
       EXC_THROW_CUSTOMIZED_PRINT (EXC_BADARG, "Grid function cell size not equal to stack cell "
         "size.");
       return;
@@ -954,7 +970,7 @@ gfunc3_write_to_stack (gfunc3 *gf, FILE *fp, int stackpos)
     }
 
     /* Update nz */
-    nz++;
+    nz = (stackpos + 1 <= nz) ? nz : stackpos + 1;
     write_int32 (&nz, fp, 8);
     
   return;

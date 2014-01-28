@@ -33,7 +33,9 @@ bin_PROGRAMS =  ai_single_axis generate_tiltangles convex_comb forward_op
 # (or list each library twice)
 
 ai_single_axis_SOURCES = $(srcdir)/ai_single_axis.c $(top_srcdir)/lib/ETreco.h
-ai_single_axis_LDADD = $(lib_libdir)/libetai.a \
+ai_single_axis_LDADD = $(lib_libdir)/libai.a \
+											 $(lib_libdir)/libet.a \
+											 $(lib_libdir)/libtilt.a \
 											 $(lib_libdir)/libgfunc3.a \
 											 $(lib_libdir)/libutil.a \
 											 $(lib_libdir)/libiniparser.a \
@@ -42,7 +44,9 @@ ai_single_axis_LDADD = $(lib_libdir)/libetai.a \
 												
 
 forward_op_SOURCES = $(srcdir)/forward_op.c $(top_srcdir)/lib/ETreco.h
-forward_op_LDADD = $(lib_libdir)/libetai.a \
+forward_op_LDADD = $(lib_libdir)/libfwd_op.a \
+									 $(lib_libdir)/libet.a \
+									 $(lib_libdir)/libtilt.a \
 					 				 $(lib_libdir)/libgfunc3.a \
 									 $(lib_libdir)/libutil.a \
 									 $(lib_libdir)/libiniparser.a \
@@ -50,9 +54,13 @@ forward_op_LDADD = $(lib_libdir)/libetai.a \
 									 $(gnulib_libdir)/libgnu.a 
 
 generate_tiltangles_SOURCES = $(srcdir)/generate_tiltangles.c
-generate_tiltangles_LDADD = $(lib_libdir)/libetai.a $(lib_libdir)/libutil.a \
-														$(lib_libdir)/libCException.a $(gnulib_libdir)/libgnu.a 
+generate_tiltangles_LDADD = $(lib_libdir)/libtilt.a \
+														$(lib_libdir)/libutil.a \
+														$(lib_libdir)/libCException.a \
+														$(gnulib_libdir)/libgnu.a 
 
 convex_comb_SOURCES = $(srcdir)/convex_comb.c
-convex_comb_LDADD = $(lib_libdir)/libgfunc3.a $(lib_libdir)/libutil.a $(lib_libdir)/libCException.a \
+convex_comb_LDADD = $(lib_libdir)/libgfunc3.a \
+										$(lib_libdir)/libutil.a \
+										$(lib_libdir)/libCException.a \
 										$(gnulib_libdir)/libgnu.a

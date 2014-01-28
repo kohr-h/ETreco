@@ -53,7 +53,7 @@ main (int argc, char *argv[])
   vfunc vf_rk, vf_lambda, vf_recip_mtf;
   EtParams *et_params;
   AiParams *ai_params;
-  ParamsWrapper pwrapper;
+  EtAiParWrapper pwrapper;
   gfunc3 *proj_image, *rk, *recip_mtf, *volume;
   tiltangles *tilts;
 
@@ -80,7 +80,7 @@ main (int argc, char *argv[])
     }  CATCH_EXIT_FAIL (_e);
   Try { 
     AiParams_assign_ctftrunc_from_EtParams (ai_params, et_params);
-    gfunc3_init_mrc (proj_image, opts->fname_in, &fp, &nz, STACK);
+    gfunc3_init_mrc (proj_image, opts->fname_in, &fp, &nz);
     tiltangles_assign_from_file (tilts, opts->fname_tiltangles);
   } CATCH_EXIT_FAIL (_e);
 
