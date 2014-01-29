@@ -67,8 +67,6 @@ static char const *_exc_names[] __attribute__ ((unused)) = {
  * Exception throwing macros
  *-------------------------------------------------------------------------------------------------*/
 
-# if DEBUGGING
-
 #define EXC_THROW_PRINT(_exc_id) \
 do { \
   fprintf (stderr, "At %s() [%s:%d]: %s\n", __func__, __FILE__, __LINE__, _exc_names[_exc_id]); \
@@ -94,29 +92,6 @@ do { \
   fprintf (stderr, "raised at %s() [%s:%d].\n", __func__, __FILE__, __LINE__); \
 } while (0)
 
-
-#else
-
-#define EXC_THROW_PRINT(_exc_id) \
-do { \
-  fputs (_exc_names[_exc_id], stderr); \
-  fprintf (stderr, "\n"); \
-  Throw (_exc_id); \
-} while (0)
-
-#define EXC_THROW_CUSTOMIZED_PRINT(_exc_id, _format, ...) \
-do { \
-  fprintf (stderr, _format, ##__VA_ARGS__); \
-  fprintf (stderr, "\n"); \
-  Throw (_exc_id); \
-} while (0)
-
-#define EXC_RETHROW_REPRINT(_exc_id)  Throw (_exc_id)
-
-#define EXC_REPRINT  /* empty */
-
-
-#endif
 
 #define CATCH_RETURN_VOID(_exc) Catch (_exc) {EXC_RETHROW_REPRINT (_exc); return;}
 #define CATCH_RETURN(_exc, _retval) Catch (_exc) {EXC_RETHROW_REPRINT (_exc); return _retval;}
