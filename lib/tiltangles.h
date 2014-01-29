@@ -62,7 +62,7 @@ tiltangles_free (tiltangles **pta);
  *-------------------------------------------------------------------------------------------------*/
 
 void
-tiltangles_get_angles (tiltangles *ta, float *angles, int index);
+tiltangles_get_angles (tiltangles const *ta, float *angles, int index);
 
 /*-------------------------------------------------------------------------------------------------*
  * I/O

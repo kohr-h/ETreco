@@ -33,6 +33,8 @@
 #include "vec3.h"
 #include "misc.h"
 
+#include "tiltangles.h"
+
 #include "fft.h"
 #include "gfunc3.h"
 #include "mrc.h"
@@ -90,6 +92,45 @@ perp_plane_freqs (gfunc3 const *ft_proj_img_grid, vec3 const normal_angles_deg)
     }
 
   return freqs;
+}
+
+/*-------------------------------------------------------------------------------------------------*/
+
+float *
+perp_plane_stack_freqs (gfunc3 const *ft_proj_img_grid, tiltangles const *tilts)
+{
+  CEXCEPTION_T _e = EXC_NONE;
+  
+  int i;
+  size_t j;
+  
+  vec3 angles_deg;
+  float *freqs = NULL, *allfreqs = NULL, *cur_freq;
+  
+  CAPTURE_NULL (ft_proj_img_grid, NULL);
+  CAPTURE_NULL (tilts, NULL);
+  
+  /* Alloc space for the huge frequency array */
+  Try { 
+    allfreqs = (float *) ali16_malloc (3 * ft_proj_img_grid->ntotal * tilts->ntilts);
+  } CATCH_RETURN (_e, NULL);
+  
+  cur_freq = allfreqs;
+  for (i = 0; i < tilts->ntilts; i++)
+    {
+      /* Compute frequencies for the i'th sphere and copy them to the huge array. */
+      Try { tiltangles_get_angles (tilts, angles_deg, i); }  CATCH_RETURN (_e, NULL);
+      Try { 
+        freqs = perp_plane_freqs (ft_proj_img_grid, angles_deg);
+      } CATCH_RETURN (_e, NULL);
+      
+      for (j = 0; j < 3 * ft_proj_img_grid->ntotal; j++)
+        *(cur_freq++) = freqs[j];
+    }
+  
+  free (freqs);
+  
+  return allfreqs;
 }
 
 /*-------------------------------------------------------------------------------------------------*/

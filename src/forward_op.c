@@ -33,7 +33,6 @@ int main(int argc, char **argv)
   CEXCEPTION_T _e = EXC_NONE;
 
   int i;
-  int last_index;
   FILE *fp = NULL;
   vec3 angles_deg;
 
@@ -74,19 +73,6 @@ int main(int argc, char **argv)
   }  CATCH_EXIT_FAIL (_e);
 
 
-  /* Set some parameters and resolve conflicts */
-  if (opts->num_images == 0)  /* Not specified by option, thus taken from data */
-    opts->num_images = tilts->ntilts - opts->start_index;
-
-  last_index = opts->start_index + opts->num_images - 1;
-
-  Try {
-    if (last_index >= tilts->ntilts)
-      EXC_THROW_CUSTOMIZED_PRINT (EXC_BADARG, "Image indices (max: %d) must be "
-      "smaller\n than the number of tiltangles (%d).\n", last_index, tilts->ntilts);
-  } CATCH_EXIT_FAIL (_e);
-
-
   /* Initialize the stack on the disk */
   Try { proj_img_imag = gfunc3_imagpart (proj_img, NULL); }  CATCH_EXIT_FAIL (_e);
   Try { gfunc3_to_mrc (proj_img_imag, opts->fname_out, &fp); } CATCH_EXIT_FAIL (_e);
@@ -104,10 +90,10 @@ int main(int argc, char **argv)
   gfunc3_print_grid (proj_img, "Projection image grid:");
 
 
-  for (i = opts->start_index; i <= last_index; i++)
+  for (i = 0; i < tilts->ntilts; i++)
     {
       if (verbosity_level >= VERB_LEVEL_NORMAL)
-        printf ("Image %3d of %3d\n", i - opts->start_index + 1, opts->num_images);
+        printf ("Image %3d of %3d\n", i + 1, tilts->ntilts);
 
       tiltangles_get_angles (tilts, angles_deg, i);
       Try {
@@ -115,8 +101,7 @@ int main(int argc, char **argv)
       } CATCH_EXIT_FAIL (_e);
       
       Try { proj_img_imag = gfunc3_imagpart (proj_img, proj_img_imag); }  CATCH_EXIT_FAIL (_e);
-      
-      Try { gfunc3_write_to_stack (proj_img_imag, fp, i - opts->start_index); }  CATCH_EXIT_FAIL (_e);
+      Try { gfunc3_write_to_stack (proj_img_imag, fp, i); }  CATCH_EXIT_FAIL (_e);
     }
 
   printf ("\n\nProjections written to %s.\n\n", opts->fname_out);
@@ -128,6 +113,7 @@ int main(int argc, char **argv)
   tiltangles_free (&tilts);
   gfunc3_free (&volume);
   gfunc3_free (&proj_img);
+  gfunc3_free (&proj_img_imag);
   fclose (fp);
   
   return EXIT_SUCCESS;

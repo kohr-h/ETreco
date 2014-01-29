@@ -482,8 +482,9 @@ gfunc3_init_mrc (gfunc3 *gf, char const *mrc_fname, FILE **pfp_in, int *pnz)
     {
       *pnz = gf->shape[2];
       gf->shape[2] = 1;
-      gf->ntotal = idx3_product (gf->shape);
     }    
+
+  gf->ntotal = idx3_product (gf->shape);
 
   read_float_arr (gf->csize, 3, fp, 40);  // Bytes   40 -- 52: total grid size
   vec3_div_int (gf->csize, gf->shape);
@@ -532,7 +533,9 @@ gfunc3_init_mrc (gfunc3 *gf, char const *mrc_fname, FILE **pfp_in, int *pnz)
       
       if (pnz != NULL)  break;
 
-      read_float_arr (gf->fvals, gf->ntotal, fp, MRC_HEADER_BYTES + next);
+      Try { 
+        read_float_arr (gf->fvals, gf->ntotal, fp, MRC_HEADER_BYTES + next);
+      } Catch (_e) { EXC_RETHROW_REPRINT (_e);  fclose (fp);  return; }
       
       break;
 

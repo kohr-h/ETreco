@@ -53,10 +53,6 @@ typedef struct {
   /* Model parameter */
   scattering_model model;
   
-  /* Data subset parameters */
-  int num_images;
-  int start_index;
-  
 } FwdOpts;
 
 /*-------------------------------------------------------------------------------------------------*/

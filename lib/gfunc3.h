@@ -21,8 +21,8 @@
  * 
  */
 
-#ifndef __GFUNC_H__
-#define __GFUNC_H__
+#ifndef __GFUNC3_H__
+#define __GFUNC3_H__
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>
@@ -635,4 +635,4 @@ void gfunc3_zeropad (gfunc3 * gf, int const *padding);
 void gfunc3_unpad (gfunc3 * gf, int const *padding);
 */
 
-#endif /* __GFUNC_H__ */
+#endif /* __GFUNC3_H__ */

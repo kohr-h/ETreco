@@ -46,21 +46,23 @@ libutil_a_SOURCES = $(lib_srcdir)/misc.c 		$(lib_srcdir)/misc.h \
 										$(lib_srcdir)/simd.h \
 										$(lib_srcdir)/vec3.c		$(lib_srcdir)/vec3.h
 
+libtilt_a_SOURCES = $(lib_srcdir)/tiltangles.c  $(lib_srcdir)/tiltangles.h \
+										$(libCException_a_SOURCES) \
+										$(libutil_a_SOURCES)
+
 libgfunc3_a_SOURCES = $(lib_srcdir)/fft.c  				$(lib_srcdir)/fft.h     $(lib_srcdir)/fft_private.h\
 											$(lib_srcdir)/gfunc3.c  		$(lib_srcdir)/gfunc3.h \
 											$(lib_srcdir)/mrc.c  				$(lib_srcdir)/mrc.h \
 											$(lib_srcdir)/operators.c 	$(lib_srcdir)/operators.h \
+											$(lib_srcdir)/tiltangles.c  $(lib_srcdir)/tiltangles.h \
 											$(lib_srcdir)/vfunc.h	\
 											$(libCException_a_SOURCES) \
 											$(libutil_a_SOURCES)
 
-libtilt_a_SOURCES = $(lib_srcdir)/tiltangles.c  	$(lib_srcdir)/tiltangles.h \
-										$(libCException_a_SOURCES) \
-										$(libutil_a_SOURCES)
-
 libet_a_SOURCES = $(lib_srcdir)/et_operators.c 	$(lib_srcdir)/et_operators.h \
 									$(lib_srcdir)/et_params.c  		$(lib_srcdir)/et_params.h \
 									$(lib_srcdir)/et_vfuncs.c  		$(lib_srcdir)/et_vfuncs.h  $(lib_srcdir)/et_vfuncs_private.h \
+									$(lib_srcdir)/gfunc3_private.h \
 									$(lib_srcdir)/operators_private.h\
 									$(lib_srcdir)/vfunc.h \
 									$(libCException_a_SOURCES) \

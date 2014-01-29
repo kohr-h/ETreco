@@ -59,8 +59,6 @@
          {"output-file",      required_argument, 0, 'o'}, \
          {"params-file",      required_argument, 0, 'p'}, \
          {"model",            required_argument, 0, 'm'}, \
-         {"num-images",       required_argument, 0, 'n'}, \
-         {"start-index",      required_argument, 0, 's'}, \
          {"tiltangles-file",  required_argument, 0, 't'}, \
          {"fft-padding",      required_argument, 0, 'F'}, \
          {0, 0, 0, 0}
@@ -89,8 +87,6 @@ new_FwdOpts (void)
   opts->fname_params            = NULL;
   opts->fname_tiltangles        = NULL;
   opts->model                   = PROJ_ASSUMPTION;
-  opts->num_images              = 0;
-  opts->start_index             = 0;
   
   return opts;
 }
@@ -125,7 +121,6 @@ FwdOpts_print (FwdOpts *opts)
   if (verbosity_level == VERB_LEVEL_QUIET)
     return;
   
-  /* TODO: make dependent on verbosity */
   printf ("\n\n");
   puts ("Options from command line:");
   puts ("==========================\n");
@@ -142,13 +137,6 @@ FwdOpts_print (FwdOpts *opts)
   else
     printf ("no\n");
 
-  printf ("Number of images      : ");
-  if (opts->num_images == -1)
-    printf ("(determined from data)\n");
-  else
-    printf ("%d\n", opts->num_images);
-
-  printf ("Start index           : %d\n", opts->start_index);
   printf ("FFT zero-padding      : %d\n", fft_padding);
   printf ("\n\n");
   
@@ -187,12 +175,6 @@ print_help (char const *progname)
   puts ("  -I, --invert-contrast");
   puts ("                 invert the contrast of the images; use this option if projections of");
   puts ("                 dense regions are brighter than the background (enabled by default).");
-  puts ("  -n N, --num-images=N");
-  puts ("                 override image number determined from input file by N; useful");
-  puts ("                 for data generation with only a subset of the tilt angles.");
-  puts ("  -s N, --start-index=N");
-  puts ("                 start with N'th image instead of 0; useful for data generation");
-  puts ("                 with only a subset of the tilt angles.");
   puts ("  --fft-padding[=N]");
   puts ("                 continue grid functions by N zero pixels in each direction prior");
   puts ("                 to computing Fourier transforms ('zero-padding').");
@@ -301,37 +283,6 @@ FwdOpts_set_fname_tiltangles (FwdOpts *opts, char const *fname)
 /*-------------------------------------------------------------------------------------------------*/
 
 void
-FwdOpts_set_num_images (FwdOpts *opts, int n_images)
-{
-  if (n_images <= 0)
-    {
-      EXC_THROW_CUSTOMIZED_PRINT (EXC_BADARG, "Parameter of `-n' (`--num-images') must be positive.");
-      return;
-    }
-  
-  opts->num_images = n_images;
-  return;
-}
-
-/*-------------------------------------------------------------------------------------------------*/
-
-void
-FwdOpts_set_start_index (FwdOpts *opts, int nstart)
-{
-  if (nstart < 0)
-    {
-      EXC_THROW_CUSTOMIZED_PRINT (EXC_BADARG, 
-        "Parameter of `-s' (`--start-index') must be nonnegative.");
-      return;
-    }
-  
-  opts->start_index = nstart;
-  return;
-}
-
-/*-------------------------------------------------------------------------------------------------*/
-
-void
 FwdOpts_set_model (FwdOpts *opts, char *model_str)
 {
   char *p;
@@ -363,16 +314,12 @@ FwdOpts_assign_from_args (FwdOpts *opts, int argc, char **argv)
   /* Aux variables */
   int c;
   char const *progname = base_name(argv[0]);
-  int n_images;
-  int nstart;
   
   /* Internal flags for the short options */
   int F_flag = 0;
   int m_flag = 0;
-  int n_flag = 0;
   int o_flag = 0;
   int p_flag = 0;
-  int s_flag = 0;
   int t_flag = 0;
  
   if (argc == 1)
@@ -446,18 +393,6 @@ FwdOpts_assign_from_args (FwdOpts *opts, int argc, char **argv)
           m_flag = 1;
           break;
  
-        case 'n':
-          if (n_flag != 0)
-            {
-              fputs ("Invalid multiple use of `-n' (`--num-images') option.", stderr);
-              exit (EXIT_FAILURE);
-            }
-
-          n_images = atoi (optarg);
-          FwdOpts_set_num_images (opts, n_images);
-          n_flag = 1;
-          break;
-
         case 'o':
           if (o_flag != 0)
             {
@@ -489,18 +424,6 @@ FwdOpts_assign_from_args (FwdOpts *opts, int argc, char **argv)
             }
             
           verbosity_level = VERB_LEVEL_QUIET;
-          break;
- 
-        case 's':
-          if (s_flag != 0)
-            {
-              fputs ("Invalid multiple use of `-s' (`--start-index') option.", stderr);
-              exit (EXIT_FAILURE);
-            }
-
-          nstart = atoi (optarg);
-          FwdOpts_set_start_index (opts, nstart);
-          s_flag = 1;
           break;
  
         case 't':

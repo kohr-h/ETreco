@@ -75,13 +75,17 @@ gfunc3_free (gfunc3 **pgf)
   if ((*pgf) == NULL)
     return;
   
+  puts ("nothing so far");
   if ((*pgf)->fvals != NULL)
     free ((*pgf)->fvals);
   
+  puts ("free'd fvals");
+
   (*pgf)->is_initialized = FALSE;
   (*pgf)->type           = REAL;
 
   free (*pgf);
+  puts ("free'd gf");
   return;
 }
 
@@ -132,6 +136,41 @@ gfunc3_init (gfunc3 *gf, vec3 const x0, vec3 const cs, idx3 const shp, gfunc_typ
 
   gf->is_initialized = TRUE;
   gfunc3_set_all (gf, 0.0);
+  return;
+}
+
+/*-------------------------------------------------------------------------------------------------*/
+
+void
+gfunc3_init_gridonly (gfunc3 *gf, vec3 const x0, vec3 const cs, idx3 const shp, gfunc_type gf_type)
+{
+  CAPTURE_NULL_VOID (gf);
+  CAPTURE_NULL_VOID (cs);
+  CAPTURE_NULL_VOID (shp);
+
+  /* Initialize grid */
+  idx3_copy (gf->shape, shp);
+  
+  if (shp[2] == 0)
+    gf->shape[2] = 1;
+  gf->ntotal = idx3_product (gf->shape);
+
+  if (x0 == NULL)
+    vec3_set_all (gf->x0, 0.0);
+  else
+    vec3_copy (gf->x0, x0);
+
+  vec3_copy (gf->csize, cs);
+
+  if (GFUNC_IS_2D (gf))
+    {
+      gf->x0[2] = 0.0;
+      gf->csize[2] = 1.0;
+    }
+
+  gf->type = gf_type;
+  gfunc3_compute_xmin_xmax (gf);
+
   return;
 }
 

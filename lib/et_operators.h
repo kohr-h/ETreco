@@ -26,6 +26,8 @@
 
 #include "vec3.h"
 
+#include "tiltangles.h"
+
 #include "gfunc3.h"
 
 #include "et_params.h"
@@ -39,6 +41,11 @@ typedef enum { MD_START, PROJ_ASSUMPTION, BORN_APPROX, MD_END } scattering_model
 void
 et_scattering_projection (gfunc3 const *scatterer, vec3 const angles_deg, EtParams const *params, 
                           gfunc3 *proj_img, scattering_model sct_model);
+
+void
+et_scattering_projection_atonce (gfunc3 const *scatterer, tiltangles const *tilts, 
+                                 EtParams const *params, gfunc3 *proj_stack, 
+                                 scattering_model sct_model);
 
 /*-------------------------------------------------------------------------------------------------*/
 

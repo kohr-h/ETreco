@@ -33,11 +33,6 @@ int main(int argc, char **argv)
 {
   CEXCEPTION_T _e = EXC_NONE;
 
-  int i;
-  int last_index;
-  FILE *fp = NULL;
-  vec3 angles_deg;
-
   FwdOpts *opts = NULL;
   EtParams *et_params = NULL;
   FwdParams *fwd_params = NULL;
@@ -51,7 +46,6 @@ int main(int argc, char **argv)
     tilts = new_tiltangles ();
     volume = new_gfunc3 ();
     proj_stack = new_gfunc3 ();
-    proj_stack_imag = new_gfunc3 ();
   } CATCH_EXIT_FAIL (_e);
 
 
@@ -64,7 +58,6 @@ int main(int argc, char **argv)
     gfunc3_init_mrc (volume, opts->fname_in, NULL, NULL);
   }  CATCH_EXIT_FAIL (_e);
 
-  
   /* Scale and shift the volume if necessary; transfer to complex */
   Try {
     FwdParams_apply_to_volume (fwd_params, volume);
@@ -73,59 +66,30 @@ int main(int argc, char **argv)
   }  CATCH_EXIT_FAIL (_e);
 
 
-  /* Set some parameters and resolve conflicts */
-  if (opts->num_images == 0)  /* Not specified by option, thus taken from data */
-    opts->num_images = tilts->ntilts - opts->start_index;
-
-  last_index = opts->start_index + opts->num_images - 1;
-
-  Try {
-    if (last_index >= tilts->ntilts)
-      EXC_THROW_CUSTOMIZED_PRINT (EXC_BADARG, "Image indices (max: %d) must be "
-      "smaller\n than the number of tiltangles (%d).\n", last_index, tilts->ntilts);
-  } CATCH_EXIT_FAIL (_e);
-
   /* Initialize the stack */
   Try {
     idx3_copy (proj_stack->shape, fwd_params->detector_shape);
-    proj_stack->shape[2] = opts->num_images;
-    gfunc3_init (proj_img, NULL, fwd_params->detector_px_size, proj_stack->shape, COMPLEX);
+    proj_stack->shape[2] = tilts->ntilts;
+    gfunc3_init (proj_stack, NULL, fwd_params->detector_px_size, proj_stack->shape, COMPLEX);
   } CATCH_EXIT_FAIL (_e);
 
   
-  /* TODO: continue here */
-
-  /* Initialize the stack on the disk */
-  Try { proj_img_imag = gfunc3_imagpart (proj_img, NULL); }  CATCH_EXIT_FAIL (_e);
-  Try { gfunc3_to_mrc (proj_img_imag, opts->fname_out, &fp); } CATCH_EXIT_FAIL (_e);
-
-
-  /* Swap x and z axes of volume due to different ordering in NFFT */
-  // Try { gfunc3_swapxz (volume); }  CATCH_EXIT_FAIL (_e);
-
-
   /* Print a summary of everything before starting */
   FwdOpts_print (opts);
   EtParams_print (et_params);
   FwdParams_print (fwd_params);
   gfunc3_print_grid (volume, "volume grid:");
-  gfunc3_print_grid (proj_img, "Projection image grid:");
+  gfunc3_print_grid (proj_stack, "Projection stack grid:");
 
-
-  for (i = opts->start_index; i <= last_index; i++)
-    {
-      if (verbosity_level >= VERB_LEVEL_NORMAL)
-        printf ("Image %3d of %3d\n", i - opts->start_index + 1, opts->num_images);
-
-      tiltangles_get_angles (tilts, angles_deg, i);
-      Try {
-        et_scattering_projection (volume, angles_deg, et_params, proj_img, opts->model);
-      } CATCH_EXIT_FAIL (_e);
+  
+  /* Compute the projections */
+  Try {
+    et_scattering_projection_atonce (volume, tilts, et_params, proj_stack, opts->model);
+  } CATCH_EXIT_FAIL (_e);
       
-      Try { proj_img_imag = gfunc3_imagpart (proj_img, proj_img_imag); }  CATCH_EXIT_FAIL (_e);
-      
-      Try { gfunc3_write_to_stack (proj_img_imag, fp, i - opts->start_index); }  CATCH_EXIT_FAIL (_e);
-    }
+  /* Get the imaginary part and write it to disk */
+  Try { proj_stack_imag = gfunc3_imagpart (proj_stack, NULL); }  CATCH_EXIT_FAIL (_e);
+  Try { gfunc3_to_mrc (proj_stack_imag, opts->fname_out, NULL); }  CATCH_EXIT_FAIL (_e);
 
   printf ("\n\nProjections written to %s.\n\n", opts->fname_out);
   
@@ -135,8 +99,8 @@ int main(int argc, char **argv)
   FwdParams_free (&fwd_params);
   tiltangles_free (&tilts);
   gfunc3_free (&volume);
-  gfunc3_free (&proj_img);
-  fclose (fp);
+  gfunc3_free (&proj_stack);
+  gfunc3_free (&proj_stack_imag);
   
   return EXIT_SUCCESS;
 }

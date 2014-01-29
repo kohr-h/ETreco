@@ -1,5 +1,5 @@
 /*
- * operators_private.h -- operations on grid functions - private header
+ * gfunc3.h -- 3-dimensional grid functions - private header
  * 
  * Copyright 2014 Holger Kohr <kohr@num.uni-sb.de>
  * 
@@ -21,22 +21,28 @@
  * 
  */
 
-#ifndef __OPERATORS_PRIVATE_H__
-#define __OPERATORS_PRIVATE_H__
+#ifndef __GFUNC3_PRIVATE_H__
+#define __GFUNC3_PRIVATE_H__
 
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
+
+#include <complex.h>
 
 #include "vec3.h"
 
-#include "tiltangles.h"
-
-#include "gfunc3.h"
+#include "vfunc.h"
 
 
-float *
-perp_plane_freqs (gfunc3 const *ft_proj_img_grid, vec3 const normal_angles_deg);
+/* Initialize the grid of GF with the provided parameters X0, CS and SHP as well as the function 
+ * type. Do not allocate the data array.
+ * 
+ * Thrown exceptions: 
+ * - EXC_NULL
+ */
+void
+gfunc3_init_gridonly (gfunc3 *gf, vec3 const x0, vec3 const cs, idx3 const shp, gfunc_type gf_type);
 
-float *
-perp_plane_stack_freqs (gfunc3 const *ft_proj_img_grid, tiltangles const *tilts);
 
-
-#endif // __OPERATORS_PRIVATE_H__
+#endif /* __GFUNC_H__ */

@@ -289,7 +289,7 @@ tiltangles_to_file (tiltangles const *ta, char const *ta_fname)
  *-------------------------------------------------------------------------------------------------*/
 
 void
-tiltangles_get_angles (tiltangles *ta, float *angles, int index)
+tiltangles_get_angles (tiltangles const *ta, float *angles, int index)
 {
   int i;
   
