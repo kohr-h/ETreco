@@ -75,17 +75,13 @@ gfunc3_free (gfunc3 **pgf)
   if ((*pgf) == NULL)
     return;
   
-  puts ("nothing so far");
   if ((*pgf)->fvals != NULL)
     free ((*pgf)->fvals);
   
-  puts ("free'd fvals");
-
   (*pgf)->is_initialized = FALSE;
   (*pgf)->type           = REAL;
 
   free (*pgf);
-  puts ("free'd gf");
   return;
 }
 
@@ -787,7 +783,7 @@ gfunc3_real2complex (gfunc3 *gf)
   
   fvals_old = gf->fvals;
   Try { 
-    gf->fvals = (float *) ali16_malloc (2 * gf->ntotal * sizeof (float)); 
+    gf->fvals = (float *) ali16_malloc (gf->ntotal * sizeof (float complex)); 
   } CATCH_RETURN_VOID (_e);
   
   pfold_val = fvals_old;
