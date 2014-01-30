@@ -58,11 +58,13 @@ int main(int argc, char **argv)
     gfunc3_init_mrc (volume, opts->fname_in, NULL, NULL);
   }  CATCH_EXIT_FAIL (_e);
 
-  /* Scale and shift the volume if necessary; transfer to complex */
+
+  /* Scale and shift the volume if necessary; transfer to complex and add imaginary part */
   Try {
     FwdParams_apply_to_volume (fwd_params, volume);
     gfunc3_scale_grid (volume, et_params->magnification);
-    gfunc3_real2complex (volume);
+    // gfunc3_real2complex (volume);
+    gfunc3_scale (volume, 1.0 + 0.1 * I);
   }  CATCH_EXIT_FAIL (_e);
 
 
@@ -73,7 +75,6 @@ int main(int argc, char **argv)
     gfunc3_init (proj_stack, NULL, fwd_params->detector_px_size, proj_stack->shape, COMPLEX);
   } CATCH_EXIT_FAIL (_e);
 
-  
   /* Print a summary of everything before starting */
   FwdOpts_print (opts);
   EtParams_print (et_params);
@@ -86,12 +87,14 @@ int main(int argc, char **argv)
   Try {
     et_scattering_projection_atonce (volume, tilts, et_params, proj_stack, opts->model);
   } CATCH_EXIT_FAIL (_e);
-      
-  /* Get the imaginary part and write it to disk */
+
+  /* Get the imaginary part, invert contrast if necessary and write it to disk */
   Try { proj_stack_imag = gfunc3_imagpart (proj_stack, NULL); }  CATCH_EXIT_FAIL (_e);
+  if (invert_contrast_flag)
+    gfunc3_scale (proj_stack_imag, -1.0);
   Try { gfunc3_to_mrc (proj_stack_imag, opts->fname_out, NULL); }  CATCH_EXIT_FAIL (_e);
 
-  printf ("\n\nProjections written to %s.\n\n", opts->fname_out);
+  printf ("\n\nProjections written to %s\n\n", opts->fname_out);
   
   /* Delete all objects before exiting */
   FwdOpts_free (&opts);

@@ -530,7 +530,6 @@ fft_backward (gfunc3 *gf)
 {
   CEXCEPTION_T _e = EXC_NONE;
   
-  static int count = 0;
   size_t n_ift;
   float *d_ift = NULL;
   idx3 padding = {0, 0, 0};
@@ -545,9 +544,6 @@ fft_backward (gfunc3 *gf)
     }
 
   fft_bwd_premod (gf);
-
-  if (DEBUGGING)
-    temp_mrc_out (gf, "bwd_premod", ++count);
 
   if (gf->type == HALFCOMPLEX)
     {
@@ -589,9 +585,7 @@ fft_backward (gfunc3 *gf)
       fftwf_execute (p);
       fftwf_destroy_plan (p);
 
-      gf->is_initialized = FALSE;
       gfunc3_grid_bwd_reciprocal (gf);
-      gf->is_initialized = TRUE;
     }
 
   if (fft_padding > 0)
@@ -612,11 +606,11 @@ fft_backward (gfunc3 *gf)
 /*-------------------------------------------------------------------------------------------------*/
 
 void
-nfft_normalize_freqs (float *freqs, vec3 const csize, size_t nfreqs)
+nfft_normalize_freqs (double *freqs, vec3 const csize, size_t nfreqs)
 {
   int i;
   size_t j;
-  float *cur_freq;
+  double *cur_freq;
   
   for (j = 0, cur_freq = freqs; j < nfreqs; j++, cur_freq += 3)
     {
@@ -670,11 +664,14 @@ nfft_transform (gfunc3 const *gf, float const *freqs, size_t nfreqs, float compl
 {
   CEXCEPTION_T _e = EXC_NONE;
   
-  size_t j;
+  int ix, iy, iz;
+  size_t j, idx, incx;
   float const *cur_freq;
-  float *cur_x;
+  double *cur_x;
+  float complex *fvals_c, *cur_val_c;
+  double complex *cur_val_dc;
 
-  nfftf_plan p;
+  nfft_plan p;
 
   CAPTURE_NULL_VOID (gf);
   CAPTURE_NULL_VOID (freqs);
@@ -692,29 +689,59 @@ nfft_transform (gfunc3 const *gf, float const *freqs, size_t nfreqs, float compl
       return;
     }
 
-  nfftf_init_3d (&p, gf->shape[0], gf->shape[1], gf->shape[2], nfreqs);
-  p.f_hat = (float complex *) gf->fvals;
+  nfft_init_3d (&p, gf->shape[0], gf->shape[1], gf->shape[2], nfreqs);
+  
+  /* Copy GF->FVALS to P.F_HAT with x and z axes switched */
+  cur_val_dc = p.f_hat;
+  fvals_c = (float complex *) gf->fvals;
+  idx = 0;
+  incx = gf->shape[1] * gf->shape[0];
+  for (iz = 0; iz < gf->shape[0]; iz++)
+    {
+      for (iy = 0; iy < gf->shape[1]; iy++)
+        {
+          idx = iy * gf->shape[0] + iz;
+          for (ix = 0; ix < gf->shape[2]; ix++, idx += incx)
+            *(cur_val_dc++) = (double complex) fvals_c[idx];
+        }
+    }
+
+  /* This is for single-precision once it becomes available */
+  // p.f_hat = (float complex *) gf->fvals;
 
   /* Copy the normalized frequencies to the array in the plan */
   cur_freq = freqs;
   cur_x = p.x; 
   for (j = 0; j < 3 * nfreqs; j++)
-    *(cur_x++) = *(cur_freq++);
+    *(cur_x++) = (double) *(cur_freq++);
 
   Try { nfft_normalize_freqs (p.x, gf->csize, nfreqs); } CATCH_RETURN_VOID (_e);
   
   /* Prepare and execute the transform */
-  nfftf_precompute_one_psi (&p);
-  nfftf_trafo (&p);
+  nfft_precompute_one_psi (&p);
+  nfft_trafo (&p);
 
-  *pftvals = p.f;
+  /* Copy over the transform values to the new float complex array behind PFTVALS */
+  Try {
+    *pftvals = (float complex *) ali16_malloc (nfreqs * sizeof (float complex));
+  } CATCH_RETURN_VOID (_e);
+  cur_val_dc = p.f;
+  cur_val_c = *pftvals;
+  for (j = 0; j < nfreqs; j++)
+    *(cur_val_c++) = (float complex) *(cur_val_dc++);
+
+  /* This is for single-precision once it becomes available */
+  // *pftvals = p.f;
 
   /* The plan is no longer needed, so free the space. Since the f and f_hat members are pointed to 
    * by other pointers, they must not be free'd. 
    */
-  p.f = NULL;
-  p.f_hat = NULL;
-  nfftf_finalize (&p);
+
+  /* This is for single-precision once it becomes available */
+  // p.f = NULL;
+  // p.f_hat = NULL;
+
+  nfft_finalize (&p);
   
   /* Apply the modification due to shift and scaling (use unnormalized frequencies) */
   nfft_postmod (*pftvals, gf->x0, gf->csize, freqs, nfreqs);
