@@ -57,7 +57,7 @@ perp_plane_freqs (gfunc3 const *ft_proj_img_grid, vec3 const normal_angles_deg)
   float *cur_freq;
 
   Try { 
-    freqs = (float *) ali16_malloc ((3 * ft_proj_img_grid->ntotal) * sizeof (float));
+    freqs = (float *) ali16_malloc (3 * ft_proj_img_grid->ntotal * sizeof (float));
   } CATCH_RETURN (_e, NULL);
 
   sin_psi   = sinf (normal_angles_deg[0] * ONE_DEGREE);
@@ -112,7 +112,7 @@ perp_plane_stack_freqs (gfunc3 const *ft_proj_img_grid, tiltangles const *tilts)
   
   /* Alloc space for the huge frequency array */
   Try { 
-    allfreqs = (float *) ali16_malloc (3 * ft_proj_img_grid->ntotal * tilts->ntilts);
+    allfreqs = (float *) ali16_malloc (3 * ft_proj_img_grid->ntotal * tilts->ntilts * sizeof (float));
   } CATCH_RETURN (_e, NULL);
   
   cur_freq = allfreqs;

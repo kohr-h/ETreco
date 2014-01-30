@@ -65,7 +65,7 @@ ewald_sphere_freqs (gfunc3 const *ft_proj_img_grid, vec3 const normal_angles_deg
   double tmp, v;
 
   Try { 
-    freqs = (float *) ali16_malloc ((ft_proj_img_grid->ntotal * 3) * sizeof (float));
+    freqs = (float *) ali16_malloc (3 * ft_proj_img_grid->ntotal * sizeof (float));
   } CATCH_RETURN (_e, NULL);
   
   sin_psi   = sinf (normal_angles_deg[0] * ONE_DEGREE);
@@ -126,7 +126,7 @@ ewald_sphere_stack_freqs (gfunc3 const *ft_proj_img_grid, tiltangles const *tilt
   
   /* Alloc space for the huge frequency array */
   Try { 
-    allfreqs = (float *) ali16_malloc (3 * ft_proj_img_grid->ntotal * tilts->ntilts);
+    allfreqs = (float *) ali16_malloc (3 * ft_proj_img_grid->ntotal * tilts->ntilts * sizeof (float));
   } CATCH_RETURN (_e, NULL);
   
   cur_freq = allfreqs;
@@ -274,7 +274,7 @@ et_scattering_projection_atonce (gfunc3 const *scatterer, tiltangles const *tilt
   if (sct_model == PROJ_ASSUMPTION)
     {
       Try { freqs = perp_plane_stack_freqs (gf_tmp, tilts); }  CATCH_RETURN_VOID (_e);
-   }
+    }
   else if (sct_model == BORN_APPROX)
     {
       Try { 
@@ -286,8 +286,8 @@ et_scattering_projection_atonce (gfunc3 const *scatterer, tiltangles const *tilt
     nfft_transform (scatterer, freqs, proj_stack->ntotal, (float complex **) (&proj_stack->fvals)); 
   } CATCH_RETURN_VOID (_e);
 
-  gf_tmp->is_initialized = TRUE;
   Try { vfunc_init_ctf (&ctf, params); } CATCH_RETURN_VOID (_e);
+  gf_tmp->is_initialized = TRUE;
   for (i = 0; i < tilts->ntilts; i++)
     {
       /* Have GF_TMP->FVALS point to the current image in the stack */
@@ -301,13 +301,15 @@ et_scattering_projection_atonce (gfunc3 const *scatterer, tiltangles const *tilt
       Try { 
         gfunc3_mul_vfunc (gf_tmp, &ctf); 
         fft_backward (gf_tmp);
-        /* TODO: other factors here */
         gfunc3_scale (gf_tmp, 2 * M_PI * M_SQRT2PI);
       }  CATCH_RETURN_VOID (_e);
 
       /* Return to reciprocal grid */
       Try { gfunc3_grid_fwd_reciprocal (gf_tmp); }  CATCH_RETURN_VOID (_e);  
     }
+
+  gf_tmp->fvals = NULL;
+  gfunc3_free (&gf_tmp);
 
   free (freqs);
   return;

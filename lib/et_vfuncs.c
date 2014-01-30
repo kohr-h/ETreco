@@ -40,7 +40,9 @@
 #include "et_vfuncs.h"
 
 
-/*-------------------------------------------------------------------------------------------------*/
+/*-------------------------------------------------------------------------------------------------
+ * Some common functions for all CTF variants
+ *-------------------------------------------------------------------------------------------------*/
 
 float
 envelope_energy_spread (float t, EtParams const *params)
@@ -81,27 +83,15 @@ oscillating_part_angle_function_acr (float t, EtParams const *params)
   return zp + atan (params->acr);
 }
 
-/*-------------------------------------------------------------------------------------------------*/
+/*-------------------------------------------------------------------------------------------------
+ * The projection-assumption complex total CTF
+ *-------------------------------------------------------------------------------------------------*/
 
 float
 ctf_scaling_function (float t, EtParams const *params)
 {
   /* Account for volume dilation factor here: sqrt(m) -> m^2 */
   float c = params->magnification * params->magnification * params->wave_number * params->wave_number;
-
-  double a = sqrt ( (double) params->wave_number * params->wave_number - t);
-
-  return (float) (c / a);
-}
-
-/*-------------------------------------------------------------------------------------------------*/
-
-float
-ctf_acr_scaling_function (float t, EtParams const *params)
-{
-  /* Account for volume dilation factor here: sqrt(m) -> m^2 */
-  float c = params->magnification * params->magnification * params->wave_number * params->wave_number
-    * sqrtf (1 + params->acr * params->acr);
 
   double a = sqrt ( (double) params->wave_number * params->wave_number - t);
 
@@ -120,6 +110,51 @@ ctf_unscaled_radial (float t, EtParams const *params)
 
   return cexpf (I * oscillating_part_angle_function (t, params)) 
     * envelope_source_size (t, params) * envelope_energy_spread (t, params);
+}
+
+/*-------------------------------------------------------------------------------------------------*/
+
+void
+ctf (float const *xi, float *zp, void const *par)
+{
+  EtParams *params = (EtParams *) par;
+  float mxi2;
+  float complex *z = (float complex *) zp;
+
+  mxi2 = xi[0] * xi[0] + xi[1] * xi[1];
+  mxi2 *= params->magnification * params->magnification;
+
+  *z = ctf_scaling_function (mxi2, params) * ctf_unscaled_radial (mxi2, params) / (2 * M_PI);
+
+  return;
+}
+
+void
+vfunc_init_ctf (vfunc *vf, EtParams const *params)
+{
+  CAPTURE_NULL_VOID (vf);
+  CAPTURE_NULL_VOID (params);
+    
+  vf->f = ctf;
+  vf->params = params;
+
+  return;
+}
+
+/*-------------------------------------------------------------------------------------------------
+ * The projection-assumption-constant-ACR real CTF
+ *-------------------------------------------------------------------------------------------------*/
+
+float
+ctf_acr_scaling_function (float t, EtParams const *params)
+{
+  /* Account for volume dilation factor here: sqrt(m) -> m^2 */
+  float c = params->magnification * params->magnification * params->wave_number * params->wave_number
+    * sqrtf (1 + params->acr * params->acr);
+
+  double a = sqrt ( (double) params->wave_number * params->wave_number - t);
+
+  return (float) (c / a);
 }
 
 /*-------------------------------------------------------------------------------------------------*/
@@ -159,35 +194,6 @@ vfunc_init_ctf_acr (vfunc *vf, EtParams const *params)
   CAPTURE_NULL_VOID (params);
     
   vf->f = ctf_acr;
-  vf->params = params;
-
-  return;
-}
-
-/*-------------------------------------------------------------------------------------------------*/
-
-void
-ctf (float const *xi, float *zp, void const *par)
-{
-  EtParams *params = (EtParams *) par;
-  float mxi2;
-  float complex *z = (float complex *) zp;
-
-  mxi2 = xi[0] * xi[0] + xi[1] * xi[1];
-  mxi2 *= params->magnification * params->magnification;
-
-  *z = ctf_scaling_function (mxi2, params) * ctf_unscaled_radial (mxi2, params) / (2 * M_PI);
-
-  return;
-}
-
-void
-vfunc_init_ctf (vfunc *vf, EtParams const *params)
-{
-  CAPTURE_NULL_VOID (vf);
-  CAPTURE_NULL_VOID (params);
-    
-  vf->f = ctf;
   vf->params = params;
 
   return;
