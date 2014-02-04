@@ -35,7 +35,7 @@
 typedef enum { MD_START, PROJ_ASSUMPTION, BORN_APPROX, MD_END } scattering_model;
 
 /*-------------------------------------------------------------------------------------------------
- * ET Forward operator 
+ * Forward operator 
  *-------------------------------------------------------------------------------------------------*/
 
 void
@@ -47,6 +47,16 @@ et_scattering_projection_atonce (gfunc3 const *scatterer, tiltangles const *tilt
                                  EtParams const *params, gfunc3 *proj_stack, 
                                  scattering_model sct_model);
 
+/*-------------------------------------------------------------------------------------------------
+ * Adjoint operator 
+ *-------------------------------------------------------------------------------------------------*/
+
+void
+et_scattering_adjoint_single_axis (gfunc3 const *proj_img, float const theta_deg, int axis,  
+                                   EtParams const *params, gfunc3 *volume, 
+                                   scattering_model sct_model);
+
 /*-------------------------------------------------------------------------------------------------*/
+
 
 #endif  /* __ET_OPERATORS_H__ */

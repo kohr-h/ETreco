@@ -43,11 +43,17 @@
 #include "gfunc3.h"
 #include "gfunc3_private.h"
 #include "mrc.h"
+#include "operators.h"
 #include "operators_private.h"
 
 #include "et_params.h"
 #include "et_operators.h"
 #include "et_vfuncs.h"
+
+
+/*-------------------------------------------------------------------------------------------------*/
+
+extern int use_ctf_flag;
 
 /*-------------------------------------------------------------------------------------------------*/
 
@@ -167,7 +173,13 @@ et_scattering_projection (gfunc3 const *scatterer, vec3 const angles_deg, EtPara
   GFUNC_CAPTURE_UNINIT_VOID (scatterer);
   GFUNC_CAPTURE_UNINIT_VOID (proj_img);
 
-  if (proj_img->type == REAL)
+  if (scatterer->type != COMPLEX)
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_GFTYPE, "Scatterer must be of COMPLEX type.");
+      return;
+    }
+
+  if (proj_img->type != COMPLEX)
     {
       EXC_THROW_CUSTOMIZED_PRINT (EXC_GFTYPE, "Projection image must be of COMPLEX type.");
       return;
@@ -205,11 +217,11 @@ et_scattering_projection (gfunc3 const *scatterer, vec3 const angles_deg, EtPara
       } CATCH_RETURN_VOID (_e);
     }
   
-  /* FIXXME: there is something wrong with the factors. Check with math! */
   /* Multiply with CTF and scaling factors. Finally apply inverse FT */
   Try { vfunc_init_ctf (&ctf, params); } CATCH_RETURN_VOID (_e);
   Try {
-    gfunc3_mul_vfunc (proj_img, &ctf);
+    if (use_ctf_flag)
+      gfunc3_mul_vfunc (proj_img, &ctf);
     gfunc3_scale (proj_img, 2 * M_PI * M_SQRT2PI);
   } CATCH_RETURN_VOID (_e);
 
@@ -242,6 +254,12 @@ et_scattering_projection_atonce (gfunc3 const *scatterer, tiltangles const *tilt
   
   GFUNC_CAPTURE_UNINIT_VOID (scatterer);
   GFUNC_CAPTURE_UNINIT_VOID (proj_stack);
+
+  if (scatterer->type != COMPLEX)
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_GFTYPE, "Scatterer must be of COMPLEX type.");
+      return;
+    }
 
   if (proj_stack->type != COMPLEX)
     {
@@ -298,8 +316,9 @@ et_scattering_projection_atonce (gfunc3 const *scatterer, tiltangles const *tilt
        * - FT backwards
        * - Multiply with the other factors
        */
-      Try { 
-        gfunc3_mul_vfunc (gf_tmp, &ctf); 
+      Try {
+        if (use_ctf_flag) 
+          gfunc3_mul_vfunc (gf_tmp, &ctf); 
         fft_backward (gf_tmp);
         gfunc3_scale (gf_tmp, 2 * M_PI * M_SQRT2PI);
       }  CATCH_RETURN_VOID (_e);
@@ -316,3 +335,65 @@ et_scattering_projection_atonce (gfunc3 const *scatterer, tiltangles const *tilt
 }
 
 /*-------------------------------------------------------------------------------------------------*/
+
+void
+et_scattering_adjoint_single_axis (gfunc3 const *proj_img, float const theta_deg, int axis,  
+                                   EtParams const *params, gfunc3 *volume, 
+                                   scattering_model sct_model)
+{
+  CEXCEPTION_T _e = EXC_NONE;
+
+  vfunc ctf;
+  gfunc3 *img_copy = new_gfunc3 ();
+  
+  CAPTURE_NULL_VOID (proj_img);
+  CAPTURE_NULL_VOID (volume);
+  CAPTURE_NULL_VOID (angles_deg);
+  if (sct_model != PROJ_ASSUMPTION)
+    CAPTURE_NULL_VOID (params);
+  
+  GFUNC_CAPTURE_UNINIT_VOID (volume);
+  GFUNC_CAPTURE_UNINIT_VOID (proj_img);
+
+  if (proj_img->type == REAL)
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_GFTYPE, "Projection image must be of COMPLEX type.");
+      return;
+    }
+
+  if (volume->type != COMPLEX)
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_GFTYPE, "Scatterer must be of COMPLEX type.");
+      return;
+    }
+
+  if (sct_model != PROJ_ASSUMPTION)
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_UNIMPL, "Only implemented for proj-assumption model.");
+      return;
+    }
+  
+  /* Convolve with CTF if wished (use copy of data for that) */
+  if (use_ctf_flag)
+    {
+      Try { vfunc_init_ctf (&ctf, params); }  CATCH_RETURN_VOID (_e);
+      Try { gfunc3_copy (img_copy, proj_img); }  CATCH_RETURN_VOID (_e);
+      Try { 
+        fft_forward (img_copy); 
+        gfunc3_mul_vfunc (img_copy, &ctf);
+        fft_backward (img_copy);
+      } CATCH_RETURN_VOID (_e);
+      
+    }
+  else
+    img_copy = (gfunc3 *) proj_img;
+
+  Try { 
+    xray_backprojection_single_axis (img_copy, theta_deg, axis, 0.0, volume);
+  } CATCH_RETURN_VOID (_e);
+  
+  if (use_ctf_flag)
+    gfunc3_free (&img_copy);
+  
+  return;
+}
