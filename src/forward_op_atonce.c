@@ -63,8 +63,8 @@ int main(int argc, char **argv)
   Try {
     FwdParams_apply_to_volume (fwd_params, volume);
     gfunc3_scale_grid (volume, et_params->magnification);
-    // gfunc3_real2complex (volume);
-    gfunc3_scale (volume, 1.0 + 0.1 * I);
+    if (volume->type == REAL)
+      gfunc3_scale (volume, 1.0 + 0.1 * I);
   }  CATCH_EXIT_FAIL (_e);
 
 
