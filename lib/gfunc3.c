@@ -212,6 +212,37 @@ gfunc3_init_from_foreign_grid (gfunc3 *gf, gfunc3 const *gf_template)
 /*-------------------------------------------------------------------------------------------------*/
 
 void
+gfunc3_set_stack_pointer (gfunc3 *stack_pt, gfunc3 *stack, int pos)
+{
+  idx3 shp;
+  
+  CAPTURE_NULL_VOID (stack_pt);
+  CAPTURE_NULL_VOID (stack);
+  GFUNC_CAPTURE_UNINIT_VOID (stack);
+  
+  if ((pos < 0) || (pos >= stack->shape[2]))
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_BADARG, "Stack position must lie between 0 and # of "
+        "images.");
+      return;
+    }
+
+  idx3_copy (shp, stack->shape);
+  shp[2] = 1;
+  gfunc3_init_gridonly (stack_pt, stack->x0, stack->csize, shp, stack->type);
+  
+  if (stack->type == REAL)
+    stack_pt->fvals = &stack->fvals[pos * stack_pt->ntotal];
+  else
+    stack_pt->fvals = &stack->fvals[2 * pos * stack_pt->ntotal];
+    
+  stack_pt->is_initialized = TRUE;
+  return;
+}
+
+/*-------------------------------------------------------------------------------------------------*/
+
+void
 gfunc3_set_csize (gfunc3 *gf, vec3 const cs)
 {
   CAPTURE_NULL_VOID (gf);

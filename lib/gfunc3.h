@@ -141,6 +141,18 @@ void
 gfunc3_init_from_foreign_grid (gfunc3 *gf, gfunc3 const *gf_template);
 
 
+/* Initialize STACK_PT as a 2D function with grid from STACK and have STACK_PT->DATA 
+ * point to the POS'th image in the STACK.
+ * 
+ * Thrown exceptions: 
+ * - EXC_NULL
+ * - EXC_GFINIT
+ * - EXC_BADARG
+ */ 
+void
+gfunc3_set_stack_pointer (gfunc3 *stack_pt, gfunc3 *stack, int pos);
+
+
 /* Set cell size of GF to CS and recompute the grid.
  * 
  * Thrown exceptions: 

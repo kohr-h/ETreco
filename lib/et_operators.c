@@ -242,7 +242,6 @@ et_scattering_projection_atonce (gfunc3 const *scatterer, tiltangles const *tilt
 
   int i;
   float *freqs = NULL;
-  idx3 proj_shp;
   vfunc ctf;
   gfunc3 *gf_tmp = new_gfunc3 ();
   
@@ -279,11 +278,6 @@ et_scattering_projection_atonce (gfunc3 const *scatterer, tiltangles const *tilt
       return;
     }
 
-  /* Create the reciprocal grid for one single projection */
-  idx3_copy (proj_shp, proj_stack->shape);
-  proj_shp[2] = 1;
-  gfunc3_init_gridonly (gf_tmp, proj_stack->x0, proj_stack->csize, proj_shp, COMPLEX);
-  Try { gfunc3_grid_fwd_reciprocal (gf_tmp); }  CATCH_RETURN_VOID (_e);
 
   /* Evaluate the FT of the SCATTERER at frequencies according to the chosen model. For the
    * PROJ_ASSUMPTION model, the frequencies lie on the union of 2D planes perpendicular to the 
@@ -305,11 +299,11 @@ et_scattering_projection_atonce (gfunc3 const *scatterer, tiltangles const *tilt
   } CATCH_RETURN_VOID (_e);
 
   Try { vfunc_init_ctf (&ctf, params); } CATCH_RETURN_VOID (_e);
-  gf_tmp->is_initialized = TRUE;
   for (i = 0; i < tilts->ntilts; i++)
     {
-      /* Have GF_TMP->FVALS point to the current image in the stack */
-      gf_tmp->fvals = &proj_stack->fvals[i * 2 * gf_tmp->ntotal];
+      /* Make GF_TMP a 'working version' pointing to the current stack position */
+      Try { gfunc3_set_stack_pointer (gf_tmp, proj_stack, i); }  CATCH_RETURN_VOID (_e);
+      Try { gfunc3_grid_fwd_reciprocal (gf_tmp); }  CATCH_RETURN_VOID (_e);
       
       /* Image per image:
        * - Multiply with CTF
