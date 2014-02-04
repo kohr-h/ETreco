@@ -32,6 +32,10 @@
 
 // TODO: write descriptions
 
+extern int use_ctf_flag;
+extern int use_mtf_flag;
+
+
 /*-------------------------------------------------------------------------------------------------*/
 
 typedef struct
