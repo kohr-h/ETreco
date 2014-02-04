@@ -75,6 +75,7 @@ int main(int argc, char **argv)
     gfunc3_init (proj_stack, NULL, fwd_params->detector_px_size, proj_stack->shape, COMPLEX);
   } CATCH_EXIT_FAIL (_e);
 
+
   /* Print a summary of everything before starting */
   FwdOpts_print (opts);
   EtParams_print (et_params);

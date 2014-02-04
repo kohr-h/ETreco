@@ -85,14 +85,14 @@ Makefile.in
 /autom4te.cache
 /aclocal.m4
 /compile
-/configure
+#/configure
 /depcomp
 /install-sh
 /missing
 
 # These files break update by `git pull` due to local changes after `autoreconf`
 
-configure  
+#configure  
 aclocal.m4
 config.h.in
 
