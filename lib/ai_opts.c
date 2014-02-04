@@ -41,6 +41,7 @@
 
 #define BG_PATCH_SIZE  50 /* Default size of patch to compute background stats */
 #define FFT_PADDING    64 /* Default padding of functions before FFT */
+#define REC_STR   "rec_ai_"  /* prepend this to the file name for the reco */
 
 /*-------------------------------------------------------------------------------------------------*/
 
@@ -93,7 +94,7 @@ new_AiOpts (void)
   
   opts->fname_in                = NULL;
   opts->fname_out               = NULL;
-  opts->fname_params       = NULL;
+  opts->fname_params            = NULL;
   opts->fname_tiltangles        = NULL;
   opts->gamma                   = 0.0;
   opts->ctf_trunc               = 0.0;
@@ -139,7 +140,6 @@ AiOpts_print (AiOpts *opts)
   if (verbosity_level == VERB_LEVEL_QUIET)
     return;
   
-  /* TODO: make dependent on verbosity */
   printf ("\n\n");
   puts ("Options from command line:");
   puts ("==========================\n");
@@ -227,8 +227,8 @@ print_help (char const *progname)
   puts ("");
   puts ("  -o file, --output-file=file");
   puts ("                 write reconstruction to FILE; if no parameter is given, the");
-  puts ("                 output file is determined from tiltseries_file by appending");
-  puts ("                 `_rec' before its extension.");
+  puts ("                 output file is determined from tiltseries_file by prepending");
+  printf ("                 `%s'.\n", REC_STR);
   puts ("  -c value, --ctf-cutoff=value");
   puts ("                 set value for reciprocal CTF cutoff; in intervals where ");
   puts ("                 1/CTF exceeds VALUE, it is replaced by a differentiable");
@@ -280,40 +280,6 @@ print_help (char const *progname)
 
 /*-------------------------------------------------------------------------------------------------*/
 
-void 
-fname_rsplit_at_dot (char const *fname, char **pbase_str, char **pext_str)
-{
-  CEXCEPTION_T e = EXC_NONE;
-  int fname_len, base_len, ext_len;
-  char const *pext = NULL;
-  
-  fname_len = strlen (fname);
-
-  /* pext points to the first dot from the right or one char beyond the string */
-  if ((pext = strrchr (fname, '.')) == NULL)
-    pext = &fname[fname_len];
-    
-  base_len = pext - fname;
-  ext_len  = fname_len - base_len;
-  
-  Try {
-    *pbase_str = (char *) ali16_malloc (base_len + 1);
-    *pext_str = (char *) ali16_malloc (ext_len + 1);
-  } Catch (e)
-  {
-    EXC_RETHROW_REPRINT (e);
-    free (*pbase_str); *pbase_str = NULL;
-    free (*pext_str);  *pext_str  = NULL;
-    return;
-  }
-
-  strncpy (*pbase_str, fname, base_len);  (*pbase_str)[base_len] = '\0';
-  strncpy (*pext_str, pext, ext_len);  (*pext_str)[ext_len] = '\0';
-  return;
-}
-
-/*-------------------------------------------------------------------------------------------------*/
-
 void
 AiOpts_set_fname_in (AiOpts *opts, char const *fname)
 {
@@ -327,50 +293,36 @@ AiOpts_set_fname_in (AiOpts *opts, char const *fname)
 
 /*-------------------------------------------------------------------------------------------------*/
 
-#define REC_STR   "_rec"  /* append this before the file extension for the reco */
-
 void
-AiOpts_assemble_fname_out (AiOpts *opts,  char const *base, char const *ext)
+AiOpts_determine_fname_out (AiOpts *opts, char const *fname_in)
 {
   CEXCEPTION_T e = EXC_NONE;
-  int base_len, rec_len, ext_len;
-  char *p_tmp;
+  int dir_len, base_len, rec_len;
+  char *dirname, *basename, *p_tmp;
   
-  base_len = strlen (base);
+  dirname  = dir_name (fname_in);
+  dir_len  = strlen (dirname);
+  basename = base_name (fname_in);
+  base_len = strlen (basename);
   rec_len  = strlen (REC_STR);
-  ext_len  = strlen (ext);
   
-  Try { opts->fname_out = (char *) ali16_malloc (base_len + rec_len + ext_len + 1); }
-  CATCH_RETURN_VOID (e);
+  Try { 
+    opts->fname_out = (char *) ali16_malloc (dir_len + base_len + rec_len + 2); 
+  } CATCH_RETURN_VOID (e);
     
   p_tmp = opts->fname_out;
-  strncpy (p_tmp, base, base_len);
+  strncpy (p_tmp, dirname, dir_len);
   
-  p_tmp += base_len;
+  p_tmp += dir_len;
+  *(p_tmp++) = '/';
   strncpy (p_tmp, REC_STR, rec_len);
   
   p_tmp += rec_len;
-  strncpy (p_tmp, ext, ext_len);
+  strncpy (p_tmp, basename, base_len);
   
-  p_tmp += ext_len;
+  p_tmp += base_len;
   *p_tmp = '\0';
     
-  return;
-}
-
-/*-------------------------------------------------------------------------------------------------*/
-
-void
-AiOpts_determine_fname_out (AiOpts *opts, char *fname_in)
-{
-  CEXCEPTION_T e = EXC_NONE;
-  char *bs, *ex;
-  
-  Try { fname_rsplit_at_dot (fname_in, &bs, &ex); } CATCH_RETURN_VOID (e);
-  Try { AiOpts_assemble_fname_out (opts, bs, ex); } CATCH_RETURN_VOID (e);
-    
-  free (bs);
-  free (ex);
   return;
 }
 
