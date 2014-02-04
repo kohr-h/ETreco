@@ -43,8 +43,6 @@
 #include "fwd_op_opts.h"
 
 
-#define FFT_PADDING    0 /* Default padding of functions before FFT */
-
 /*-------------------------------------------------------------------------------------------------*/
 
 #define SHORT_OPTS "o:f:p:n:m:s:t:Ihvq"
@@ -60,7 +58,6 @@
          {"params-file",      required_argument, 0, 'p'}, \
          {"model",            required_argument, 0, 'm'}, \
          {"tiltangles-file",  required_argument, 0, 't'}, \
-         {"fft-padding",      required_argument, 0, 'F'}, \
          {0, 0, 0, 0}
 
 
@@ -68,7 +65,7 @@
 
 int verbosity_level      = VERB_LEVEL_NORMAL;
 int invert_contrast_flag = 1;
-int fft_padding          = FFT_PADDING;
+int fft_padding          = 0;
 
 char const *models[]      = {"", "proj-assumption", "born-approx", ""};
 
@@ -137,7 +134,6 @@ FwdOpts_print (FwdOpts *opts)
   else
     printf ("no\n");
 
-  printf ("FFT zero-padding      : %d\n", fft_padding);
   printf ("\n\n");
   
   return;
@@ -175,10 +171,6 @@ print_help (char const *progname)
   puts ("  -I, --invert-contrast");
   puts ("                 invert the contrast of the images; use this option if projections of");
   puts ("                 dense regions are brighter than the background (enabled by default).");
-  puts ("  --fft-padding[=N]");
-  puts ("                 continue grid functions by N zero pixels in each direction prior");
-  puts ("                 to computing Fourier transforms ('zero-padding').");
-  printf ("                 (Default: N=%d)\n", FFT_PADDING);
   puts ("  -v, --verbose");
   puts ("                 display more information during execution");
   puts ("  -q, --quiet");
@@ -316,7 +308,6 @@ FwdOpts_assign_from_args (FwdOpts *opts, int argc, char **argv)
   char const *progname = base_name(argv[0]);
   
   /* Internal flags for the short options */
-  int F_flag = 0;
   int m_flag = 0;
   int o_flag = 0;
   int p_flag = 0;
@@ -356,28 +347,6 @@ FwdOpts_assign_from_args (FwdOpts *opts, int argc, char **argv)
           printf ("\n");
           break;
 
-        case 'F':
-          if (F_flag != 0)
-            {
-              fputs ("Invalid multiple use of `--fft-padding' option.", stderr);
-              exit (EXIT_FAILURE);
-            }
-          
-          if (optarg)
-            {
-              fft_padding = atoi (optarg);
-              if (fft_padding < 0)
-                {
-                  fputs ("Parameter of `--fft-padding' must be nonnegative.", stderr);
-                  exit (EXIT_FAILURE);
-                }
-            }
-          else
-            fft_padding = FFT_PADDING;
-            
-          F_flag = 1;
-          break;
- 
         case 'I':
           invert_contrast_flag = 1;  /* Long option already sets the flag, but short one doesn't */
           break;
