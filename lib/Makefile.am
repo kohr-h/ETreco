@@ -34,7 +34,8 @@ noinst_LIBRARIES = libCException.a \
 									 libtilt.a       \
 									 libet.a         \
 									 libai.a         \
-									 libfwd_op.a
+									 libfwd_op.a		 \
+									 liblandw.a
 
 libCException_a_SOURCES = $(lib_srcdir)/CException.c $(lib_srcdir)/CException.h \
 													$(lib_srcdir)/CExceptionConfig.h
@@ -89,6 +90,15 @@ libfwd_op_a_SOURCES = $(lib_srcdir)/fwd_op_params.c $(lib_srcdir)/fwd_op_params.
 											$(libgfunc3_a_SOURCES) \
 											$(libtilt_a_SOURCES) \
 											$(libet_a_SOURCES)
+
+liblandw_a_SOURCES = $(lib_srcdir)/landweber_opts.c $(lib_srcdir)/landweber_opts.h \
+										 $(lib_srcdir)/fwd_op_params.c $(lib_srcdir)/fwd_op_params.h \
+										 $(libCException_a_SOURCES) \
+										 $(libiniparser_a_SOURCES) \
+										 $(libutil_a_SOURCES) \
+										 $(libgfunc3_a_SOURCES) \
+										 $(libtilt_a_SOURCES) \
+										 $(libet_a_SOURCES)
 
 
 #lib??_a_LDFLAGS += $(OPENMP_CFLAGS)

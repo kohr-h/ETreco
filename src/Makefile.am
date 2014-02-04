@@ -27,10 +27,27 @@ endif
 AM_CPPFLAGS += $(OPENMP_CFLAGS)
 
 
-bin_PROGRAMS =  ai_single_axis generate_tiltangles convex_comb forward_op forward_op_atonce 
+bin_PROGRAMS =  generate_tiltangles \
+								convex_comb         \
+								ai_single_axis      \
+								forward_op          \
+								forward_op_atonce   \
+								landweber_single_axis
 
 # CAUTION: order of libraries matters! Order from "most dependent" to "least dependent"
 # (or list each library twice)
+
+generate_tiltangles_SOURCES = $(srcdir)/generate_tiltangles.c
+generate_tiltangles_LDADD = $(lib_libdir)/libtilt.a \
+														$(lib_libdir)/libutil.a \
+														$(lib_libdir)/libCException.a \
+														$(gnulib_libdir)/libgnu.a 
+
+convex_comb_SOURCES = $(srcdir)/convex_comb.c
+convex_comb_LDADD = $(lib_libdir)/libgfunc3.a \
+										$(lib_libdir)/libutil.a \
+										$(lib_libdir)/libCException.a \
+										$(gnulib_libdir)/libgnu.a
 
 ai_single_axis_SOURCES = $(srcdir)/ai_single_axis.c $(top_srcdir)/lib/ETreco.h
 ai_single_axis_LDADD = $(lib_libdir)/libai.a \
@@ -63,14 +80,13 @@ forward_op_atonce_LDADD = $(lib_libdir)/libfwd_op.a \
 													$(lib_libdir)/libCException.a \
 													$(gnulib_libdir)/libgnu.a 
 
-generate_tiltangles_SOURCES = $(srcdir)/generate_tiltangles.c
-generate_tiltangles_LDADD = $(lib_libdir)/libtilt.a \
-														$(lib_libdir)/libutil.a \
-														$(lib_libdir)/libCException.a \
-														$(gnulib_libdir)/libgnu.a 
+landweber_single_axis_SOURCES = $(srcdir)/landweber_single_axis.c $(top_srcdir)/lib/ETreco.h
+landweber_single_axis_LDADD = $(lib_libdir)/liblandw.a \
+															$(lib_libdir)/libet.a \
+															$(lib_libdir)/libgfunc3.a \
+															$(lib_libdir)/libtilt.a \
+															$(lib_libdir)/libutil.a \
+															$(lib_libdir)/libiniparser.a \
+															$(lib_libdir)/libCException.a \
+															$(gnulib_libdir)/libgnu.a 
 
-convex_comb_SOURCES = $(srcdir)/convex_comb.c
-convex_comb_LDADD = $(lib_libdir)/libgfunc3.a \
-										$(lib_libdir)/libutil.a \
-										$(lib_libdir)/libCException.a \
-										$(gnulib_libdir)/libgnu.a

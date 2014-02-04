@@ -47,3 +47,5 @@
 
 #include "fwd_op_opts.h"
 #include "fwd_op_params.h"
+
+#include "landweber_opts.h"
