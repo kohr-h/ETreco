@@ -1,5 +1,5 @@
 /*
- * ai_options.c -- dispatch options for ai_* programs via getopt
+ * fwd_opts.c -- dispatch options for forward_op_* programs via getopt
  * 
  * Copyright 2014 Holger Kohr <kohr@num.uni-sb.de>
  * 
@@ -42,6 +42,8 @@
 
 #include "fwd_op_opts.h"
 
+
+#define TSERIES_STR   "tiltseries_"  /* prepend this to the output tiltseries file name */
 
 /*-------------------------------------------------------------------------------------------------*/
 
@@ -167,7 +169,7 @@ print_help (char const *progname)
   puts ("  -o file, --output-file=file");
   puts ("                 write reconstruction to FILE; if no parameter is given, the");
   puts ("                 output file is determined from VOLUME_FILE by prepending");
-  puts ("                 `tiltseries_'.");
+  printf ("                 `%s'.\n", TSERIES_STR);
   puts ("  -I, --invert-contrast");
   puts ("                 invert the contrast of the images; use this option if projections of");
   puts ("                 dense regions are brighter than the background (enabled by default).");
@@ -197,8 +199,6 @@ FwdOpts_set_fname_in (FwdOpts *opts, char const *fname)
 }
 
 /*-------------------------------------------------------------------------------------------------*/
-
-#define TSERIES_STR   "tiltseries_"  /* prepend this to the output tiltseries file name */
 
 void
 FwdOpts_determine_fname_out (FwdOpts *opts, char const *fname_in)

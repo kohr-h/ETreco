@@ -1,5 +1,5 @@
 /*
- * fwd_op_opts.h -- dispatch options for fwd_op* programs via getopt
+ * fwd_op_opts.h -- dispatch options for forward_op* programs via getopt
  * 
  * Copyright 2014 Holger Kohr <kohr@num.uni-sb.de>
  * 
