@@ -563,19 +563,6 @@ float
 gfunc3_interp_linear (gfunc3 const *gf, vec3 const pt);
 
 
-/* Approximate the value of GF at PT by linear interpolation on the grid. This is an optimized 2D 
- * version of the generic function.  Currently not implemented for HALFCOMPLEX functions.
- * 
- * Thrown exceptions: 
- * - EXC_NULL
- * - EXC_GFINIT
- * - EXC_UNIMPL
- * - EXC_GFDIM
- */
-float
-gfunc3_interp_linear_2d (gfunc3 const *gf, vec3 const pt);
-
-
 /* Store the coordinates of GF's grid in a float* array. This array is allocated in the function and 
  * returned. Interpret the grid according to GRID_TYPE as the transform of an Euclidean grid.
  * 

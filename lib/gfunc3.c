@@ -231,6 +231,9 @@ gfunc3_set_stack_pointer (gfunc3 *stack_pt, gfunc3 *stack, int pos)
   shp[2] = 1;
   gfunc3_init_gridonly (stack_pt, stack->x0, stack->csize, shp, stack->type);
   
+  gfunc3_print_grid (stack_pt, "stack pointer grid");
+  printf ("\nntotal: %lu\n\n", stack_pt->ntotal);
+  
   if (stack->type == REAL)
     stack_pt->fvals = &stack->fvals[pos * stack_pt->ntotal];
   else
@@ -641,18 +644,11 @@ gfunc3_grid_is_subgrid (gfunc3 const *gf, gfunc3 const *gf_sub)
  *-------------------------------------------------------------------------------------------------*/
 
 void
-gfunc3_copy (gfunc3 *dest, gfunc3 const *src)
+gfunc3_copy_r (gfunc3 *dest, gfunc3 const *src)
 {
   CEXCEPTION_T _e = EXC_NONE;
-  size_t nfloats = 0;
-  
-  CAPTURE_NULL_VOID (dest);
-  CAPTURE_NULL_VOID (src);
-  GFUNC_CAPTURE_UNINIT_VOID (src);
 
-  if (dest->is_initialized)
-    free (dest->fvals);
-  
+  /* Copy grid */
   vec3_copy (dest->x0,    src->x0);
   vec3_copy (dest->csize, src->csize);
   idx3_copy (dest->shape, src->shape);
@@ -660,21 +656,26 @@ gfunc3_copy (gfunc3 *dest, gfunc3 const *src)
   vec3_copy (dest->xmin, src->xmin);
   vec3_copy (dest->xmax, src->xmax);
   dest->ntotal = src->ntotal;
-
-  if (GFUNC_IS_REAL (src))
-    nfloats = src->ntotal;
-  else if (GFUNC_IS_COMPLEX (src))
-    nfloats = 2 * src->ntotal;
   
-  Try { dest->fvals = (float *) ali16_malloc (nfloats * sizeof (float)); }  CATCH_RETURN_VOID (_e);
+  
+  /* Init values array */
+  if (dest->is_initialized)
+    free (dest->fvals);
+  
+  Try { 
+    dest->fvals = (float *) ali16_malloc (src->ntotal * sizeof (float)); 
+  } CATCH_RETURN_VOID (_e);
   
   dest->is_initialized = TRUE;
   dest->type = src->type;
 
+
+  /* Copy values */
   #if HAVE_CBLAS
-  cblas_scopy (nfloats, src->fvals, 1, dest->fvals, 1);
+  cblas_scopy (src->ntotal, src->fvals, 1, dest->fvals, 1);
 
   #elif HAVE_SSE
+  size_t nfloats = src->ntotal;
   size_t i, N4 = nfloats / 4, N4rem = nfloats % 4;
   __m128 *p1 = (__m128 *) dest->fvals;
   __m128 const *p2 = (__m128 const *) src->fvals;
@@ -686,11 +687,90 @@ gfunc3_copy (gfunc3 *dest, gfunc3 const *src)
     dest->fvals[i] = src->fvals[i];
 
   #else  /* !(HAVE_CBLAS || HAVE_SSE) */
+  size_t nfloats = src->ntotal;
   size_t i;
   for (i = 0; i < nfloats; i++)
     dest->fvals[i] = src->fvals[i];
 
   #endif
+  return;
+}
+
+/*-------------------------------------------------------------------------------------------------*/
+
+void
+gfunc3_copy_c (gfunc3 *dest, gfunc3 const *src)
+{
+  CEXCEPTION_T _e = EXC_NONE;
+
+  /* Copy grid */
+  vec3_copy (dest->x0,    src->x0);
+  vec3_copy (dest->csize, src->csize);
+  idx3_copy (dest->shape, src->shape);
+
+  vec3_copy (dest->xmin, src->xmin);
+  vec3_copy (dest->xmax, src->xmax);
+  dest->ntotal = src->ntotal;
+  
+  
+  /* Init fvals array */
+  if (dest->is_initialized)
+    free (dest->fvals);
+  
+  Try { 
+    dest->fvals = (float *) ali16_malloc (src->ntotal * sizeof (float complex)); 
+  } CATCH_RETURN_VOID (_e);
+  
+  dest->is_initialized = TRUE;
+  dest->type = src->type;
+
+
+  /* Copy values */
+  #if HAVE_CBLAS
+  cblas_ccopy (src->ntotal, src->fvals, 1, dest->fvals, 1);
+
+  #elif HAVE_SSE
+  size_t nfloats = 2 * src->ntotal;
+  size_t i, N4 = nfloats / 4, N4rem = nfloats % 4;
+  __m128 *p1 = (__m128 *) dest->fvals;
+  __m128 const *p2 = (__m128 const *) src->fvals;
+
+  for (i = 0; i < N4; i++, p1++, p2++)
+    *p1 = *p2;
+  
+  for (i = nfloats - N4rem; i < nfloats; i++)
+    dest->fvals[i] = src->fvals[i];
+
+  #else  /* !(HAVE_CBLAS || HAVE_SSE) */
+  size_t nfloats = src->ntotal;
+  size_t i;
+  for (i = 0; i < nfloats; i++)
+    dest->fvals[i] = src->fvals[i];
+
+  #endif
+  return;
+}
+
+/*-------------------------------------------------------------------------------------------------*/
+
+void
+gfunc3_copy (gfunc3 *dest, gfunc3 const *src)
+{
+  CEXCEPTION_T _e = EXC_NONE;
+  
+  CAPTURE_NULL_VOID (dest);
+  CAPTURE_NULL_VOID (src);
+  GFUNC_CAPTURE_UNINIT_VOID (src);
+
+  if (src->type == REAL)
+    {
+      Try { gfunc3_copy_r (dest, src); }  CATCH_RETURN_VOID (_e);
+    }
+  else
+    {
+      Try { gfunc3_copy_c (dest, src); }  CATCH_RETURN_VOID (_e);
+    }
+
   return;
 }
 
@@ -2197,7 +2277,7 @@ gfunc3_interp_nearest_2d (gfunc3 const *gf, vec3 const pt)
 /*-------------------------------------------------------------------------------------------------*/
 
 float
-gfunc3_interp_linear (gfunc3 const *gf, vec3 const pt)
+gfunc3_interp_linear_r (gfunc3 const *gf, vec3 const pt)
 {
   int inc1, inc2;
   idx3 idx;
@@ -2210,13 +2290,6 @@ gfunc3_interp_linear (gfunc3 const *gf, vec3 const pt)
   CAPTURE_NULL (gf, FLT_MAX);
   CAPTURE_NULL (pt, FLT_MAX);
   GFUNC_CAPTURE_UNINIT (gf, FLT_MAX);
-
-  /* TODO: implement complex version */
-  if (GFUNC_IS_COMPLEX (gf))
-    {
-      EXC_THROW_CUSTOMIZED_PRINT (EXC_UNIMPL, "Complex version not implemented.");
-      return FLT_MAX;
-    }
 
   if (!vec3_between (pt, gf->xmin, gf->xmax))
     return 0.0;
@@ -2293,7 +2366,96 @@ gfunc3_interp_linear (gfunc3 const *gf, vec3 const pt)
 /*-------------------------------------------------------------------------------------------------*/
 
 float
-gfunc3_interp_linear_2d (gfunc3 const *gf, vec3 const pt)
+gfunc3_interp_linear_c (gfunc3 const *gf, vec3 const pt)
+{
+  int inc1, inc2;
+  idx3 idx;
+  size_t fi;
+  float fv1, fv2, *pwl, *pwu;
+
+  float *idxf;
+  __m128 midxf, mwl, mwu;
+
+  CAPTURE_NULL (gf, FLT_MAX);
+  CAPTURE_NULL (pt, FLT_MAX);
+  GFUNC_CAPTURE_UNINIT (gf, FLT_MAX);
+
+  if (!vec3_between (pt, gf->xmin, gf->xmax))
+    return 0.0;
+
+  /* Compute the cell index and the weights for the function values */
+
+  #if HAVE_SSE
+  __m128 const *mpt = (__m128 const *) pt, *mxmin = (__m128 const *) gf->xmin;
+  __m128 const *mcs = (__m128 const *) gf->csize;
+  __m128 mx = _mm_sub_ps (*mpt, *mxmin);
+  mx = _mm_div_ps (mx, *mcs);
+
+  #if HAVE_SSE41
+  midxf = _mm_floor_ps (mx);
+  idxf = (float *) &midxf;
+
+  #else  
+  midxf = mx;
+  float *px = (float *) &mx;
+  idxf = (float *) &midxf;
+  idxf[0] = floorf (px[0]);
+  idxf[1] = floorf (px[1]);
+  idxf[2] = floorf (px[2]);
+
+  #endif  /* HAVE_SSE41 */
+
+  mwu = _mm_sub_ps (mx, midxf);
+  mwl = _mm_set1_ps (1.0f);
+  mwl = _mm_sub_ps (mwl, mwu);
+
+  idx[0] = (int) idxf[0];
+  idx[1] = (int) idxf[1];
+  idx[2] = (int) idxf[2];
+
+  pwl = (float *) &mwl;
+  pwu = (float *) &mwu;
+
+  #else  /* !HAVE_SSE */
+  int i;
+  vec3 x, wl, wu;
+  
+  for (i = 0; i < 3; i++)
+    {
+      x[i] = (pt[i] - gf->xmin[i]) / gf->csize[i];
+      idx[i] = (int) x[i];
+      wu[i] = x[i] - idx[i];
+      wl[i] = 1 - wu[i];
+    }
+    
+  pwl = wl;
+  pwu = wu;
+
+  #endif  /* HAVE_SSE */
+  
+  /* Now compute the interpolated value */
+
+  /* TODO: possible to use SIMD here, too? */
+  inc2 = 2 * gf->shape[1] * gf->shape[0];
+  inc1 = 2 * gf->shape[0];
+
+  fi = 2 * (idx[2] * inc2 + idx[1] * inc1 + idx[0]);
+
+  fv1  = (pwl[0] * gf->fvals[fi]        + pwu[0] * gf->fvals[fi + 2])        * pwl[1];
+  fv1 += (pwl[0] * gf->fvals[fi + inc1] + pwu[0] * gf->fvals[fi + inc1 + 2]) * pwu[1];
+  fv1 *= pwl[2];
+  fi += inc2;
+  fv2  = (pwl[0] * gf->fvals[fi]        + pwu[0] * gf->fvals[fi + 2])        * pwl[1];
+  fv2 += (pwl[0] * gf->fvals[fi + inc1] + pwu[0] * gf->fvals[fi + inc1 + 2]) * pwu[1];
+  fv2 *= pwu[2];
+
+  return fv1 + fv2;
+}
+
+/*-------------------------------------------------------------------------------------------------*/
+
+float
+gfunc3_interp_linear_2d_r (gfunc3 const *gf, vec3 const pt)
 {
   int inc1;
   idx3 idx;
@@ -2308,19 +2470,6 @@ gfunc3_interp_linear_2d (gfunc3 const *gf, vec3 const pt)
   CAPTURE_NULL (pt, FLT_MAX);
   GFUNC_CAPTURE_UNINIT (gf, FLT_MAX);
 
-  /* TODO: implement complex version */
-  if (GFUNC_IS_COMPLEX (gf))
-    {
-      EXC_THROW_CUSTOMIZED_PRINT (EXC_UNIMPL, "Complex version not implemented.");
-      return FLT_MAX;
-    }
-
-  if (!GFUNC_IS_2D(gf))
-    {
-      EXC_THROW_CUSTOMIZED_PRINT (EXC_GFDIM, "Function must be 2-dimensional.");
-      return FLT_MAX;
-    }
-  
 
   if ((pt[0] <= gf->xmin[0]) || (pt[0] >= gf->xmax[0]) || 
       (pt[1] <= gf->xmin[1]) || (pt[1] >= gf->xmax[1]))
@@ -2383,6 +2532,90 @@ gfunc3_interp_linear_2d (gfunc3 const *gf, vec3 const pt)
     
   fv  = (pwl[0] * gf->fvals[fi]        + pwu[0] * gf->fvals[fi + 1])        * pwl[1];
   fv += (pwl[0] * gf->fvals[fi + inc1] + pwu[0] * gf->fvals[fi + inc1 + 1]) * pwu[1];
+  
+  return fv;
+}
+
+/*-------------------------------------------------------------------------------------------------*/
+
+float
+gfunc3_interp_linear_2d_c (gfunc3 const *gf, vec3 const pt)
+{
+  int inc1;
+  idx3 idx;
+  size_t fi;
+  float fv, *pwl, *pwu;
+
+  float *idxf;
+  __m128 midxf, mwl, mwu;
+
+
+  CAPTURE_NULL (gf, FLT_MAX);
+  CAPTURE_NULL (pt, FLT_MAX);
+  GFUNC_CAPTURE_UNINIT (gf, FLT_MAX);
+
+
+  if ((pt[0] <= gf->xmin[0]) || (pt[0] >= gf->xmax[0]) || 
+      (pt[1] <= gf->xmin[1]) || (pt[1] >= gf->xmax[1]))
+    return 0.0;
+
+  /* Compute the cell index and the weights for the function values */
+
+  #if HAVE_SSE
+  __m128 const *mpt = (__m128 const *) pt, *mxmin = (__m128 const *) gf->xmin;
+  __m128 const *mcs = (__m128 const *) gf->csize;
+  __m128 mx = _mm_sub_ps (*mpt, *mxmin);
+  mx = _mm_div_ps (mx, *mcs);
+
+  #if HAVE_SSE41
+  midxf = _mm_floor_ps (mx);
+  idxf = (float *) &midxf;
+
+  #else  
+  midxf = mx;
+  float *px = (float *) &mx;
+  idxf = (float *) &midxf;
+  idxf[0] = floorf (px[0]);
+  idxf[1] = floorf (px[1]);
+  idxf[2] = floorf (px[2]);
+
+  #endif  /* HAVE_SSE41 */
+
+  mwu = _mm_sub_ps (mx, midxf);
+  mwl = _mm_set1_ps (1.0f);
+  mwl = _mm_sub_ps (mwl, mwu);
+
+  idx[0] = (int) idxf[0];
+  idx[1] = (int) idxf[1];
+  idx[2] = (int) idxf[2];
+
+  pwl = (float *) &mwl;
+  pwu = (float *) &mwu;
+
+  #else  /* !HAVE_SSE */
+  int i;
+  vec3 x, wl, wu;
+
+  for (i = 0; i < 2; i++)
+    {
+      x[i] = (pt[i] - gf->xmin[i]) / gf->csize[i];
+      idx[i] = (int) x[i];
+      wu[i] = x[i] - idx[i];
+      wl[i] = 1 - wu[i];
+    }
+    
+  pwl = wl;
+  pwu = wu;
+
+  #endif  /* HAVE_SSE */
+
+  /* Now compute the interpolated value */
+
+  inc1 = 2 * gf->shape[0];
+  fi = 2 * (idx[1] * inc1 + idx[0]);
+    
+  fv  = (pwl[0] * gf->fvals[fi]        + pwu[0] * gf->fvals[fi + 2])        * pwl[1];
+  fv += (pwl[0] * gf->fvals[fi + inc1] + pwu[0] * gf->fvals[fi + inc1 + 2]) * pwu[1];
   
   return fv;
 }
