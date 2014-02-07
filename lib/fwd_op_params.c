@@ -1,5 +1,5 @@
 /*
- * et_params.c -- functions to handle ET input parameter structures
+ * fwd_op_params.c -- functions to handle forward operator input parameters
  * 
  * Copyright 2014 Holger Kohr <kohr@num.uni-sb.de>
  * 
@@ -96,13 +96,10 @@ FwdParams_assign_from_file (FwdParams *params, const char *fname_params)
 
   /* VOLUME */
 
-  /* All these settings override MRC header */
-  params->vol_shape[0] = iniparser_getint (dict, "volume:nx", -1);
-  params->vol_shape[1] = iniparser_getint (dict, "volume:ny", -1);
-  params->vol_shape[2] = iniparser_getint (dict, "volume:nz", -1);
-  
+  /* Override MRC header */
   dtmp = iniparser_getdouble (dict, "volume:voxel_size", FLT_MAX);
   vec3_set_all (params->vol_csize, (float) dtmp);
+
 
   params->vol_shift_px[0] = (float) iniparser_getdouble (dict, "volume:shift_x", FLT_MAX);
   params->vol_shift_px[1] = (float) iniparser_getdouble (dict, "volume:shift_y", FLT_MAX);
@@ -184,33 +181,23 @@ FwdParams_print (FwdParams const *params)
   puts ("Geometry:");
   puts ("---------\n");
   
-  printf ("vol_shape            : (");
-  for (i = 0; i < 3; i++)
-    {
-      if (params->vol_shape[i] == -1)  printf ("(from data)");
-      else  printf ("%d", params->vol_shape[i]);
-      if (i != 2)  printf (", ");
-    }
-  printf (")\n");
-
-  printf ("vol_csize            : ");
+  printf ("volume voxel size    : ");
   if (params->vol_csize[0] == FLT_MAX)
     printf ("(from data)\n");
   else
     printf ("% 9.2f [nm]\n", params->vol_csize[0]);
     
-  printf ("vol_shift_px         : (");
+  printf ("volume shift         : (");
   for (i = 0; i < 3; i++)
     {
       if (params->vol_shift_px[i] == FLT_MAX)  printf ("(from data)");
       else  printf ("%7.2f", params->vol_shift_px[i]);
       if (i != 2)  printf (", ");
     }
-  printf (")\n\n");
+  printf (") [pixels]\n\n");
 
-  printf ("detector shape       : (%d, %d)\n", params->detector_shape[0], params->detector_shape[1]);
-  printf ("detector_px_size     : % 9.2f [nm]\n", params->detector_px_size[0]);
-  printf ("tilt_axis            : % 9.2f [degrees]\n", params->tilt_axis_rotation);
+  printf ("detector pixel size  : % 9.2f [nm]\n", params->detector_px_size[0]);
+  printf ("tilt axis rotation   : % 9.2f [degrees]\n", params->tilt_axis_rotation);
   printf ("\n\n");
 
   return;
@@ -233,10 +220,6 @@ FwdParams_apply_to_volume (FwdParams const *params, gfunc3 *vol)
 
       if (params->vol_shift_px[i] != FLT_MAX)
         vol->x0[i] = params->vol_shift_px[i] * vol->csize[i];
-
-      /* FIXME: This is dangerous! */
-      if (params->vol_shape[i] != -1)
-        vol->shape[i] = params->vol_shape[i];
     }
   
   gfunc3_compute_xmin_xmax (vol);
@@ -259,8 +242,6 @@ FwdParams_apply_to_proj_image (FwdParams const *params, gfunc3 *proj_img)
     }
   
   gfunc3_set_csize (proj_img, params->detector_px_size);
-    
-  gfunc3_compute_xmin_xmax (proj_img);
   
   return;
 }

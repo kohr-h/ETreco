@@ -1,5 +1,5 @@
 /*
- * fwd_op_params.h -- functions to handle AI specific input parameters
+ * fwd_op_params.h -- functions to handle forward operator input parameters
  * 
  * Copyright 2014 Holger Kohr <kohr@num.uni-sb.de>
  * 
@@ -39,7 +39,6 @@
 typedef struct
 {
   /* Volume grid parameters */
-  idx3 vol_shape;
   vec3 vol_csize;
   vec3 vol_shift_px;
   
