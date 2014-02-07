@@ -333,23 +333,25 @@ et_scattering_projection_atonce (gfunc3 const *scatterer, tiltangles const *tilt
 void
 et_scattering_adjoint_single_axis (gfunc3 const *proj_img, float const theta_deg, int axis,  
                                    EtParams const *params, gfunc3 *volume, 
-                                   scattering_model sct_model)
+                                   scattering_model sct_model, float weight)
 {
   CEXCEPTION_T _e = EXC_NONE;
+
+  static int count = 1;
 
   vfunc ctf;
   gfunc3 *img_copy = new_gfunc3 ();
   
   CAPTURE_NULL_VOID (proj_img);
   CAPTURE_NULL_VOID (volume);
-  CAPTURE_NULL_VOID (angles_deg);
   if (sct_model != PROJ_ASSUMPTION)
     CAPTURE_NULL_VOID (params);
   
   GFUNC_CAPTURE_UNINIT_VOID (volume);
   GFUNC_CAPTURE_UNINIT_VOID (proj_img);
 
-  if (proj_img->type == REAL)
+  /* TODO: Implement for REAL, too! */
+  if (proj_img->type != COMPLEX)
     {
       EXC_THROW_CUSTOMIZED_PRINT (EXC_GFTYPE, "Projection image must be of COMPLEX type.");
       return;
@@ -357,7 +359,7 @@ et_scattering_adjoint_single_axis (gfunc3 const *proj_img, float const theta_deg
 
   if (volume->type != COMPLEX)
     {
-      EXC_THROW_CUSTOMIZED_PRINT (EXC_GFTYPE, "Scatterer must be of COMPLEX type.");
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_GFTYPE, "Volume must be of COMPLEX type.");
       return;
     }
 
@@ -373,6 +375,8 @@ et_scattering_adjoint_single_axis (gfunc3 const *proj_img, float const theta_deg
       Try { vfunc_init_ctf (&ctf, params); }  CATCH_RETURN_VOID (_e);
       Try { gfunc3_copy (img_copy, proj_img); }  CATCH_RETURN_VOID (_e);
       Try { 
+        if (DEBUGGING)
+          temp_mrc_out (img_copy, "copied_", count);
         fft_forward (img_copy); 
         gfunc3_mul_vfunc (img_copy, &ctf);
         fft_backward (img_copy);
@@ -382,12 +386,17 @@ et_scattering_adjoint_single_axis (gfunc3 const *proj_img, float const theta_deg
   else
     img_copy = (gfunc3 *) proj_img;
 
+  if (DEBUGGING)
+    temp_mrc_out (img_copy, "conv_ctf_", count);
+  
+  /* TODO: Continue here: something is going wrong in the backprojection */
   Try { 
-    xray_backprojection_single_axis (img_copy, theta_deg, axis, 0.0, volume);
+    xray_backprojection_single_axis (img_copy, theta_deg, axis, 0.0, volume, weight);
   } CATCH_RETURN_VOID (_e);
   
   if (use_ctf_flag)
     gfunc3_free (&img_copy);
   
+  count++;
   return;
 }
