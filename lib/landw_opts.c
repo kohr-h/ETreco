@@ -1,5 +1,5 @@
 /*
- * landweber_opts.c -- dispatch options for landweber_* programs via getopt
+ * landw_opts.c -- dispatch options for landweber_* programs via getopt
  * 
  * Copyright 2014 Holger Kohr <kohr@num.uni-sb.de>
  * 
@@ -40,7 +40,7 @@
 
 #include "et_operators.h"
 
-#include "landweber_opts.h"
+#include "landw_opts.h"
 
 
 /*-------------------------------------------------------------------------------------------------*/
@@ -129,7 +129,7 @@ LandwOpts_free (LandwOpts **popts)
 /*-------------------------------------------------------------------------------------------------*/
 
 void
-LandwOpts_print (LandwOpts *opts)
+LandwOpts_print (LandwOpts const *opts)
 {
   CAPTURE_NULL_VOID (opts);
   

@@ -1,5 +1,5 @@
 /*
- * landweber_opts.h -- dispatch options for fwd_op* programs via getopt
+ * landw_opts.h -- dispatch options for landweber_* programs via getopt
  * 
  * Copyright 2014 Holger Kohr <kohr@num.uni-sb.de>
  * 
@@ -21,8 +21,8 @@
  * 
  */
 
-#ifndef __LANDWEBER_OPTS_H__
-#define __LANDWEBER_OPTS_H__
+#ifndef __LANDW_OPTS_H__
+#define __LANDW_OPTS_H__
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>
@@ -76,7 +76,7 @@ new_LandwOpts (void);
 /*-------------------------------------------------------------------------------------------------*/
 
 void
-LandwOpts_print (LandwOpts *opts);
+LandwOpts_print (LandwOpts const *opts);
 
 
 void
