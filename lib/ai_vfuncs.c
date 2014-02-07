@@ -149,7 +149,6 @@ void ft_rk_single_axis (float const *xi, float *zp, void const *par)
         ai_params->moll_ft (xi, ai_params->gamma);
     }
   
-        
   return;
 }
 
