@@ -180,10 +180,12 @@ AiParams_assign_from_AiOpts (AiParams *params, const AiOpts *opts)
   
   /* Overrides MRC header */
   dtmp = iniparser_getdouble (dict, "detector:pixel_size", 0.0);
-  params->detector_px_size[0] = (float) dtmp * ONE_MICROMETER;
-  params->detector_px_size[1] = (float) dtmp * ONE_MICROMETER;
-  params->detector_px_size[2] = 1.0;
-
+  if (dtmp != 0.0)
+    {
+      params->detector_px_size[0] = (float) dtmp * ONE_MICROMETER;
+      params->detector_px_size[1] = (float) dtmp * ONE_MICROMETER;
+      params->detector_px_size[2] = 1.0;
+    }
 
   iniparser_freedict (dict);
 
@@ -333,8 +335,6 @@ AiParams_print (AiParams const *params)
   
   CAPTURE_NULL_VOID (params);
 
-  /* TODO: fix alignment of printout */
-  /* TODO: make dependent on verbosity */
   printf ("\n");
   puts ("AI parameters:");
   puts ("==============\n");
@@ -342,22 +342,20 @@ AiParams_print (AiParams const *params)
   puts ("Geometry:");
   puts ("---------\n");
   
-  printf ("vol_shape            : (%d, %d, %d)\n", params->vol_shape[0], params->vol_shape[1], 
-  params->vol_shape[2]);
-  printf ("vol_csize            : % 9.2f [nm]\n", params->vol_csize[0]);
-  printf ("vol_shift_px         : (");
+  printf ("volume voxel size    : % 9.2f [nm]\n", params->vol_csize[0]);
+  printf ("volume shift         : (");
   for (i = 0; i < 3; i++)
     {
       if (params->vol_shift_px[i] == FLT_MAX)  printf ("(from data)");
       else  printf ("%7.2f", params->vol_shift_px[i]);
       if (i != 2)  printf (", ");
     }
-  printf (")\n\n");
+  printf (") [pixels]\n\n");
 
-  printf ("detector_px_size     : ");
+  printf ("detector shape      : ");
   if (params->detector_px_size[0] != 0.0)  printf ("% 9.2f [nm]\n", params->detector_px_size[0]);
   else  printf ("(from data)\n");
-  printf ("tilt_axis            : % 9.2f [degrees]\n", params->tilt_axis_rotation);
+  printf ("tilt axis rotation  : % 9.2f [degrees]\n", params->tilt_axis_rotation);
   printf ("\n");
 
   puts ("Regularization:");
@@ -398,9 +396,8 @@ AiParams_apply_to_volume (AiParams const *params, gfunc3 *vol)
   
   for (i = 0; i < 3; i++)
     {
-      if (params->vol_shift_px[i] == FLT_MAX)  continue;
-      
-      vol->x0[i] = params->vol_shift_px[i] * vol->csize[i];
+      if (params->vol_shift_px[i] != FLT_MAX)
+        vol->x0[i] = params->vol_shift_px[i] * vol->csize[i];
     }
   
   gfunc3_compute_xmin_xmax (vol);
@@ -425,8 +422,6 @@ AiParams_apply_to_proj_image (AiParams const *params, gfunc3 *proj_img)
   if (params->detector_px_size[0] != 0.0)  /* Detector pixel size is set in config file */
     gfunc3_set_csize (proj_img, params->detector_px_size);
     
-  gfunc3_compute_xmin_xmax (proj_img);
-  
   return;
 }
 
