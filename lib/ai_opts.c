@@ -41,6 +41,7 @@
 
 #define BG_PATCH_SIZE  50 /* Default size of patch to compute background stats */
 #define FFT_PADDING    64 /* Default padding of functions before FFT */
+#define CTF_TRUNCATION 1.5F /* Default reciprocal CTF truncation value */
 #define REC_STR   "rec_ai_"  /* prepend this to the file name for the reco */
 
 /*-------------------------------------------------------------------------------------------------*/
@@ -73,10 +74,10 @@
 /*-------------------------------------------------------------------------------------------------*/
 
 int verbosity_level      = VERB_LEVEL_NORMAL;
-int truncate_ctf_flag    = 0;
-int normalize_flag       = 1;
-int autocenter_vol_flag  = 1;
-int invert_contrast_flag = 1;
+int truncate_ctf_flag    = TRUE;
+int normalize_flag       = TRUE;
+int autocenter_vol_flag  = TRUE;
+int invert_contrast_flag = TRUE;
 int use_lambda_flag      = 0;
 int fft_padding          = FFT_PADDING;
 
@@ -97,7 +98,7 @@ new_AiOpts (void)
   opts->fname_params            = NULL;
   opts->fname_tiltangles        = NULL;
   opts->gamma                   = 0.0;
-  opts->ctf_trunc               = 0.0;
+  opts->ctf_trunc               = CTF_TRUNCATION;
   opts->moll_type               = GAUSSIAN;
   opts->num_images              = 0;
   opts->start_index             = 0;
@@ -232,28 +233,28 @@ print_help (char const *progname)
   puts ("  -c value, --ctf-cutoff=value");
   puts ("                 set value for reciprocal CTF cutoff; in intervals where ");
   puts ("                 1/CTF exceeds VALUE, it is replaced by a differentiable");
-  puts ("                 transition spline; must be > 1.0 and should not exceed ~10.0.");
+  puts ("                 transition spline; must be > 1.0 and should not exceed ~5.0.");
+  printf ("                 (Default: %.2f)\n", CTF_TRUNCATION);
   puts ("  -m name, --mollifier=name");
   puts ("                 use the specified mollifier; Possible values:");
   for (iter_m = MO_START + 1; iter_m < MO_END; iter_m++)
     printf ("  %s", mollifiers[iter_m]);
   printf ("\n");
-  puts ("                 (default: gaussian)");
+  puts ("                 (Default: gaussian)");
   puts ("  -A, --autocenter-volume");
-  puts ("                 automatically center the volume over the tilt-axis (enabled by");
-  puts ("                 default).");
+  puts ("                 automatically center the volume over the tilt-axis (Default: enabled)");
   puts ("  -N, --normalize");
-  puts ("                 normalize the projection images based on their histograms (enabled");
-  puts ("                 by default).");
+  puts ("                 normalize the projection images based on their histograms (Default:");
+  puts ("                 enabled).");
   puts ("  --background=index_x,index_y,size_x,size_y");
   puts ("                 compute background statistics using a patch of SIZE_X x SIZE_Y");
   puts ("                 pixels with lower-left indices INDEX_X, INDEX_Y.");
-  printf ("                 Default: 0,0,%d,%d\n", 
+  printf ("                 (Default: 0,0,%d,%d)\n", 
     BG_PATCH_SIZE, BG_PATCH_SIZE);
   puts ("  -I, --invert-contrast");
   puts ("                 invert the contrast of the images; use this option if dense regions");
-  puts ("                 are darker than the background (enabled by default).");
-  puts ("  -L value, --lambda-pow=value");
+  puts ("                 are darker than the background (Default: enabled).");
+  puts ("  -L VALUE, --lambda-pow=VALUE");
   puts ("                 feature reconstruction: compute Lambda^a(f) instead of f,");
   puts ("                 where Lambda = sqrt(-Laplacian) and a = VALUE.");
   puts ("  -n N, --num-images=N");
@@ -265,7 +266,7 @@ print_help (char const *progname)
   puts ("  --fft-padding[=N]");
   puts ("                 continue grid functions by N zero pixels in each direction prior");
   puts ("                 to computing Fourier transforms ('zero-padding').");
-  printf ("                 (Default: N=%d)\n", FFT_PADDING);
+  printf ("                 (Default: %d)\n", FFT_PADDING);
   puts ("  -v, --verbose");
   puts ("                 display more information during execution");
   puts ("  -q, --quiet");
