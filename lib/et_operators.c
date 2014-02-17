@@ -243,7 +243,7 @@ et_scattering_projection_atonce (gfunc3 const *scatterer, tiltangles const *tilt
   int i;
   float *freqs = NULL;
   vfunc ctf;
-  gfunc3 *gf_tmp = new_gfunc3 ();
+  gfunc3 *cur_img = new_gfunc3 ();
   
   CAPTURE_NULL_VOID (scatterer);
   CAPTURE_NULL_VOID (proj_stack);
@@ -283,14 +283,19 @@ et_scattering_projection_atonce (gfunc3 const *scatterer, tiltangles const *tilt
    * PROJ_ASSUMPTION model, the frequencies lie on the union of 2D planes perpendicular to the 
    * unit vectors defined by TILTS. For BORN_APPROX, they lie on the corresponding Ewald spheres.
    */
+
+  /* Take one projection image to the reciprocal space */
+  Try { gfunc3_set_stack_pointer (cur_img, proj_stack, 0); }  CATCH_RETURN_VOID (_e);
+  Try { gfunc3_grid_fwd_reciprocal (cur_img); }  CATCH_RETURN_VOID (_e);
+
   if (sct_model == PROJ_ASSUMPTION)
     {
-      Try { freqs = perp_plane_stack_freqs (gf_tmp, tilts); }  CATCH_RETURN_VOID (_e);
+      Try { freqs = perp_plane_stack_freqs (cur_img, tilts); }  CATCH_RETURN_VOID (_e);
     }
   else if (sct_model == BORN_APPROX)
     {
       Try { 
-        freqs = ewald_sphere_stack_freqs (gf_tmp, tilts, params->wave_number); 
+        freqs = ewald_sphere_stack_freqs (cur_img, tilts, params->wave_number); 
       } CATCH_RETURN_VOID (_e);
     }
   
@@ -302,8 +307,8 @@ et_scattering_projection_atonce (gfunc3 const *scatterer, tiltangles const *tilt
   for (i = 0; i < tilts->ntilts; i++)
     {
       /* Make GF_TMP a 'working version' pointing to the current stack position */
-      Try { gfunc3_set_stack_pointer (gf_tmp, proj_stack, i); }  CATCH_RETURN_VOID (_e);
-      Try { gfunc3_grid_fwd_reciprocal (gf_tmp); }  CATCH_RETURN_VOID (_e);
+      Try { gfunc3_set_stack_pointer (cur_img, proj_stack, i); }  CATCH_RETURN_VOID (_e);
+      Try { gfunc3_grid_fwd_reciprocal (cur_img); }  CATCH_RETURN_VOID (_e);
       
       /* Image per image:
        * - Multiply with CTF
@@ -312,17 +317,17 @@ et_scattering_projection_atonce (gfunc3 const *scatterer, tiltangles const *tilt
        */
       Try {
         if (use_ctf_flag) 
-          gfunc3_mul_vfunc (gf_tmp, &ctf); 
-        fft_backward (gf_tmp);
-        gfunc3_scale (gf_tmp, 2 * M_PI * M_SQRT2PI);
+          gfunc3_mul_vfunc (cur_img, &ctf); 
+        fft_backward (cur_img);
+        gfunc3_scale (cur_img, 2 * M_PI * M_SQRT2PI);
       }  CATCH_RETURN_VOID (_e);
 
       /* Return to reciprocal grid */
-      Try { gfunc3_grid_fwd_reciprocal (gf_tmp); }  CATCH_RETURN_VOID (_e);  
+      Try { gfunc3_grid_fwd_reciprocal (cur_img); }  CATCH_RETURN_VOID (_e);  
     }
 
-  gf_tmp->fvals = NULL;
-  gfunc3_free (&gf_tmp);
+  cur_img->fvals = NULL;
+  gfunc3_free (&cur_img);
 
   free (freqs);
   return;
@@ -350,19 +355,6 @@ et_scattering_adjoint_single_axis (gfunc3 const *proj_img, float const theta_deg
   GFUNC_CAPTURE_UNINIT_VOID (volume);
   GFUNC_CAPTURE_UNINIT_VOID (proj_img);
 
-  /* TODO: Implement for REAL, too! */
-  if (proj_img->type != COMPLEX)
-    {
-      EXC_THROW_CUSTOMIZED_PRINT (EXC_GFTYPE, "Projection image must be of COMPLEX type.");
-      return;
-    }
-
-  if (volume->type != COMPLEX)
-    {
-      EXC_THROW_CUSTOMIZED_PRINT (EXC_GFTYPE, "Volume must be of COMPLEX type.");
-      return;
-    }
-
   if (sct_model != PROJ_ASSUMPTION)
     {
       EXC_THROW_CUSTOMIZED_PRINT (EXC_UNIMPL, "Only implemented for proj-assumption model.");
@@ -372,11 +364,9 @@ et_scattering_adjoint_single_axis (gfunc3 const *proj_img, float const theta_deg
   /* Convolve with CTF if wished (use copy of data for that) */
   if (use_ctf_flag)
     {
-      Try { vfunc_init_ctf (&ctf, params); }  CATCH_RETURN_VOID (_e);
+      Try { vfunc_init_ctf_acr (&ctf, params); }  CATCH_RETURN_VOID (_e);
       Try { gfunc3_copy (img_copy, proj_img); }  CATCH_RETURN_VOID (_e);
       Try { 
-        if (DEBUGGING)
-          temp_mrc_out (img_copy, "copied_", count);
         fft_forward (img_copy); 
         gfunc3_mul_vfunc (img_copy, &ctf);
         fft_backward (img_copy);
@@ -389,7 +379,7 @@ et_scattering_adjoint_single_axis (gfunc3 const *proj_img, float const theta_deg
   if (DEBUGGING)
     temp_mrc_out (img_copy, "conv_ctf_", count);
   
-  /* TODO: Continue here: something is going wrong in the backprojection */
+  
   Try { 
     xray_backprojection_single_axis (img_copy, theta_deg, axis, 0.0, volume, weight);
   } CATCH_RETURN_VOID (_e);
