@@ -527,7 +527,7 @@ xray_backprojection_sax_r_c (gfunc3 const *proj_img, float const theta_deg,
   float cos_theta, sin_theta;
   float x, *wlx = NULL, *wux = NULL, idxf_x, wly, wuy, idxf_y;
   int *idx_x = NULL, idx_y;
-  float fv;
+  float complex fv;
   float complex *cur_fval = (float complex *) volume->fvals;
   
   /* The projections of the increments in y and z directions as well as xmin are precomputed */
@@ -636,10 +636,11 @@ xray_backprojection_sax_c_c (gfunc3 const *proj_img, float const theta_deg,
   float cos_theta, sin_theta;
   float x, *wlx = NULL, *wux = NULL, idxf_x, wly, wuy, idxf_y;
   int *idx_x = NULL, idx_y;
-  float fv;
+  float complex fv;
   float complex *cur_fval = (float complex *) volume->fvals;
   float complex *proj_fvals_c = (float complex *) proj_img->fvals;;
-  
+
+
   /* The projections of the increments in y and z directions as well as xmin are precomputed */
   cos_theta = cosf (theta_deg * ONE_DEGREE);
   sin_theta = sinf (theta_deg * ONE_DEGREE);
@@ -850,7 +851,7 @@ xray_backprojection_say_r_c (gfunc3 const *proj_img, float const theta_deg,
   float cos_theta, sin_theta;
   float y, *wly = NULL, *wuy = NULL, idxf_y, wlx, wux, idxf_x;
   int *idx_y = NULL, idx_x;
-  float fv;
+  float complex fv;
   float complex *cur_fval = (float complex *) volume->fvals;
   
   /* The projections of the increments in y and z directions as well as xmin are precomputed */
@@ -956,10 +957,11 @@ xray_backprojection_say_c_c (gfunc3 const *proj_img, float const theta_deg,
   float cos_theta, sin_theta;
   float y, *wly = NULL, *wuy = NULL, idxf_y, wlx, wux, idxf_x;
   int *idx_y = NULL, idx_x;
-  float fv;
+  float complex fv;
   float complex *cur_fval = (float complex *) volume->fvals;
   float complex *proj_fvals_c = (float complex *) proj_img->fvals;
   
+
   /* The projections of the increments in y and z directions as well as xmin are precomputed */
   cos_theta = cosf (theta_deg * ONE_DEGREE);
   sin_theta = sinf (theta_deg * ONE_DEGREE);
