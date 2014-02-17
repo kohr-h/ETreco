@@ -209,6 +209,12 @@ LandwParams_print (LandwParams const *params)
   printf (") [pixels]\n\n");
 
   printf ("detector pixel size  : % 9.2f [nm]\n", params->detector_px_size[0]);
+  printf ("tilt axis            : ");
+  if (params->tilt_axis == 0)
+    printf ("x\n");
+  else 
+    printf ("y\n");
+    
   printf ("tilt axis rotation   : % 9.2f [degrees]\n", params->tilt_axis_rotation);
   printf ("\n\n");
 
