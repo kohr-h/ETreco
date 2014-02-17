@@ -45,4 +45,31 @@ void
 gfunc3_init_gridonly (gfunc3 *gf, vec3 const x0, vec3 const cs, idx3 const shp, gfunc_type gf_type);
 
 
+/* Approximate the value of GF at PT by linear interpolation on the grid. This is an optimized 2D 
+ * version of the generic function.  This version is for REAL functions.
+ * 
+ * Thrown exceptions: 
+ * - EXC_NULL
+ * - EXC_GFINIT
+ * - EXC_UNIMPL
+ * - EXC_GFDIM
+ */
+float
+gfunc3_interp_linear_2d_r (gfunc3 const *gf, vec3 const pt);
+
+
+/* Approximate the value of GF at PT by linear interpolation on the grid. This is an optimized 2D 
+ * version of the generic function.  This version is for COMPLEX functions.
+ * 
+ * Thrown exceptions: 
+ * - EXC_NULL
+ * - EXC_GFINIT
+ * - EXC_UNIMPL
+ * - EXC_GFDIM
+ */
+float
+gfunc3_interp_linear_2d_c (gfunc3 const *gf, vec3 const pt);
+
+
+
 #endif /* __GFUNC_H__ */

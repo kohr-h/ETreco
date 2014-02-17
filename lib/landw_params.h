@@ -1,5 +1,5 @@
 /*
- * fwd_op_opts.h -- dispatch options for forward_op* programs via getopt
+ * landw_params.h -- functions to handle Landweber input parameters
  * 
  * Copyright 2014 Holger Kohr <kohr@num.uni-sb.de>
  * 
@@ -21,63 +21,60 @@
  * 
  */
 
-#ifndef __FWD_OP_OPTS_H__
-#define __FWD_OP_OPTS_H__
+#ifndef __LANDW_PARAMS_H__
+#define __LANDW_PARAMS_H__
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
 
 #include "vec3.h"
-#include "misc.h"
 
-#include "et_operators.h"
+#include "gfunc3.h"
 
 // TODO: write descriptions
 
 /*-------------------------------------------------------------------------------------------------*/
 
-extern int verbosity_level;
-extern int invert_contrast_flag;
-extern int fft_padding;
+typedef struct
+{
+  /* Volume grid parameters */
+  idx3 vol_shape;
+  vec3 vol_csize;
+  vec3 vol_shift_px;
+  
+  /* Geometry parameters */
+  int tilt_axis;
+  float tilt_axis_rotation;
+  float tilt_axis_par_shift_px;
 
+  /* Detector parameters */
+  vec3 detector_px_size;
 
-typedef struct {
-  
-  /* File names */
-  char *fname_in;
-  char *fname_out;
-  char *fname_params;
-  char *fname_tiltangles;
-  
-  /* Model parameter */
-  scattering_model model;
-  
-} FwdOpts;
+} LandwParams;
 
 /*-------------------------------------------------------------------------------------------------*/
 
-/* Create a new FwdOpts structure and return a pointer to it.
- * 
- * Thrown exceptions:  
- * - Rethrows
- */
-FwdOpts *
-new_FwdOpts (void);
+LandwParams *
+new_LandwParams (void);
+
+void
+LandwParams_free (LandwParams **pparams);
 
 /*-------------------------------------------------------------------------------------------------*/
 
 void
-FwdOpts_print (FwdOpts *opts);
-
-
-void
-FwdOpts_free (FwdOpts **popts);
-
+LandwParams_assign_from_file (LandwParams *params, const char *fname_params);
 
 void
-FwdOpts_assign_from_args (FwdOpts *opts, int argc, char **argv);
+LandwParams_print (const LandwParams *params);
+
+void
+LandwParams_apply_to_volume (LandwParams const *params, gfunc3 *vol);
+
+void
+LandwParams_apply_to_proj_stack (LandwParams const *params, gfunc3 *proj_stack);
 
 /*-------------------------------------------------------------------------------------------------*/
 
-#endif  /* __FWD_OP_OPTS_H__ */
+#endif // __LANDW_PARAMS_H__

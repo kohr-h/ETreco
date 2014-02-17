@@ -1,5 +1,5 @@
 /*
- * fwd_op_params.c -- functions to handle forward operator input parameters
+ * landw_params.c -- functions to handle Landweber input parametes
  * 
  * Copyright 2014 Holger Kohr <kohr@num.uni-sb.de>
  * 
@@ -40,19 +40,19 @@
 
 #include "gfunc3.h"
 
-#include "fwd_op_params.h"
+#include "landw_params.h"
 
 #define ONE_MICROMETER  1E3   // [nm]
 
 /*-------------------------------------------------------------------------------------------------*/
 
-FwdParams *
-new_FwdParams (void)
+LandwParams *
+new_LandwParams (void)
 {
   CEXCEPTION_T e = EXC_NONE;
-  FwdParams *params = NULL;
+  LandwParams *params = NULL;
   
-  Try { params = (FwdParams *) ali16_malloc (sizeof (FwdParams)); }  CATCH_RETURN (e, NULL);
+  Try { params = (LandwParams *) ali16_malloc (sizeof (LandwParams)); }  CATCH_RETURN (e, NULL);
     
   params->tilt_axis               = 0;
   params->tilt_axis_rotation      = 0.0;
@@ -64,7 +64,7 @@ new_FwdParams (void)
 /*-------------------------------------------------------------------------------------------------*/
 
 void
-FwdParams_free (FwdParams **pparams)
+LandwParams_free (LandwParams **pparams)
 {
   if (pparams == NULL)
     return;
@@ -77,7 +77,7 @@ FwdParams_free (FwdParams **pparams)
 /*-------------------------------------------------------------------------------------------------*/
 
 void
-FwdParams_assign_from_file (FwdParams *params, const char *fname_params)
+LandwParams_assign_from_file (LandwParams *params, const char *fname_params)
 {
   int itmp;
   float ta_sx, ta_sy;
@@ -96,10 +96,40 @@ FwdParams_assign_from_file (FwdParams *params, const char *fname_params)
 
   /* VOLUME */
 
-  /* Override MRC header */
-  dtmp = iniparser_getdouble (dict, "volume:voxel_size", FLT_MAX);
+  if ((itmp = iniparser_getint (dict, "volume:nx", -1)) == -1)
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Key 'nx' not found in %s.", fname_params);
+      return;
+    }
+
+  params->vol_shape[0] = itmp;
+  
+  if ((itmp = iniparser_getint (dict, "volume:ny", -1)) == -1)
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Key 'ny' not found in %s.", fname_params);
+      return;
+    }
+
+  params->vol_shape[1] = itmp;
+
+  if ((itmp = iniparser_getint (dict, "volume:nz", -1)) == -1)
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Key 'nz' not found in %s.", fname_params);
+      return;
+    }
+
+  params->vol_shape[2] = itmp;
+
+  if ((dtmp = iniparser_getdouble (dict, "volume:voxel_size", FLT_MAX)) == FLT_MAX)
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Key 'voxel_size' not found in %s.", fname_params);
+      return;
+    }
+
   vec3_set_all (params->vol_csize, (float) dtmp);
 
+
+  /* These settings override MRC header */
 
   params->vol_shift_px[0] = (float) iniparser_getdouble (dict, "volume:shift_x", FLT_MAX);
   params->vol_shift_px[1] = (float) iniparser_getdouble (dict, "volume:shift_y", FLT_MAX);
@@ -132,32 +162,14 @@ FwdParams_assign_from_file (FwdParams *params, const char *fname_params)
   
   /* DETECTOR */
 
-  if ( (itmp = iniparser_getint (dict, "detector:det_pix_x", -1)) == -1 )
+  /* Overrides MRC header */
+  dtmp = iniparser_getdouble (dict, "detector:pixel_size", 0.0);
+  if (dtmp != 0.0)
     {
-      EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Key 'detector:det_pix_x' not found in %s.", fname_params);
-      return;
+      params->detector_px_size[0] = (float) dtmp * ONE_MICROMETER;
+      params->detector_px_size[1] = (float) dtmp * ONE_MICROMETER;
+      params->detector_px_size[2] = 1.0;
     }
-  
-  params->detector_shape[0] = itmp;
-  
-  if ( (itmp = iniparser_getint (dict, "detector:det_pix_y", -1)) == -1 )
-    {
-      EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Key 'detector:det_pix_y' not found in %s.", fname_params);
-      return;
-    }
-  
-  params->detector_shape[1] = itmp;
-  params->detector_shape[2] = 1;
-  
-  if ( (dtmp = iniparser_getdouble (dict, "detector:pixel_size", FLT_MAX)) == FLT_MAX )
-    {
-      EXC_THROW_CUSTOMIZED_PRINT (EXC_IO, "Key 'detector:pixel_size' not found in %s.", fname_params);
-      return;
-    }
-
-  params->detector_px_size[0] = (float) dtmp * ONE_MICROMETER;
-  params->detector_px_size[1] = (float) dtmp * ONE_MICROMETER;
-  params->detector_px_size[2] = 1.0;
 
   iniparser_freedict (dict);
 
@@ -168,15 +180,15 @@ FwdParams_assign_from_file (FwdParams *params, const char *fname_params)
 
 
 void
-FwdParams_print (FwdParams const *params)
+LandwParams_print (LandwParams const *params)
 {
   int i;
   
   CAPTURE_NULL_VOID (params);
 
   printf ("\n");
-  puts ("Forward Op parameters:");
-  puts ("======================\n");
+  puts ("Landweber parameters:");
+  puts ("=====================\n");
 
   puts ("Geometry:");
   puts ("---------\n");
@@ -197,6 +209,12 @@ FwdParams_print (FwdParams const *params)
   printf (") [pixels]\n\n");
 
   printf ("detector pixel size  : % 9.2f [nm]\n", params->detector_px_size[0]);
+  printf ("tilt axis            : ");
+  if (params->tilt_axis == 0)
+    printf ("x\n");
+  else 
+    printf ("y\n");
+    
   printf ("tilt axis rotation   : % 9.2f [degrees]\n", params->tilt_axis_rotation);
   printf ("\n\n");
 
@@ -206,7 +224,7 @@ FwdParams_print (FwdParams const *params)
 /*-------------------------------------------------------------------------------------------------*/
 
 void
-FwdParams_apply_to_volume (FwdParams const *params, gfunc3 *vol)
+LandwParams_apply_to_volume (LandwParams const *params, gfunc3 *vol)
 {
   int i;
   
@@ -215,9 +233,6 @@ FwdParams_apply_to_volume (FwdParams const *params, gfunc3 *vol)
   
   for (i = 0; i < 3; i++)
     {
-      if (params->vol_csize[i] != FLT_MAX)
-        vol->csize[i] = params->vol_csize[i];
-
       if (params->vol_shift_px[i] != FLT_MAX)
         vol->x0[i] = params->vol_shift_px[i] * vol->csize[i];
     }
@@ -230,18 +245,13 @@ FwdParams_apply_to_volume (FwdParams const *params, gfunc3 *vol)
 /*-------------------------------------------------------------------------------------------------*/
 
 void
-FwdParams_apply_to_proj_image (FwdParams const *params, gfunc3 *proj_img)
+LandwParams_apply_to_proj_stack (LandwParams const *params, gfunc3 *proj_stack)
 {
   CAPTURE_NULL_VOID (params);
-  CAPTURE_NULL_VOID (proj_img);
+  CAPTURE_NULL_VOID (proj_stack);
   
-  if (!GFUNC_IS_2D (proj_img))
-    {
-      EXC_THROW_CUSTOMIZED_PRINT (EXC_GFDIM, "proj_img must be 2-dimensional");
-      return;
-    }
-  
-  gfunc3_set_csize (proj_img, params->detector_px_size);
+  if (params->detector_px_size[0] != 0.0)  /* Detector pixel size is set in config file */
+    gfunc3_set_csize (proj_stack, params->detector_px_size);
   
   return;
 }

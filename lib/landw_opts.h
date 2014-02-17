@@ -1,5 +1,5 @@
 /*
- * fwd_op_opts.h -- dispatch options for forward_op* programs via getopt
+ * landw_opts.h -- dispatch options for landweber_* programs via getopt
  * 
  * Copyright 2014 Holger Kohr <kohr@num.uni-sb.de>
  * 
@@ -21,8 +21,8 @@
  * 
  */
 
-#ifndef __FWD_OP_OPTS_H__
-#define __FWD_OP_OPTS_H__
+#ifndef __LANDW_OPTS_H__
+#define __LANDW_OPTS_H__
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>
@@ -39,7 +39,7 @@
 
 extern int verbosity_level;
 extern int invert_contrast_flag;
-extern int fft_padding;
+extern int normalize_flag;
 
 
 typedef struct {
@@ -52,32 +52,40 @@ typedef struct {
   
   /* Model parameter */
   scattering_model model;
+
+  /* Iteration parameters */
+  float relax_param;
+  int max_iter;
+
+  /* Normalization parameters */
+  idx3 bg_patch_ix0;
+  idx3 bg_patch_shape;
   
-} FwdOpts;
+} LandwOpts;
 
 /*-------------------------------------------------------------------------------------------------*/
 
-/* Create a new FwdOpts structure and return a pointer to it.
+/* Create a new LandwOpts structure and return a pointer to it.
  * 
  * Thrown exceptions:  
  * - Rethrows
  */
-FwdOpts *
-new_FwdOpts (void);
+LandwOpts *
+new_LandwOpts (void);
 
 /*-------------------------------------------------------------------------------------------------*/
 
 void
-FwdOpts_print (FwdOpts *opts);
+LandwOpts_print (LandwOpts const *opts);
 
 
 void
-FwdOpts_free (FwdOpts **popts);
+LandwOpts_free (LandwOpts **popts);
 
 
 void
-FwdOpts_assign_from_args (FwdOpts *opts, int argc, char **argv);
+LandwOpts_assign_from_args (LandwOpts *opts, int argc, char **argv);
 
 /*-------------------------------------------------------------------------------------------------*/
 
-#endif  /* __FWD_OP_OPTS_H__ */
+#endif  /* __LANDWEBER_OPTS_H__ */

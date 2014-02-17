@@ -141,6 +141,18 @@ void
 gfunc3_init_from_foreign_grid (gfunc3 *gf, gfunc3 const *gf_template);
 
 
+/* Initialize STACK_PT as a 2D function with grid from STACK and have STACK_PT->DATA 
+ * point to the POS'th image in the STACK.
+ * 
+ * Thrown exceptions: 
+ * - EXC_NULL
+ * - EXC_GFINIT
+ * - EXC_BADARG
+ */ 
+void
+gfunc3_set_stack_pointer (gfunc3 *stack_pt, gfunc3 *stack, int pos);
+
+
 /* Set cell size of GF to CS and recompute the grid.
  * 
  * Thrown exceptions: 
@@ -549,19 +561,6 @@ gfunc3_interp_nearest_2d (gfunc3 const *gf, vec3 const pt);
  */
 float
 gfunc3_interp_linear (gfunc3 const *gf, vec3 const pt);
-
-
-/* Approximate the value of GF at PT by linear interpolation on the grid. This is an optimized 2D 
- * version of the generic function.  Currently not implemented for HALFCOMPLEX functions.
- * 
- * Thrown exceptions: 
- * - EXC_NULL
- * - EXC_GFINIT
- * - EXC_UNIMPL
- * - EXC_GFDIM
- */
-float
-gfunc3_interp_linear_2d (gfunc3 const *gf, vec3 const pt);
 
 
 /* Store the coordinates of GF's grid in a float* array. This array is allocated in the function and 

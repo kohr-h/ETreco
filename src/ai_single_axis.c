@@ -180,9 +180,7 @@ main (int argc, char *argv[])
       if (invert_contrast_flag)
         weight = -weight;
         
-      Try { gfunc3_scale (proj_image, weight); }  CATCH_EXIT_FAIL (_e);
-
-      
+     
       /* Rotate image to align tilt axis with x or y axis */
       Try { image_rotation (proj_image, -ai_params->tilt_axis_rotation); }  CATCH_EXIT_FAIL (_e);
 
@@ -269,7 +267,7 @@ main (int argc, char *argv[])
       /* Compute backprojection */
       Try { 
         xray_backprojection_single_axis (proj_image, theta_cur, ai_params->tilt_axis,
-          ai_params->tilt_axis_par_shift_px, volume); 
+          ai_params->tilt_axis_par_shift_px, volume, weight); 
       } CATCH_EXIT_FAIL (_e);
       // Try { tiltangles_get_angles (tilts, angles, i); }  CATCH_EXIT_FAIL (_e);
       // Try 

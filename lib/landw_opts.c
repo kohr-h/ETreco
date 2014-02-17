@@ -1,5 +1,5 @@
 /*
- * fwd_opts.c -- dispatch options for forward_op_* programs via getopt
+ * landw_opts.c -- dispatch options for landweber_* programs via getopt
  * 
  * Copyright 2014 Holger Kohr <kohr@num.uni-sb.de>
  * 
@@ -40,16 +40,22 @@
 
 #include "et_operators.h"
 
-#include "fwd_op_opts.h"
+#include "landw_opts.h"
 
-
-#define TSERIES_STR   "tiltseries_"  /* prepend this to the output tiltseries file name */
 
 /*-------------------------------------------------------------------------------------------------*/
 
-#define SHORT_OPTS "o:f:p:n:m:s:t:Ihvq"
+#define RELAX_PARAM 1.0F
+#define MAX_ITER 25
+#define BG_PATCH_SIZE  50 /* Default size of patch to compute background stats */
+#define REC_STR   "lw_rec_"  /* prepend this to the output tiltseries file name */
+
+/*-------------------------------------------------------------------------------------------------*/
+
+#define SHORT_OPTS "o:f:p:n:m:s:t:r:M:INhvq"
 #define LONG_OPTS \
          /* These options set a flag. */                    \
+         {"normalize",        no_argument, &normalize_flag, TRUE}, \
          {"verbose",          no_argument, &verbosity_level, VERB_LEVEL_VERBOSE},  \
          {"quiet",            no_argument, &verbosity_level, VERB_LEVEL_QUIET}, \
          {"invert-contrast",  no_argument, &invert_contrast_flag, 1}, \
@@ -59,6 +65,9 @@
          {"output-file",      required_argument, 0, 'o'}, \
          {"params-file",      required_argument, 0, 'p'}, \
          {"model",            required_argument, 0, 'm'}, \
+         {"max-iter",         required_argument, 0, 'M'}, \
+         {"background",       required_argument, 0, 'P'}, \
+         {"relax-param",      required_argument, 0, 'r'}, \
          {"tiltangles-file",  required_argument, 0, 't'}, \
          {0, 0, 0, 0}
 
@@ -66,26 +75,33 @@
 /*-------------------------------------------------------------------------------------------------*/
 
 int verbosity_level      = VERB_LEVEL_NORMAL;
-int invert_contrast_flag = 1;
+int invert_contrast_flag = TRUE;
 int fft_padding          = 0;
+int normalize_flag       = TRUE;
 
 char const *models[]      = {"", "proj-assumption", "born-approx", ""};
 
 /*-------------------------------------------------------------------------------------------------*/
 
-FwdOpts *
-new_FwdOpts (void)
+LandwOpts *
+new_LandwOpts (void)
 {
   CEXCEPTION_T e = EXC_NONE;
-  FwdOpts *opts = NULL;
+  LandwOpts *opts = NULL;
   
-  Try { opts = (FwdOpts *) ali16_malloc (sizeof (FwdOpts)); } CATCH_RETURN (e, NULL);
+  Try { opts = (LandwOpts *) ali16_malloc (sizeof (LandwOpts)); } CATCH_RETURN (e, NULL);
   
-  opts->fname_in                = NULL;
-  opts->fname_out               = NULL;
-  opts->fname_params            = NULL;
-  opts->fname_tiltangles        = NULL;
-  opts->model                   = PROJ_ASSUMPTION;
+  opts->fname_in          = NULL;
+  opts->fname_out         = NULL;
+  opts->fname_params      = NULL;
+  opts->fname_tiltangles  = NULL;
+  opts->model             = PROJ_ASSUMPTION;
+  opts->relax_param       = RELAX_PARAM;
+  opts->max_iter          = MAX_ITER;
+  opts->bg_patch_ix0[2]   = -1;
+  opts->bg_patch_shape[0] = BG_PATCH_SIZE;
+  opts->bg_patch_shape[1] = BG_PATCH_SIZE;
+  opts->bg_patch_shape[2] = 1;
   
   return opts;
 }
@@ -93,7 +109,7 @@ new_FwdOpts (void)
 /*-------------------------------------------------------------------------------------------------*/
 
 void
-FwdOpts_free (FwdOpts **popts)
+LandwOpts_free (LandwOpts **popts)
 {
   if (popts == NULL)
     return;
@@ -113,7 +129,7 @@ FwdOpts_free (FwdOpts **popts)
 /*-------------------------------------------------------------------------------------------------*/
 
 void
-FwdOpts_print (FwdOpts *opts)
+LandwOpts_print (LandwOpts const *opts)
 {
   CAPTURE_NULL_VOID (opts);
   
@@ -124,17 +140,34 @@ FwdOpts_print (FwdOpts *opts)
   puts ("Options from command line:");
   puts ("==========================\n");
 
-  printf ("Input file            : %s\n", opts->fname_in);
-  printf ("Output file           : %s\n", opts->fname_out);
-  printf ("ET parameter file     : %s\n", opts->fname_params);
-  printf ("Tiltangles file       : %s\n", opts->fname_tiltangles);
-  printf ("Model                 : %s\n", models[opts->model]); 
+  printf ("Input file          : %s\n", opts->fname_in);
+  printf ("Output file         : %s\n", opts->fname_out);
+  printf ("ET parameter file   : %s\n", opts->fname_params);
+  printf ("Tiltangles file     : %s\n", opts->fname_tiltangles);
+  printf ("Model               : %s\n", models[opts->model]); 
 
-  printf ("Contrast inversion    : " );
+  printf ("Contrast inversion  : " );
   if (invert_contrast_flag)
     printf ("yes\n");
   else
     printf ("no\n");
+
+  printf ("Relaxation parameter: %f\n", opts->relax_param);
+  printf ("Maximum iterations  : %d\n", opts->max_iter);
+
+  printf ("Normalization         : " );
+  if (normalize_flag)
+    printf ("yes\n");
+  else
+    printf ("no\n");
+  
+  printf ("Background patch      : ");
+  if (!normalize_flag)
+    printf ("(unused, no normalization)\n");
+
+  else
+    printf ("size %dx%d at (%d,%d)\n", opts->bg_patch_shape[0], opts->bg_patch_shape[1], 
+    opts->bg_patch_ix0[0], opts->bg_patch_ix0[1]);
 
   printf ("\n\n");
   
@@ -148,31 +181,44 @@ print_help (char const *progname)
 {
   scattering_model iter_m;
   
-  printf ("Usage: %s [options] volume_file\n", progname);
+  printf ("Usage: %s [options] TILTSERIES_FILE\n", progname);
   puts ("");
   puts ("Required parameters:");
   puts ("");
-  puts ("  -t file, --tiltangles-file=file");
+  puts ("  -t FILE, --tiltangles-file=FILE");
   puts ("                 read tilt angles from FILE.");
-  puts ("  -m name, --model=name");
+  puts ("  -m NAME, --model=NAME");
   puts ("                 set forward model to NAME. Possible values are:");
   printf ("               ");
   for (iter_m = MD_START + 1; iter_m < MD_END; iter_m++)
     printf ("  %s", models[iter_m]);
   printf ("\n");
   puts ("                 (Default: proj-assumption)");
-  puts ("  -p file, --params-file=file");
+  puts ("  -p FILE, --params-file=FILE");
   puts ("                 read CTF parameters from FILE (INI-style).");
   puts ("");
   puts ("Options:");
   puts ("");
-  puts ("  -o file, --output-file=file");
+  puts ("  -o FILE, --output-file=FILE");
   puts ("                 write reconstruction to FILE; if no parameter is given, the");
-  puts ("                 output file is determined from VOLUME_FILE by prepending");
-  printf ("                 `%s'.\n", TSERIES_STR);
+  puts ("                 output file is determined from TILTSERIES_FILE by prepending");
+  printf ("                 `%s'.\n", REC_STR);
+  puts ("  -N, --normalize");
+  puts ("                 normalize the projection images based on their histograms (enabled");
+  puts ("                 by default).");
+  puts ("  --background=index_x,index_y,size_x,size_y");
+  puts ("                 compute background statistics using a patch of SIZE_X x SIZE_Y");
+  puts ("                 pixels with lower-left indices INDEX_X, INDEX_Y.");
+  printf ("                 Default: 0,0,%d,%d\n", 
+    BG_PATCH_SIZE, BG_PATCH_SIZE);
   puts ("  -I, --invert-contrast");
   puts ("                 invert the contrast of the images; use this option if projections of");
   puts ("                 dense regions are brighter than the background (enabled by default).");
+  puts ("  -r MU, --relax-param=MU");
+  printf ("                 use MU as relaxation parameter in the iteration (default: %.2f)\n", 
+    RELAX_PARAM);
+  puts ("  -M NUM, --max-iter=NUM");
+  printf ("                 do at most NUM iteration steps (default: %d)\n", MAX_ITER);
   puts ("  -v, --verbose");
   puts ("                 display more information during execution");
   puts ("  -q, --quiet");
@@ -188,7 +234,7 @@ print_help (char const *progname)
 /*-------------------------------------------------------------------------------------------------*/
 
 void
-FwdOpts_set_fname_in (FwdOpts *opts, char const *fname)
+LandwOpts_set_fname_in (LandwOpts *opts, char const *fname)
 {
   CEXCEPTION_T e = EXC_NONE;
   int len = strlen (fname);
@@ -201,20 +247,20 @@ FwdOpts_set_fname_in (FwdOpts *opts, char const *fname)
 /*-------------------------------------------------------------------------------------------------*/
 
 void
-FwdOpts_determine_fname_out (FwdOpts *opts, char const *fname_in)
+LandwOpts_determine_fname_out (LandwOpts *opts, char const *fname_in)
 {
   CEXCEPTION_T e = EXC_NONE;
-  int dir_len, base_len, ts_len;
+  int dir_len, base_len, rec_len;
   char *dirname, *basename, *p_tmp;
   
   dirname  = dir_name (fname_in);
   dir_len  = strlen (dirname);
   basename = base_name (fname_in);
   base_len = strlen (basename);
-  ts_len   = strlen (TSERIES_STR);
+  rec_len   = strlen (REC_STR);
   
   Try { 
-    opts->fname_out = (char *) ali16_malloc (dir_len + base_len + ts_len + 2); 
+    opts->fname_out = (char *) ali16_malloc (dir_len + base_len + rec_len + 2); 
   } CATCH_RETURN_VOID (e);
     
   p_tmp = opts->fname_out;
@@ -222,9 +268,9 @@ FwdOpts_determine_fname_out (FwdOpts *opts, char const *fname_in)
   
   p_tmp += dir_len;
   *(p_tmp++) = '/';
-  strncpy (p_tmp, TSERIES_STR, ts_len);
+  strncpy (p_tmp, REC_STR, rec_len);
   
-  p_tmp += ts_len;
+  p_tmp += rec_len;
   strncpy (p_tmp, basename, base_len);
   
   p_tmp += base_len;
@@ -236,7 +282,7 @@ FwdOpts_determine_fname_out (FwdOpts *opts, char const *fname_in)
 /*-------------------------------------------------------------------------------------------------*/
 
 void
-FwdOpts_set_fname_out (FwdOpts *od, char const *fname)
+LandwOpts_set_fname_out (LandwOpts *od, char const *fname)
 {
   CEXCEPTION_T e = EXC_NONE;
   int len = strlen (fname);
@@ -249,7 +295,7 @@ FwdOpts_set_fname_out (FwdOpts *od, char const *fname)
 /*-------------------------------------------------------------------------------------------------*/
 
 void
-FwdOpts_set_fname_params (FwdOpts *opts, char const *fname)
+LandwOpts_set_fname_params (LandwOpts *opts, char const *fname)
 {
   CEXCEPTION_T e = EXC_NONE;
   int len = strlen (fname);
@@ -262,7 +308,7 @@ FwdOpts_set_fname_params (FwdOpts *opts, char const *fname)
 /*-------------------------------------------------------------------------------------------------*/
 
 void
-FwdOpts_set_fname_tiltangles (FwdOpts *opts, char const *fname)
+LandwOpts_set_fname_tiltangles (LandwOpts *opts, char const *fname)
 {
   CEXCEPTION_T e = EXC_NONE;
   int len = strlen (fname);
@@ -275,7 +321,7 @@ FwdOpts_set_fname_tiltangles (FwdOpts *opts, char const *fname)
 /*-------------------------------------------------------------------------------------------------*/
 
 void
-FwdOpts_set_model (FwdOpts *opts, char *model_str)
+LandwOpts_set_model (LandwOpts *opts, char *model_str)
 {
   char *p;
   scattering_model iter;
@@ -299,7 +345,64 @@ FwdOpts_set_model (FwdOpts *opts, char *model_str)
 /*-------------------------------------------------------------------------------------------------*/
 
 void
-FwdOpts_assign_from_args (FwdOpts *opts, int argc, char **argv)
+LandwOpts_set_relax_param (LandwOpts *opts, float tau)
+{
+  if (tau < 0)
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_BADARG, "Relaxation parameter must be nonnegative.");
+      return;
+    }
+    
+  opts->relax_param = tau;
+  return;
+}
+
+/*-------------------------------------------------------------------------------------------------*/
+
+void
+LandwOpts_set_max_iter (LandwOpts *opts, int iter)
+{
+  if (iter <= 0)
+    {
+      EXC_THROW_CUSTOMIZED_PRINT (EXC_BADARG, "Number of iterations must be positive.");
+      return;
+    }
+    
+  opts->max_iter = iter;
+  return;
+}
+
+/*-------------------------------------------------------------------------------------------------*/
+
+void
+LandwOpts_set_bg_params (LandwOpts *opts, char const *params_str)
+{
+  int ix, iy, iz = 0, sx, sy;
+  int n = sscanf (params_str, "%d,%d,%d,%d", &ix, &iy, &sx, &sy);
+  
+  if (n != 4)  /* Nothing provided or wrong format -> defaults */
+    {
+      ix = 0;
+      iy = 0;
+      iz = -1;
+      sx = BG_PATCH_SIZE;
+      sy = BG_PATCH_SIZE;
+    }
+  
+  opts->bg_patch_ix0[0]   = ix;
+  opts->bg_patch_ix0[1]   = iy;
+  opts->bg_patch_ix0[2]   = iz;
+  opts->bg_patch_shape[0] = sx;
+  opts->bg_patch_shape[1] = sy;
+  opts->bg_patch_shape[2] = 1;
+  
+  return;
+}
+
+/*-------------------------------------------------------------------------------------------------*/
+
+void
+LandwOpts_assign_from_args (LandwOpts *opts, int argc, char **argv)
 {
   CAPTURE_NULL_VOID (opts);
 
@@ -309,8 +412,11 @@ FwdOpts_assign_from_args (FwdOpts *opts, int argc, char **argv)
   
   /* Internal flags for the short options */
   int m_flag = 0;
+  int M_flag = 0;
   int o_flag = 0;
   int p_flag = 0;
+  int P_flag = 0;
+  int r_flag = 0;
   int t_flag = 0;
  
   if (argc == 1)
@@ -358,8 +464,23 @@ FwdOpts_assign_from_args (FwdOpts *opts, int argc, char **argv)
               exit (EXIT_FAILURE);
             }
 
-          FwdOpts_set_model (opts, optarg);
+          LandwOpts_set_model (opts, optarg);
           m_flag = 1;
+          break;
+ 
+        case 'M':
+          if (M_flag != 0)
+            {
+              fputs ("Invalid multiple use of `-M' (`--max-iter') option.", stderr);
+              exit (EXIT_FAILURE);
+            }
+
+          LandwOpts_set_max_iter (opts, atoi(optarg));
+          M_flag = 1;
+          break;
+ 
+        case 'N':
+          normalize_flag = TRUE;  /* Long option already sets the flag, but short one doesn't */
           break;
  
         case 'o':
@@ -369,7 +490,7 @@ FwdOpts_assign_from_args (FwdOpts *opts, int argc, char **argv)
               exit (EXIT_FAILURE);
             }
 
-          FwdOpts_set_fname_out (opts, optarg);
+          LandwOpts_set_fname_out (opts, optarg);
           o_flag = 1;
           break;
  
@@ -380,8 +501,19 @@ FwdOpts_assign_from_args (FwdOpts *opts, int argc, char **argv)
               exit (EXIT_FAILURE);
             }
 
-          FwdOpts_set_fname_params (opts, optarg);
+          LandwOpts_set_fname_params (opts, optarg);
           p_flag = 1;
+          break;
+ 
+        case 'P':
+          if (P_flag != 0)
+            {
+              fputs ("Invalid multiple use of `--background' option.", stderr);
+              exit (EXIT_FAILURE);
+            }
+
+          LandwOpts_set_bg_params (opts, optarg);
+          P_flag = 1;
           break;
  
         case 'q':
@@ -395,6 +527,17 @@ FwdOpts_assign_from_args (FwdOpts *opts, int argc, char **argv)
           verbosity_level = VERB_LEVEL_QUIET;
           break;
  
+        case 'r':
+          if (r_flag != 0)
+            {
+              fputs ("Invalid multiple use of `-r' (`--relax-param') option.", stderr);
+              exit (EXIT_FAILURE);
+            }
+
+          LandwOpts_set_relax_param (opts, atof (optarg));
+          r_flag = 1;
+          break;
+ 
         case 't':
           if (t_flag != 0)
             {
@@ -402,7 +545,7 @@ FwdOpts_assign_from_args (FwdOpts *opts, int argc, char **argv)
               exit (EXIT_FAILURE);
             }
 
-          FwdOpts_set_fname_tiltangles (opts, optarg);
+          LandwOpts_set_fname_tiltangles (opts, optarg);
           t_flag = 1;
           break;
  
@@ -458,7 +601,15 @@ FwdOpts_assign_from_args (FwdOpts *opts, int argc, char **argv)
       exit (EXIT_FAILURE);
     }
 
-    
+  if ((!normalize_flag) && P_flag)
+    {
+      fprintf (stderr, "The `--backgound' option can only be used if the "
+        "`-N' (`--normalize') option is enabled.\n\n" 
+        "`%s --help' provides further information.\n\n", progname);
+      exit (EXIT_FAILURE);
+    }
+
+
   /* Process any remaining command line arguments (not options). */
   if ((argc - optind) != 1 )
     {
@@ -466,11 +617,11 @@ FwdOpts_assign_from_args (FwdOpts *opts, int argc, char **argv)
       exit (EXIT_FAILURE);
     }
 
-  FwdOpts_set_fname_in (opts, argv[optind]);
+  LandwOpts_set_fname_in (opts, argv[optind]);
 
   
   if (!o_flag)
-    FwdOpts_determine_fname_out (opts, argv[optind]);
+    LandwOpts_determine_fname_out (opts, argv[optind]);
   
   return;
 }

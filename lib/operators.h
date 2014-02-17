@@ -43,11 +43,11 @@ void
 xray_projection (gfunc3 const *volume, vec3 const angles_deg, gfunc3 *proj_img);
 
 void
-xray_backprojection (gfunc3 const *proj_img, vec3 const angles_deg, gfunc3 *volume);
+xray_backprojection (gfunc3 const *proj_img, vec3 const angles_deg, gfunc3 *volume, float weight);
 
 void
 xray_backprojection_single_axis (gfunc3 const *proj_img, float const theta_deg, int axis,
-                                 float tilt_axis_par_shift_px, gfunc3 *volume);
+                                 float tilt_axis_par_shift_px, gfunc3 *volume, float weight);
 
 
 /*-------------------------------------------------------------------------------------------------

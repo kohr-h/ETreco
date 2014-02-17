@@ -41,6 +41,8 @@
 
 #define BG_PATCH_SIZE  50 /* Default size of patch to compute background stats */
 #define FFT_PADDING    64 /* Default padding of functions before FFT */
+#define CTF_TRUNCATION 1.5F /* Default reciprocal CTF truncation value */
+#define REC_STR   "rec_ai_"  /* prepend this to the file name for the reco */
 
 /*-------------------------------------------------------------------------------------------------*/
 
@@ -72,10 +74,10 @@
 /*-------------------------------------------------------------------------------------------------*/
 
 int verbosity_level      = VERB_LEVEL_NORMAL;
-int truncate_ctf_flag    = 0;
-int normalize_flag       = 1;
-int autocenter_vol_flag  = 1;
-int invert_contrast_flag = 1;
+int truncate_ctf_flag    = TRUE;
+int normalize_flag       = TRUE;
+int autocenter_vol_flag  = TRUE;
+int invert_contrast_flag = TRUE;
 int use_lambda_flag      = 0;
 int fft_padding          = FFT_PADDING;
 
@@ -93,10 +95,10 @@ new_AiOpts (void)
   
   opts->fname_in                = NULL;
   opts->fname_out               = NULL;
-  opts->fname_params       = NULL;
+  opts->fname_params            = NULL;
   opts->fname_tiltangles        = NULL;
   opts->gamma                   = 0.0;
-  opts->ctf_trunc               = 0.0;
+  opts->ctf_trunc               = CTF_TRUNCATION;
   opts->moll_type               = GAUSSIAN;
   opts->num_images              = 0;
   opts->start_index             = 0;
@@ -139,7 +141,6 @@ AiOpts_print (AiOpts *opts)
   if (verbosity_level == VERB_LEVEL_QUIET)
     return;
   
-  /* TODO: make dependent on verbosity */
   printf ("\n\n");
   puts ("Options from command line:");
   puts ("==========================\n");
@@ -227,33 +228,33 @@ print_help (char const *progname)
   puts ("");
   puts ("  -o file, --output-file=file");
   puts ("                 write reconstruction to FILE; if no parameter is given, the");
-  puts ("                 output file is determined from tiltseries_file by appending");
-  puts ("                 `_rec' before its extension.");
+  puts ("                 output file is determined from tiltseries_file by prepending");
+  printf ("                 `%s'.\n", REC_STR);
   puts ("  -c value, --ctf-cutoff=value");
   puts ("                 set value for reciprocal CTF cutoff; in intervals where ");
   puts ("                 1/CTF exceeds VALUE, it is replaced by a differentiable");
-  puts ("                 transition spline; must be > 1.0 and should not exceed ~10.0.");
+  puts ("                 transition spline; must be > 1.0 and should not exceed ~5.0.");
+  printf ("                 (Default: %.2f)\n", CTF_TRUNCATION);
   puts ("  -m name, --mollifier=name");
   puts ("                 use the specified mollifier; Possible values:");
   for (iter_m = MO_START + 1; iter_m < MO_END; iter_m++)
     printf ("  %s", mollifiers[iter_m]);
   printf ("\n");
-  puts ("                 (default: gaussian)");
+  puts ("                 (Default: gaussian)");
   puts ("  -A, --autocenter-volume");
-  puts ("                 automatically center the volume over the tilt-axis (enabled by");
-  puts ("                 default).");
+  puts ("                 automatically center the volume over the tilt-axis (Default: enabled)");
   puts ("  -N, --normalize");
-  puts ("                 normalize the projection images based on their histograms (enabled");
-  puts ("                 by default).");
+  puts ("                 normalize the projection images based on their histograms (Default:");
+  puts ("                 enabled).");
   puts ("  --background=index_x,index_y,size_x,size_y");
   puts ("                 compute background statistics using a patch of SIZE_X x SIZE_Y");
   puts ("                 pixels with lower-left indices INDEX_X, INDEX_Y.");
-  printf ("                 Default: 0,0,%d,%d\n", 
+  printf ("                 (Default: 0,0,%d,%d)\n", 
     BG_PATCH_SIZE, BG_PATCH_SIZE);
   puts ("  -I, --invert-contrast");
   puts ("                 invert the contrast of the images; use this option if dense regions");
-  puts ("                 are darker than the background (enabled by default).");
-  puts ("  -L value, --lambda-pow=value");
+  puts ("                 are darker than the background (Default: enabled).");
+  puts ("  -L VALUE, --lambda-pow=VALUE");
   puts ("                 feature reconstruction: compute Lambda^a(f) instead of f,");
   puts ("                 where Lambda = sqrt(-Laplacian) and a = VALUE.");
   puts ("  -n N, --num-images=N");
@@ -265,7 +266,7 @@ print_help (char const *progname)
   puts ("  --fft-padding[=N]");
   puts ("                 continue grid functions by N zero pixels in each direction prior");
   puts ("                 to computing Fourier transforms ('zero-padding').");
-  printf ("                 (Default: N=%d)\n", FFT_PADDING);
+  printf ("                 (Default: %d)\n", FFT_PADDING);
   puts ("  -v, --verbose");
   puts ("                 display more information during execution");
   puts ("  -q, --quiet");
@@ -275,40 +276,6 @@ print_help (char const *progname)
   puts ("      --version");
   puts ("                 output version information and exit");
   
-  return;
-}
-
-/*-------------------------------------------------------------------------------------------------*/
-
-void 
-fname_rsplit_at_dot (char const *fname, char **pbase_str, char **pext_str)
-{
-  CEXCEPTION_T e = EXC_NONE;
-  int fname_len, base_len, ext_len;
-  char const *pext = NULL;
-  
-  fname_len = strlen (fname);
-
-  /* pext points to the first dot from the right or one char beyond the string */
-  if ((pext = strrchr (fname, '.')) == NULL)
-    pext = &fname[fname_len];
-    
-  base_len = pext - fname;
-  ext_len  = fname_len - base_len;
-  
-  Try {
-    *pbase_str = (char *) ali16_malloc (base_len + 1);
-    *pext_str = (char *) ali16_malloc (ext_len + 1);
-  } Catch (e)
-  {
-    EXC_RETHROW_REPRINT (e);
-    free (*pbase_str); *pbase_str = NULL;
-    free (*pext_str);  *pext_str  = NULL;
-    return;
-  }
-
-  strncpy (*pbase_str, fname, base_len);  (*pbase_str)[base_len] = '\0';
-  strncpy (*pext_str, pext, ext_len);  (*pext_str)[ext_len] = '\0';
   return;
 }
 
@@ -327,50 +294,36 @@ AiOpts_set_fname_in (AiOpts *opts, char const *fname)
 
 /*-------------------------------------------------------------------------------------------------*/
 
-#define REC_STR   "_rec"  /* append this before the file extension for the reco */
-
 void
-AiOpts_assemble_fname_out (AiOpts *opts,  char const *base, char const *ext)
+AiOpts_determine_fname_out (AiOpts *opts, char const *fname_in)
 {
   CEXCEPTION_T e = EXC_NONE;
-  int base_len, rec_len, ext_len;
-  char *p_tmp;
+  int dir_len, base_len, rec_len;
+  char *dirname, *basename, *p_tmp;
   
-  base_len = strlen (base);
+  dirname  = dir_name (fname_in);
+  dir_len  = strlen (dirname);
+  basename = base_name (fname_in);
+  base_len = strlen (basename);
   rec_len  = strlen (REC_STR);
-  ext_len  = strlen (ext);
   
-  Try { opts->fname_out = (char *) ali16_malloc (base_len + rec_len + ext_len + 1); }
-  CATCH_RETURN_VOID (e);
+  Try { 
+    opts->fname_out = (char *) ali16_malloc (dir_len + base_len + rec_len + 2); 
+  } CATCH_RETURN_VOID (e);
     
   p_tmp = opts->fname_out;
-  strncpy (p_tmp, base, base_len);
+  strncpy (p_tmp, dirname, dir_len);
   
-  p_tmp += base_len;
+  p_tmp += dir_len;
+  *(p_tmp++) = '/';
   strncpy (p_tmp, REC_STR, rec_len);
   
   p_tmp += rec_len;
-  strncpy (p_tmp, ext, ext_len);
+  strncpy (p_tmp, basename, base_len);
   
-  p_tmp += ext_len;
+  p_tmp += base_len;
   *p_tmp = '\0';
     
-  return;
-}
-
-/*-------------------------------------------------------------------------------------------------*/
-
-void
-AiOpts_determine_fname_out (AiOpts *opts, char *fname_in)
-{
-  CEXCEPTION_T e = EXC_NONE;
-  char *bs, *ex;
-  
-  Try { fname_rsplit_at_dot (fname_in, &bs, &ex); } CATCH_RETURN_VOID (e);
-  Try { AiOpts_assemble_fname_out (opts, bs, ex); } CATCH_RETURN_VOID (e);
-    
-  free (bs);
-  free (ex);
   return;
 }
 

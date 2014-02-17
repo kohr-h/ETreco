@@ -36,8 +36,6 @@
 /*-------------------------------------------------------------------------------------------------*/
 
 extern int verbosity_level;
-extern int use_ctf_flag;
-extern int use_mtf_flag;
 extern int use_gamma_flag;
 extern int truncate_ctf_flag;
 extern int normalize_flag;
