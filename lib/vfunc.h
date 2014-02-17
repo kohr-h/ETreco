@@ -33,7 +33,7 @@
 /* Vector function struct; to be called with VFUNC_EVAL (always use pointers) */
 typedef struct
 {
-  void (*f) (float const *x, float *pval, void const *params);
+  void (*f) (float const *x, void *pval, void const *params);
   void const *params;
 
 } vfunc;

@@ -115,16 +115,16 @@ ctf_unscaled_radial (float t, EtParams const *params)
 /*-------------------------------------------------------------------------------------------------*/
 
 void
-ctf (float const *xi, float *zp, void const *par)
+ctf (float const *xi, void *pval, void const *par)
 {
   EtParams *params = (EtParams *) par;
+  float complex *zp = (float complex *) pval;
   float mxi2;
-  float complex *z = (float complex *) zp;
 
   mxi2 = xi[0] * xi[0] + xi[1] * xi[1];
   mxi2 *= params->magnification * params->magnification;
 
-  *z = ctf_scaling_function (mxi2, params) * ctf_unscaled_radial (mxi2, params) / (2 * M_PI);
+  *zp = ctf_scaling_function (mxi2, params) * ctf_unscaled_radial (mxi2, params) / (2 * M_PI);
 
   return;
 }
@@ -174,11 +174,12 @@ ctf_acr_unscaled_radial (float t, EtParams const *params)
 /*-------------------------------------------------------------------------------------------------*/
 
 void
-ctf_acr (float const *xi, float *zp, void const *par)
+ctf_acr (float const *xi, void *pval, void const *par)
 {
   EtParams *params = (EtParams *) par;
+  float *zp = (float *) pval;
   float mxi2;
-
+  
   mxi2 = xi[0] * xi[0] + xi[1] * xi[1];
   mxi2 *= params->magnification * params->magnification;
 
@@ -215,9 +216,11 @@ detector_mtf_radial (float t, EtParams const *params)
 /*-------------------------------------------------------------------------------------------------*/
 
 void
-detector_mtf (float const *grid_xi, float *zp, void const *par)
+detector_mtf (float const *grid_xi, void *pval, void const *par)
 {
   EtParams *params = (EtParams *) par;
+  float *zp = (float *) pval;
+  
   float absxi2 = grid_xi[0] * grid_xi[0] + grid_xi[1] * grid_xi[1];
 
   *zp = detector_mtf_radial (absxi2, params);
@@ -240,9 +243,11 @@ vfunc_init_detector_mtf (vfunc *vf, EtParams const *params)
 /*-------------------------------------------------------------------------------------------------*/
 
 void
-detector_recip_mtf (float const *grid_xi, float *zp, void const *par)
+detector_recip_mtf (float const *grid_xi, void *pval, void const *par)
 {
   EtParams *params = (EtParams *) par;
+  float *zp = (float *) pval;
+  
   float absxi2 = grid_xi[0] * grid_xi[0] + grid_xi[1] * grid_xi[1];
 
   *zp = 1.0 / detector_mtf_radial (absxi2, params);

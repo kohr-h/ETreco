@@ -122,11 +122,12 @@ recip_ctf_acr_unscaled_radial (float t, EtParams const *et_params, AiParams cons
 
 /* TODO: insert the correct constants */
 
-void ft_rk_single_axis (float const *xi, float *zp, void const *par)
+void ft_rk_single_axis (float const *xi, void *pval, void const *par)
 {
   EtAiParWrapper *pwrapper = (EtAiParWrapper *) par;
   EtParams *et_params = pwrapper->et_params;
   AiParams *ai_params = pwrapper->ai_params;
+  float *zp = (float *) pval;
   
   int axis = ai_params->tilt_axis;
   float mxi2;
@@ -152,10 +153,11 @@ void ft_rk_single_axis (float const *xi, float *zp, void const *par)
   return;
 }
 
-void ft_rk_single_axis_noctf (float const *xi, float *zp, void const *par)
+void ft_rk_single_axis_noctf (float const *xi, void *pval, void const *par)
 {
   EtAiParWrapper *pwrapper = (EtAiParWrapper *) par;
   AiParams *ai_params = pwrapper->ai_params;
+  float *zp = (float *) pval;
   
   int axis = ai_params->tilt_axis;
 
@@ -186,9 +188,11 @@ vfunc_init_ft_rk_single_axis (vfunc *vf, EtAiParWrapper const *pwrapper)
 /*-------------------------------------------------------------------------------------------------*/
 
 void
-ft_charfun_ball3 (float const *xi, float *zp, void const *par)
+ft_charfun_ball3 (float const *xi, void *pval, void const *par)
 {
   float rad = *((float *) par);
+  float *zp = (float *) pval;
+  
   float tmp, r_absxi = rad * sqrtf (xi[0] * xi[0] + xi[1] * xi[1] + xi[2] * xi[2]);
 
   if (r_absxi < 0.01)
@@ -232,10 +236,12 @@ vfunc_init_ft_charfun_ball3 (vfunc *vf, float const *pradius)
 /*-------------------------------------------------------------------------------------------------*/
 
 void
-ft_charfun_cyl3 (float const *xi, float *zp, void const *par)
+ft_charfun_cyl3 (float const *xi, void *pval, void const *par)
 {
   // TODO: check and explain
   float *p = (float *) par;
+  float *zp = (float *) pval;
+  
   float len = p[0], rad = p[1];
 
   float argx, argyz, sinc, bessel;
@@ -273,15 +279,17 @@ vfunc_init_ft_charfun_cyl3 (vfunc *vf, float const *plength_radius)
 /*-------------------------------------------------------------------------------------------------*/
 
 void
-ft_lambda (float const *xi, float *zp, void const *par)
+ft_lambda (float const *xi, void *pval, void const *par)
 {
   float a = *((float const *) par);
+  float *zp = (float *) pval;
+  
   float absxi = sqrtf (xi[0] * xi[0] + xi[1] * xi[1]);
 
   if (a >= 0.0)
     *zp = powf (absxi, a);
   else
-  *zp = (absxi > EPS_DENOM) ? powf (absxi, a) : powf (EPS_DENOM, a);
+    *zp = (absxi > EPS_DENOM) ? powf (absxi, a) : powf (EPS_DENOM, a);
 
   return;
 }
@@ -301,26 +309,58 @@ vfunc_init_ft_lambda (vfunc *vf, float const *ppow)
 /*-------------------------------------------------------------------------------------------------*/
 
 void
-ft_lambda_v (float const *xi, float *zp, void const *par)
+ft_lambda_x (float const *xi, void *pval, void const *par)
 {
   float a = *((float *) par);
-  float absxi = fabs (xi[1]);
+  float *zp = (float *) pval;
+  
+  float absxi = fabs (xi[0]);
 
   if (a >= 0.0)
     *zp = powf (absxi, a);
   else
-  *zp = (absxi > EPS_DENOM) ? powf (absxi, a) : powf (EPS_DENOM, a);
+    *zp = (absxi > EPS_DENOM) ? powf (absxi, a) : powf (EPS_DENOM, a);
 
   return;
 }
 
 void
-vfunc_init_ft_lambda_v (vfunc *vf, float const *ppow)
+vfunc_init_ft_lambda_x (vfunc *vf, float const *ppow)
 {
   CAPTURE_NULL_VOID (vf);
   CAPTURE_NULL_VOID (ppow);
     
-  vf->f = ft_lambda_v;
+  vf->f = ft_lambda_x;
+  vf->params = ppow;
+
+  return;
+}
+
+/*-------------------------------------------------------------------------------------------------*/
+
+void
+ft_lambda_y (float const *xi, void *pval, void const *par)
+{
+  float a = *((float *) par);
+  float *zp = (float *) pval;
+  
+  float absxi = fabs (xi[1]);
+
+  if (a >= 0.0)
+    *zp = powf (absxi, a);
+  else
+    *zp = (absxi > EPS_DENOM) ? powf (absxi, a) : powf (EPS_DENOM, a);
+
+  return;
+}
+
+void
+vfunc_init_ft_lambda_y (vfunc *vf, float const *ppow)
+{
+  CAPTURE_NULL_VOID (vf);
+  CAPTURE_NULL_VOID (ppow);
+    
+  vf->f = ft_lambda_y;
   vf->params = ppow;
 
   return;
