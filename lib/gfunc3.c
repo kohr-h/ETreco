@@ -231,9 +231,6 @@ gfunc3_set_stack_pointer (gfunc3 *stack_pt, gfunc3 *stack, int pos)
   shp[2] = 1;
   gfunc3_init_gridonly (stack_pt, stack->x0, stack->csize, shp, stack->type);
   
-  gfunc3_print_grid (stack_pt, "stack pointer grid");
-  printf ("\nntotal: %lu\n\n", stack_pt->ntotal);
-  
   if (stack->type == REAL)
     stack_pt->fvals = &stack->fvals[pos * stack_pt->ntotal];
   else
@@ -1198,7 +1195,7 @@ gfunc3_axpy_vfunc_c (float a, gfunc3 *gf, const vfunc *vf)
         {
           for (ix = 0; ix < gf->shape[0]; ix++, pfval++)
             {
-              VFUNC_EVAL (vf, (float *) &vfval, p);
+              VFUNC_EVAL (vf, &vfval, p);
               *pfval = a * (*pfval) + vfval;
               
               p[0] += gf->csize[0];
@@ -1581,7 +1578,7 @@ gfunc3_mul_vfunc_c (gfunc3 *gf, const vfunc *vf)
         {
           for (ix = 0; ix < gf->shape[0]; ix++)
             {
-              VFUNC_EVAL (vf, (float *) &vfval, p);
+              VFUNC_EVAL (vf, &vfval, p);
               *(pfval++) *= vfval;
               
               p[0] += gf->csize[0];
