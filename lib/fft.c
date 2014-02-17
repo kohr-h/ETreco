@@ -336,12 +336,12 @@ fft_forward (gfunc3 *gf)
     }
 
   if (DEBUGGING)
-    temp_mrc_out (gf, "zero-padded", ++count);
+    temp_mrc_out (gf, "zero_padded_", ++count);
 
   fft_fwd_premod (gf);
 
   if (DEBUGGING)
-    temp_mrc_out (gf, "fwd_premod", count);
+    temp_mrc_out (gf, "fwd_premod_", count);
 
   if (GFUNC_IS_REAL (gf))
     {
@@ -370,7 +370,7 @@ fft_forward (gfunc3 *gf)
       gf->fvals = (float *) d_ft;
       gf->is_initialized = TRUE;
       if (DEBUGGING)
-        temp_mrc_out (gf, "fwd_transformed", count);
+        temp_mrc_out (gf, "fwd_transformed_", count);
     }
   else if (GFUNC_IS_COMPLEX (gf))
     {
@@ -393,7 +393,7 @@ fft_forward (gfunc3 *gf)
 
   fft_fwd_postmod (gf);
   if (DEBUGGING)
-    temp_mrc_out (gf, "fwd_postmod", count);
+    temp_mrc_out (gf, "fwd_postmod_", count);
   
   return;
 }
