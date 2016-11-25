@@ -1,15 +1,1 @@
-This is the file README for the ETreco distribution.
-
-ETreco is a software for 3-dimensional reconstruction in electron 
-tomography using the approximate inverse method.
-
-
-Prerequisites:
-
-* GSL (http://www.gnu.org/software/gsl/)
-* FFTW 3.x single precision (http://fftw.org/)
-
-Optional:
-
-* A CBLAS implementation, e.g. ATLAS (http://math-atlas.sourceforge.net/)
-  Configuration will fall back to GSL CBLAS if no other implementation is found.
+This code is outdated and no longer maintained. Don't use it.
